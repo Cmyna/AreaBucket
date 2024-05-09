@@ -1,0 +1,12 @@
+.git
+
+bin
+Library
+obj
+Properties/videos/*.mp4
+
+# UI project ignore
+UI/**/node_modules/**/*
+
+## visual studio
+.vs
