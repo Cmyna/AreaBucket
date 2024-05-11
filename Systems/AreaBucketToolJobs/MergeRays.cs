@@ -13,7 +13,8 @@ using Unity.Mathematics;
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
     /// <summary>
-    /// merge rays that their end points ALMOST conillear
+    /// merge rays that their end points ALMOST collinear
+    /// 
     /// </summary>
     public struct MergeRays : IJob
     {
@@ -26,6 +27,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         /// out of conillear angle bound (in radian)
         /// </summary>
         public float angleBound;
+
+        /// <summary>
+        /// final polygon edges min length,
+        /// for merge rays where their end points too close
+        /// </summary>
+        public float minEdgeLength;
 
         public void Execute()
         {
@@ -55,12 +62,22 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             cache.Dispose();
         }
 
+        /// <summary>
+        /// the method will stop just one index after "breakpoint"
+        /// </summary>
+        /// <param name="startIdx">also the stop index (for walking)</param>
+        /// <param name="currentIdx"></param>
+        /// <param name="dir"></param>
+        /// <param name="nextIdx">the index to next point (denoted as n1) just after the next breakpoint (denoted as n2) since the method started</param>
+        /// <param name="nextDir">vector n1n2</param>
+        /// <returns></returns>
         public bool WalkConillearRays(int startIdx, int currentIdx, float2 dir, out int nextIdx, out float2 nextDir)
         {
             // assume checking starts at 0
             int cursor = currentIdx;
             nextIdx = startIdx;
             nextDir = dir;
+            var startRay = rays[cursor];
             while (true)
             {
                 if (cursor == startIdx) return false; // break walk through
@@ -68,6 +85,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 cursor = NextRay(cursor, out var r2);
                 var v = r2.vector - r1.vector;
                 var angle = Angle(dir, v);
+
+                // if too close, continue walk
+                if (math.length(r2.vector - startRay.vector) <= minEdgeLength) continue;
+
                 // over angle turn bound or walk back
                 if (angle > angleBound || cursor == currentIdx)
                 {

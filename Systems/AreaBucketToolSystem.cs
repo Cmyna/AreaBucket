@@ -1,5 +1,4 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
-using AreaBucket.Utils;
 using Colossal.Mathematics;
 using Game.Areas;
 using Game.Common;
@@ -8,12 +7,7 @@ using Game.Net;
 using Game.Prefabs;
 using Game.Simulation;
 using Game.Tools;
-using Game.UI.Tooltip;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -22,7 +16,7 @@ using UnityEngine;
 
 namespace AreaBucket.Systems
 {
-    internal partial class AreaBucketToolSystem : ToolBaseSystem
+    public partial class AreaBucketToolSystem : ToolBaseSystem
     {
         public bool ToolEnabled = true;
 
@@ -30,6 +24,8 @@ namespace AreaBucket.Systems
         /// bucket max filling range
         /// </summary>
         public float FillMaxRange = 30;
+
+        public float MinEdgeLength = 2f;
 
         public bool Log4Debug = false;
 
@@ -182,23 +178,19 @@ namespace AreaBucket.Systems
             var raysCache = new NativeList<AreaBucketToolJobs.Ray>(Allocator.TempJob);
             var bezierCurvesCache = new NativeList<Bezier4x3>(Allocator.TempJob);
 
-            var filterNetsJob = default(FilterNets);
-            filterNetsJob.filterRange = FillMaxRange;
-            filterNetsJob.curveTypehandle = SystemAPI.GetComponentTypeHandle<Curve>();
-            filterNetsJob.hitPoint = raycastPoint.m_HitPosition.xz;
-            filterNetsJob.filterResults = bezierCurvesCache;
-
             var filterEdgesJob = default(FilterEdgesGeos);
             filterEdgesJob.thEdgeGeo = SystemAPI.GetComponentTypeHandle<EdgeGeometry>();
             filterEdgesJob.thStartNodeGeometry = SystemAPI.GetComponentTypeHandle<StartNodeGeometry>();
             filterEdgesJob.thEndNodeGeometry = SystemAPI.GetComponentTypeHandle<EndNodeGeometry>();
+            filterEdgesJob.thComposition = SystemAPI.GetComponentTypeHandle<Composition>();
+            filterEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
             filterEdgesJob.filterRange = FillMaxRange;
             filterEdgesJob.hitPoint = raycastPoint.m_HitPosition.xz;
             filterEdgesJob.filterResults = bezierCurvesCache;
 
             var curve2LinesJob = default(Curve2Lines);
             curve2LinesJob.chopCount = 8;
-            curve2LinesJob.curves = filterNetsJob.filterResults;
+            curve2LinesJob.curves = bezierCurvesCache;
             curve2LinesJob.linesCache = linesCache;
             curve2LinesJob.pointsCache = pointsCache;
 
@@ -213,7 +205,7 @@ namespace AreaBucket.Systems
 
             var filterPointsJob = default(FilterPoints);
             filterPointsJob.points = pointsCache;
-            filterPointsJob.overlayedDistSquare = 0.01f;
+            filterPointsJob.overlayedDistSquare = 0.1f;
             filterPointsJob.range = FillMaxRange;
             filterPointsJob.hitPos = raycastPoint.m_HitPosition.xz;
 
@@ -230,7 +222,8 @@ namespace AreaBucket.Systems
 
             var mergeRaysJob = default(MergeRays);
             mergeRaysJob.rays = raysCache;
-            mergeRaysJob.angleBound = 2 * Mathf.Deg2Rad;
+            mergeRaysJob.angleBound = 5 * Mathf.Deg2Rad;
+            mergeRaysJob.minEdgeLength = MinEdgeLength;
 
             var rays2AreaJob = default(Rays2AreaDefinition);
             rays2AreaJob.sortedRays = raysCache;
@@ -240,7 +233,6 @@ namespace AreaBucket.Systems
             rays2AreaJob.commandBuffer = _toolOutputBarrier.CreateCommandBuffer();
 
             // run
-            //jobHandle = filterNetsJob.Schedule(netEntityQuery, jobHandle);
             if (FillWithNet) jobHandle = filterEdgesJob.Schedule(edgeGeoEntityQuery, jobHandle);
             jobHandle = curve2LinesJob.Schedule(jobHandle);
             if (FillWithArea) jobHandle = area2LinesJob.Schedule(areaEntityQuery, jobHandle);
@@ -259,7 +251,6 @@ namespace AreaBucket.Systems
                 Mod.log.Info($"hit point: {raycastPoint.m_HitPosition.x} " +
                     $"{raycastPoint.m_HitPosition.y} " +
                     $"{raycastPoint.m_HitPosition.z}");
-                Mod.log.Info($"collected net count: {filterNetsJob.filterResults.Length}");
                 /*if (filterNetsJob.filterResults.Length > 0)
                 {
                     LogNetShape(filterNetsJob.filterResults[0]);
@@ -274,8 +265,6 @@ namespace AreaBucket.Systems
                     // Mod.log.Info($"area line: {checkLinesCache[i].ToStringEx()}");
                 }
             }
-
-            filterNetsJob.filterResults.Dispose();
             linesCache.Dispose();
             pointsCache.Dispose();
             raysCache.Dispose();

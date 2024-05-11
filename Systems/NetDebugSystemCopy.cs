@@ -16,7 +16,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Scripting;
 
-namespace AreaBucket.Systems.AreaBucketToolJobs
+namespace AreaBucket.Systems
 {
     public partial class NetDebugSystemCopy : BaseDebugSystem
     {
@@ -86,7 +86,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 }
                 else
                 {
-                    
+
                     color = Color.cyan;
                     color2 = Color.white;
                     color3 = Color.yellow;
@@ -369,7 +369,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_GizmosSystem = base.World.GetOrCreateSystemManaged<GizmosSystem>();
+            m_GizmosSystem = World.GetOrCreateSystemManaged<GizmosSystem>();
             m_NetGroup = GetEntityQuery(new EntityQueryDesc
             {
                 Any = new ComponentType[2]
@@ -387,24 +387,24 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             m_EdgeOption = AddOption("Draw Edges", defaultEnabled: true);
             m_OutlineOption = AddOption("Draw Outlines", defaultEnabled: true);
             RequireForUpdate(m_NetGroup);
-            base.Enabled = false;
+            Enabled = false;
         }
 
         [Preserve]
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            __TypeHandle.__Game_Prefabs_NetCompositionData_RO_ComponentLookup.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_Node_RO_ComponentLookup.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_ConnectedNode_RO_BufferTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_EndNodeGeometry_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_StartNodeGeometry_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_EdgeGeometry_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_Composition_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Tools_Temp_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_Curve_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_Node_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            __TypeHandle.__Game_Net_Edge_RO_ComponentTypeHandle.Update(ref base.CheckedStateRef);
-            NetGizmoJob jobData = default(NetGizmoJob);
+            __TypeHandle.__Game_Prefabs_NetCompositionData_RO_ComponentLookup.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_Node_RO_ComponentLookup.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_ConnectedNode_RO_BufferTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_EndNodeGeometry_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_StartNodeGeometry_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_EdgeGeometry_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_Composition_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Tools_Temp_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_Curve_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_Node_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            __TypeHandle.__Game_Net_Edge_RO_ComponentTypeHandle.Update(ref CheckedStateRef);
+            NetGizmoJob jobData = default;
             jobData.m_NodeOption = false;
             jobData.m_EdgeOption = false;
             jobData.m_OutlineOption = true;
@@ -420,7 +420,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             jobData.m_NodeData = __TypeHandle.__Game_Net_Node_RO_ComponentLookup;
             jobData.m_CompositionData = __TypeHandle.__Game_Prefabs_NetCompositionData_RO_ComponentLookup;
             jobData.m_GizmoBatcher = m_GizmosSystem.GetGizmosBatcher(out var dependencies);
-            JobHandle jobHandle = JobChunkExtensions.ScheduleParallel(jobData, m_NetGroup, JobHandle.CombineDependencies(inputDeps, dependencies));
+            JobHandle jobHandle = jobData.ScheduleParallel(m_NetGroup, JobHandle.CombineDependencies(inputDeps, dependencies));
             m_GizmosSystem.AddGizmosBatcherWriter(jobHandle);
             return jobHandle;
         }
@@ -433,8 +433,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         protected override void OnCreateForCompiler()
         {
             base.OnCreateForCompiler();
-            __AssignQueries(ref base.CheckedStateRef);
-            __TypeHandle.__AssignHandles(ref base.CheckedStateRef);
+            __AssignQueries(ref CheckedStateRef);
+            __TypeHandle.__AssignHandles(ref CheckedStateRef);
         }
 
         [Preserve]

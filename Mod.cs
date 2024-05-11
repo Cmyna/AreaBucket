@@ -1,5 +1,4 @@
 ﻿using AreaBucket.Systems;
-using AreaBucket.Systems.AreaBucketToolJobs;
 using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using Game;
@@ -7,6 +6,7 @@ using Game.Modding;
 using Game.SceneFlow;
 using Game.SceneFlow;
 using Game.Tools;
+using Unity.Entities;
 
 namespace AreaBucket
 {
@@ -30,9 +30,10 @@ namespace AreaBucket
             updateSystem.UpdateAt<AreaBucketToolUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<NetDebugSystemCopy>(SystemUpdatePhase.DebugGizmos);
 
-            // m_Setting = new Setting(this);
-            // m_Setting.RegisterInOptionsUI();
-            // GameManager.instance.localizationManager.AddSource("en-US", new LocaleEN(m_Setting));
+            var areaBucketToolSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<AreaBucketToolSystem>();
+
+            m_Setting = new Setting(this, areaBucketToolSystem);
+            m_Setting.RegisterInOptionsUI();
             GameManager.instance.localizationManager.AddSource("en-US", new BasicLocale());
 
             // AssetDatabase.global.LoadSettings(nameof(AreaBucket), m_Setting, new Setting(this));

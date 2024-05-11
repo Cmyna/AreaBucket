@@ -1,5 +1,6 @@
 ﻿using Colossal.Mathematics;
 using Game.Net;
+using Game.Prefabs;
 using System;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
@@ -20,9 +21,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public ComponentTypeHandle<EndNodeGeometry> thEndNodeGeometry;
 
+        [ReadOnly] public ComponentTypeHandle<Composition> thComposition;
+
+        [ReadOnly] public ComponentLookup<NetCompositionData> luCompositionData;
+
         [ReadOnly] public float filterRange;
 
         [ReadOnly] public float2 hitPoint;
+
 
         public NativeList<Bezier4x3> filterResults;
 
@@ -31,14 +37,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var geos = chunk.GetNativeArray(ref thEdgeGeo);
             var startNodeGeos = chunk.GetNativeArray(ref thStartNodeGeometry);
             var endNodeGeos = chunk.GetNativeArray(ref thEndNodeGeometry);
+            var compositions = chunk.GetNativeArray(ref thComposition);
             for (var i = 0; i < geos.Length; i++)
             {
+                if (!IsValidNet(luCompositionData[compositions[i].m_Edge])) continue;
                 var geo = geos[i];
                 
                 var distance = MathUtils.Distance(geo.m_Bounds.xz, hitPoint);
                 if (distance > filterRange) continue;
-                var nodeGeo1 = startNodeGeos[i].m_Geometry;
-                var nodeGeo2 = endNodeGeos[i].m_Geometry;
 
                 filterResults.Add(geo.m_Start.m_Left);
                 filterResults.Add(geo.m_Start.m_Right);
@@ -46,43 +52,45 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 filterResults.Add(geo.m_End.m_Left);
                 filterResults.Add(geo.m_End.m_Right);
 
-                var node1Valid = IsValid(nodeGeo1);
-                var node2Valid = IsValid(nodeGeo2);
-                if (node1Valid)
-                {
-                    filterResults.Add(nodeGeo1.m_Left.m_Left);
-                    //filterResults.Add(nodeGeo1.m_Left.m_Right);
-                    //filterResults.Add(nodeGeo1.m_Right.m_Left);
-                    filterResults.Add(nodeGeo1.m_Right.m_Right);
-                }
-
-                if (node1Valid && nodeGeo1.m_MiddleRadius > 0f)
-                {
-                    filterResults.Add(nodeGeo1.m_Left.m_Right);
-                    filterResults.Add(nodeGeo1.m_Right.m_Left);
-                }
-
-
-
-                if (node2Valid)
-                {
-                    filterResults.Add(nodeGeo2.m_Left.m_Left);
-                    //filterResults.Add(nodeGeo2.m_Left.m_Right);
-                    // filterResults.Add(nodeGeo2.m_Right.m_Left);
-                    filterResults.Add(nodeGeo2.m_Right.m_Right);
-                }
-
-                if (node2Valid && nodeGeo2.m_MiddleRadius > 0f)
-                {
-                    filterResults.Add(nodeGeo2.m_Left.m_Right);
-                    filterResults.Add(nodeGeo2.m_Right.m_Left);
-                }
-
-
-
+                TryAddNodeGeometry(startNodeGeos[i].m_Geometry);
+                TryAddNodeGeometry(endNodeGeos[i].m_Geometry);
             }
         }
 
+        private bool IsValidNet(NetCompositionData data)
+        {
+            var hasSurface = (data.m_State & CompositionState.HasSurface) != 0;
+            var checker = CompositionFlags.General.Elevated | 
+                CompositionFlags.General.Tunnel;
+            var flag = data.m_Flags.m_General;
+            return (flag & checker) == 0 && hasSurface;
+        }
+
+        private void TryAddNodeGeometry(EdgeNodeGeometry node)
+        {
+            var isValid = IsValid(node);
+            if (isValid) 
+            {
+                // add outside edges of node
+                filterResults.Add(node.m_Left.m_Left);
+                filterResults.Add(node.m_Right.m_Right);
+            }
+
+            // TODO: I am not sure this code should be used or not..
+            // guess the inside edge used if the node is part of roundabout
+            if (isValid && node.m_MiddleRadius > 0f)
+            {
+                filterResults.Add(node.m_Left.m_Right);
+                filterResults.Add(node.m_Right.m_Left);
+            }
+        }
+
+        /// <summary>
+        /// Copied from NetDebugSystem.NetGizmosJob.IsValid
+        /// Check a node geometry is valid or not
+        /// </summary>
+        /// <param name="nodeGeometry"></param>
+        /// <returns></returns>
         private bool IsValid(EdgeNodeGeometry nodeGeometry)
         {
             float3 @float = nodeGeometry.m_Left.m_Left.d - nodeGeometry.m_Left.m_Left.a;
