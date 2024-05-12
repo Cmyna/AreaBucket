@@ -26,7 +26,7 @@ namespace AreaBucket
         }
 
 
-        [SettingsUISlider(min = 0.5f, max = 4f, step = 1, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISlider(min = 0.5f, max = 4f, step = 0.5f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
         [SettingsUISection(kSection, kSliderGroup)]
         public float MinGeneratedLineLength { get; set; }
 

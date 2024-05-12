@@ -40,7 +40,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var compositions = chunk.GetNativeArray(ref thComposition);
             for (var i = 0; i < geos.Length; i++)
             {
-                if (!IsValidNet(luCompositionData[compositions[i].m_Edge])) continue;
+                if (!IsBounds(luCompositionData[compositions[i].m_Edge])) continue;
                 var geo = geos[i];
                 
                 var distance = MathUtils.Distance(geo.m_Bounds.xz, hitPoint);
@@ -57,7 +57,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        private bool IsValidNet(NetCompositionData data)
+        /// <summary>
+        /// Is net that can be boundaries for area filling
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        private bool IsBounds(NetCompositionData data)
         {
             var hasSurface = (data.m_State & CompositionState.HasSurface) != 0;
             var checker = CompositionFlags.General.Elevated | 

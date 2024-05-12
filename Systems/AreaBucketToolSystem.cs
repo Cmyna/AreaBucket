@@ -7,6 +7,7 @@ using Game.Net;
 using Game.Prefabs;
 using Game.Simulation;
 using Game.Tools;
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
@@ -16,6 +17,10 @@ using UnityEngine;
 
 namespace AreaBucket.Systems
 {
+    /// <summary>
+    /// FIX: performance issue, after testing I believe too much rays is the main reason
+    /// After profiling, main performance cost comes from FilterPoints job(fixed), secondary comes from drop rays job
+    /// </summary>
     public partial class AreaBucketToolSystem : ToolBaseSystem
     {
         public bool ToolEnabled = true;
@@ -34,6 +39,12 @@ namespace AreaBucket.Systems
         public bool FillWithArea = true;
 
         public bool FillWithNet = true;
+
+        public bool JobImmediate = true;
+
+        public bool WatchJobTime = true;
+
+
 
 
         public override string toolID => Mod.ToolId;
@@ -58,6 +69,8 @@ namespace AreaBucket.Systems
 
         private int frameCount = 0;
 
+        private System.Diagnostics.Stopwatch timer;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -71,6 +84,8 @@ namespace AreaBucket.Systems
 
             _applyAction = InputManager.instance.FindAction("Tool", "Apply");
             _secondaryApplyAction = InputManager.instance.FindAction("Tool", "Secondary Apply");
+
+            timer = new System.Diagnostics.Stopwatch();
 
             netEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
                 .WithAll<Curve>()
@@ -155,7 +170,7 @@ namespace AreaBucket.Systems
             if (ToolEnabled && prefab is AreaPrefab)
             {
                 _selectedPrefab = prefab as AreaPrefab;
-                LogAreaPrefab(prefab as AreaPrefab);
+                //LogAreaPrefab(prefab as AreaPrefab);
                 return true;
             }
             return false;
@@ -205,7 +220,7 @@ namespace AreaBucket.Systems
 
             var filterPointsJob = default(FilterPoints);
             filterPointsJob.points = pointsCache;
-            filterPointsJob.overlayedDistSquare = 0.1f;
+            filterPointsJob.overlayDist = 0.1f;
             filterPointsJob.range = FillMaxRange;
             filterPointsJob.hitPos = raycastPoint.m_HitPosition.xz;
 
@@ -233,15 +248,15 @@ namespace AreaBucket.Systems
             rays2AreaJob.commandBuffer = _toolOutputBarrier.CreateCommandBuffer();
 
             // run
-            if (FillWithNet) jobHandle = filterEdgesJob.Schedule(edgeGeoEntityQuery, jobHandle);
-            jobHandle = curve2LinesJob.Schedule(jobHandle);
-            if (FillWithArea) jobHandle = area2LinesJob.Schedule(areaEntityQuery, jobHandle);
-            jobHandle = filterPointsJob.Schedule(jobHandle);
-            jobHandle = generateRaysJob.Schedule(jobHandle);
-            if (CheckIntersection) jobHandle = dropRaysJob.Schedule(jobHandle);
-            jobHandle = mergeRaysJob.Schedule(jobHandle);
-            jobHandle = rays2AreaJob.Schedule(jobHandle);
-
+            if (FillWithNet) jobHandle = Schedule(() => filterEdgesJob.Schedule(edgeGeoEntityQuery, jobHandle), "collect edges");
+            jobHandle = Schedule(() => curve2LinesJob.Schedule(jobHandle), "curves to lines");
+            if (FillWithArea) jobHandle = Schedule(() => area2LinesJob.Schedule(areaEntityQuery, jobHandle), "area to lines");
+            jobHandle = Schedule(() => filterPointsJob.Schedule(jobHandle), "filter points");
+            jobHandle = Schedule(() => generateRaysJob.Schedule(jobHandle), "generate rays");
+            if (CheckIntersection) jobHandle = Schedule(() => dropRaysJob.Schedule(jobHandle), "drop rays");
+            jobHandle = Schedule(() => mergeRaysJob.Schedule(jobHandle), "merge rays");
+            jobHandle = Schedule(() => rays2AreaJob.Schedule(jobHandle), "create definitions");
+            
             jobHandle.Complete();
 
             // dispose
@@ -259,8 +274,8 @@ namespace AreaBucket.Systems
                 Mod.log.Info($"lines count {curve2LinesJob.linesCache.Length}");
                 Mod.log.Info($"area lines count {checkLinesCache.Length}");
                 // Mod.log.Info($"generated area nodes count: {rays2AreaJob.generateNodesCount}");
-                for (var i = 0; i < raysCache.Length; i++) LogRay(raysCache[i]);
-                for (var i = 0; i < checkLinesCache.Length; i++)
+                //for (var i = 0; i < raysCache.Length; i++) LogRay(raysCache[i]);
+                //for (var i = 0; i < checkLinesCache.Length; i++)
                 {
                     // Mod.log.Info($"area line: {checkLinesCache[i].ToStringEx()}");
                 }
@@ -299,6 +314,23 @@ namespace AreaBucket.Systems
             }
         }
 
+        private JobHandle Schedule(Func<JobHandle> scheduleFunc, string name)
+        {
+            if (WatchJobTime)
+            {
+                timer.Reset();
+                timer.Start();
+            }
+            var jobHandle = scheduleFunc();
+            if (JobImmediate) jobHandle.Complete();
+            timer.Stop();
+            Log($"job {name} time cost(ms): {timer.ElapsedMilliseconds}");
+            return jobHandle;
+        }
         
+        private void Log(string msg)
+        {
+            if (frameCount == 0 && Log4Debug) Mod.log.Info(msg);
+        }
     }
 }
