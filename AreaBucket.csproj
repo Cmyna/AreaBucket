@@ -24,8 +24,14 @@
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
 
 	<ItemGroup>
+		<Reference Include="Colossal.AssetPipeline">
+		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.AssetPipeline.dll</HintPath>
+		</Reference>
 		<Reference Include="Colossal.Mathematics">
 		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll</HintPath>
+		</Reference>
+		<Reference Include="Colossal.Mono.Cecil">
+		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mono.Cecil.dll</HintPath>
 		</Reference>
 		<Reference Include="Game">
 			<Private>false</Private>
@@ -47,6 +53,9 @@
 		</Reference>
 		<Reference Include="Colossal.Localization">
 			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.AudioModule">
+		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.CoreModule">
 			<Private>false</Private>
@@ -85,5 +94,13 @@
 		<None Include="$(ModPropsFile)" Link="Properties\Mod.props" />
 		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
 	</ItemGroup>
+
+  <ItemGroup>
+    <_Icons Include="$(ProjectDir)/Icons/*.svg" />
+  </ItemGroup>
+
+  <Target Name="CopyIcons" AfterTargets="AfterBuild">
+    <Copy SourceFiles="@(_Icons)" DestinationFolder="$(DeployDir)/Icons" />
+  </Target>
 
 </Project>

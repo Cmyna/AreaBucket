@@ -18,40 +18,37 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct DropIntersectedRays : IJob
     {
-        [ReadOnly] public float2 raysStartPoint;
-
-        [ReadOnly] public NativeList<Line2> checkLines;
-
-        public NativeList<Ray> rays;
+        public CommonContext context;
 
         public void Execute()
         {
             var raysCache = new NativeList<Ray>(Allocator.Temp);
 
             // drop rays has intersection with any check lines
-            for (var i = 0; i < rays.Length; i++)
+            for (var i = 0; i < context.rays.Length; i++)
             {
+                var ray = context.rays[i];
                 var rayline = new Line2()
                 {
-                    a = raysStartPoint,
-                    b = raysStartPoint + rays[i].vector
+                    a = context.hitPos,
+                    b = context.hitPos + ray.vector
                 };
                 bool hasIntersction = false;
-                for (var j = 0; j < checkLines.Length; j++)
+                for (var j = 0; j < context.lines.Length; j++)
                 {
-                    hasIntersction = Intersect(checkLines[j], rayline);
+                    hasIntersction = Intersect(context.lines[j], rayline);
                     if (!hasIntersction) continue;
                     else break;
                 }
                 if (hasIntersction) continue; // drop ray
-                raysCache.Add(rays[i]);
+                raysCache.Add(ray);
             }
 
-            rays.Clear();
+            context.rays.Clear();
 
             for (var i = 0; i < raysCache.Length; i++)
             {
-                rays.Add(raysCache[i]);
+                context.rays.Add(raysCache[i]);
             }
 
             raysCache.Dispose();

@@ -19,7 +19,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct Rays2AreaDefinition : IJob
     {
-        [ReadOnly] public NativeList<Ray> sortedRays;
+        public CommonContext context;
 
         [ReadOnly] public Entity prefab;
 
@@ -33,7 +33,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
-            if (sortedRays.Length <= 0) return;
+            if (context.rays.Length <= 0) return;
 
             FindLargestSector(out var maxSectorRadian, out var maxSectorRayIndex);
             // float maxSectorRadian = Mathf.PI + 0.1f;
@@ -54,6 +54,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private void BuildArea(float maxSectorRadian, int startIndex, ref DynamicBuffer<Node> buffer)
         {
+            var sortedRays = context.rays;
             bool addRaycastPoint = maxSectorRadian > Mathf.PI;
             var nodeNum = sortedRays.Length + 1;
             if (addRaycastPoint) nodeNum += 1;
@@ -98,6 +99,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private void FindLargestSector(out float maxSectorRadian, out int maxSectorIndex)
         {
+            var sortedRays = context.rays;
             maxSectorRadian = 0;
             maxSectorIndex = -1;
             for (var i = 0; i < sortedRays.Length; i++)

@@ -11,23 +11,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct GenerateRays : IJob
     {
-
-        [ReadOnly] public NativeList<float2> points;
-
-        [ReadOnly] public NativeList<Line2> lines;
-
-        [ReadOnly] public float2 rayStartPoint;
-
-        public NativeList<Ray> rays;
+        public CommonContext context;
 
         public static readonly float2 xzUp = new float2(0, 1);
 
         public void Execute()
         {
             //NativeList<Ray> raysCache1 = new NativeList<Ray>(points.Length, Allocator.Temp);
-            GenerateData(ref rays);
+            GenerateData(ref context.rays);
 
-            rays.Sort(new RayComparer());
+            context.rays.Sort(new RayComparer());
 
             // TODO check intersections
 
@@ -36,9 +29,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private void GenerateData(ref NativeList<Ray> raysCache)
         {
-            for (var i = 0; i < points.Length; i++)
+            for (var i = 0; i < context.points.Length; i++)
             {
-                var vector = points[i] - rayStartPoint;
+                var vector = context.points[i] - context.hitPos;
                 var radian = AreaBucket.Utils.Math.RadianInClock(xzUp, vector);
                 var ray = new Ray() { vector = vector, radian = radian };
                 raysCache.Add(ray);

@@ -1,6 +1,8 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
 using Colossal.Mathematics;
 using Game.Areas;
+using Game.Audio;
+using Game.Buildings;
 using Game.Common;
 using Game.Input;
 using Game.Net;
@@ -12,7 +14,6 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace AreaBucket.Systems
@@ -20,34 +21,69 @@ namespace AreaBucket.Systems
     /// <summary>
     /// FIX: performance issue, after testing I believe too much rays is the main reason
     /// After profiling, main performance cost comes from FilterPoints job(fixed), secondary comes from drop rays job
+    /// 20240504 updated: after adding subnet filter (and disable it) and I found that the tool becomes super smooth on 100m range. 
+    /// Hence the major performance issure comes from this
     /// </summary>
     public partial class AreaBucketToolSystem : ToolBaseSystem
     {
-        public bool ToolEnabled = true;
-
-        /// <summary>
-        /// bucket max filling range
-        /// </summary>
-        public float FillMaxRange = 30;
-
-        public float MinEdgeLength = 2f;
-
-        public bool Log4Debug = false;
-
-        public bool CheckIntersection = true;
-
-        public bool FillWithArea = true;
-
-        public bool FillWithNet = true;
-
-        public bool JobImmediate = true;
-
-        public bool WatchJobTime = true;
-
-
-
 
         public override string toolID => Mod.ToolId;
+
+        /// <summary>
+        /// this property control the tool can be shown by player or not, it is determined by the selected prefab
+        /// </summary>
+        public bool ToolEnabled { get; set; } = false;
+
+        /// <summary>
+        /// set the tool is active or not. if it is ToolEnabled and active, 
+        /// it will start generating area data definitions on update
+        /// 
+        /// active state is controlled by user switch
+        /// </summary>
+        public bool Active { get; set; } = false;
+
+        /// <summary>
+        /// bucket tool filling range
+        /// </summary>
+        public float FillRange { get; set; } = 50f;
+
+        /// <summary>
+        /// bucket tool max filling range
+        /// </summary>
+        public float MaxFillingRange { get; set; } = 250f;
+
+
+        public float MinEdgeLength { get; set; } = 2f;
+
+        /// <summary>
+        /// the boundary for area filling tool
+        /// </summary>
+        public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot;
+
+
+
+
+        public bool UseExperimentalOptions { get; set; } = false;
+
+        public bool CheckOcclusion { get; set; } = false;
+
+        public bool ExtraPoints { get; set; } = false;
+
+
+        public bool ShowDebugOptions { get; set; } = false;
+
+        public bool Log4Debug { get; set; } = false;
+
+        public bool CheckIntersection { get; set; } = true;
+
+        public bool JobImmediate { get; set; } = false;
+
+        public bool WatchJobTime { get; set; } = false;
+
+
+        private AudioManager _audioManager;
+
+        private EntityQuery _soundQuery;
 
         private NativeList<ControlPoint> _controlPoints;
 
@@ -67,6 +103,8 @@ namespace AreaBucket.Systems
 
         private EntityQuery edgeGeoEntityQuery;
 
+        private EntityQuery lotEntityQuery;
+
         private int frameCount = 0;
 
         private System.Diagnostics.Stopwatch timer;
@@ -74,6 +112,9 @@ namespace AreaBucket.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
+            _audioManager = World.GetOrCreateSystemManaged<AudioManager>();
+            _soundQuery = GetEntityQuery(ComponentType.ReadOnly<ToolUXSoundSettingsData>());
+
             m_ToolSystem.tools.Remove(this); // rollback added self in base.OnCreate 
             m_ToolSystem.tools.Insert(0, this); // applied before vanilla systems
 
@@ -99,11 +140,17 @@ namespace AreaBucket.Systems
                 .WithNone<CreationDefinition>()
                 .WithNone<Deleted>()
                 .WithNone<MapTile>()
+                .WithNone<District>() // exclude district polygons
                 .Build(EntityManager);
             edgeGeoEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
                 .WithAny<EdgeGeometry>()
                 .WithAny<Game.Net.Node>()
                 .WithNone<Hidden>().WithNone<Deleted>()
+                .Build(EntityManager);
+            lotEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
+                .WithAll<PrefabRef>().WithAll<Game.Objects.Transform>()
+                .WithAny<Building>().WithAny<Extension>()
+                .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
                 .Build(EntityManager);
         }
 
@@ -119,27 +166,25 @@ namespace AreaBucket.Systems
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            frameCount = frameCount + 1;
+            frameCount++;
             if (frameCount >= 10) frameCount = 0;
             // if not active, do nothing
-            if (_selectedPrefab == null || !ToolEnabled) return inputDeps;
+            if (_selectedPrefab == null || !ToolEnabled || !Active) return inputDeps;
 
-            if (_applyAction.WasPressedThisFrame())
-            {
-                applyMode = ApplyMode.Apply;
-                return inputDeps;
-            }
             applyMode = ApplyMode.Clear;
-
             if (!GetRaycastResult(out var raycastPoint))
             {
                 return inputDeps;
             }
 
+            if (_applyAction.WasPressedThisFrame())
+            {
+                _audioManager.PlayUISound(_soundQuery.GetSingleton<ToolUXSoundSettingsData>().m_PlacePropSound);
+                applyMode = ApplyMode.Apply;
+                return inputDeps;
+            }
+            
             return ApplyBucket(inputDeps, raycastPoint);
-
-            // return SquareAreaTest2(inputDeps, raycastPoint);
-            // return SquareAreaTest(inputDeps, raycastPoint);
         }
 
 
@@ -157,6 +202,7 @@ namespace AreaBucket.Systems
             netEntityQuery.Dispose();
             areaEntityQuery.Dispose();
             edgeGeoEntityQuery.Dispose();
+            lotEntityQuery.Dispose();
             base.OnDestroy();
         }
 
@@ -167,14 +213,26 @@ namespace AreaBucket.Systems
 
         public override bool TrySetPrefab(PrefabBase prefab)
         {
-            if (ToolEnabled && prefab is AreaPrefab)
-            {
-                _selectedPrefab = prefab as AreaPrefab;
-                //LogAreaPrefab(prefab as AreaPrefab);
-                return true;
-            }
-            return false;
+            ToolEnabled = CanEnable(prefab);
+            if (ToolEnabled) _selectedPrefab = prefab as AreaPrefab;
+            return ToolEnabled && Active; 
         }
+
+        /// <summary>
+        /// this one determines that the tool is enable or not 
+        /// </summary>
+        /// <param name="prefab"></param>
+        /// <returns></returns>
+        private bool CanEnable(PrefabBase prefab)
+        {
+            if (!(prefab is AreaPrefab)) return false; // if selected prefab is not area prefab, it will not be enabled
+            // if prefab is District or Lot prefab, not enabled
+            if (prefab is DistrictPrefab) return false; 
+            if (prefab is LotPrefab) return false;
+            return true;
+        }
+
+
 
         public override void InitializeRaycast()
         {
@@ -187,70 +245,97 @@ namespace AreaBucket.Systems
             var jobHandle = inputDeps;
             // prepare jobs data
 
-            var pointsCache = new NativeList<float2>(Allocator.TempJob);
-            var linesCache = new NativeList<Line2>(Allocator.TempJob);
             var checkLinesCache = new NativeList<Line2>(Allocator.TempJob);
-            var raysCache = new NativeList<AreaBucketToolJobs.Ray>(Allocator.TempJob);
             var bezierCurvesCache = new NativeList<Bezier4x3>(Allocator.TempJob);
 
-            var filterEdgesJob = default(FilterEdgesGeos);
-            filterEdgesJob.thEdgeGeo = SystemAPI.GetComponentTypeHandle<EdgeGeometry>();
-            filterEdgesJob.thStartNodeGeometry = SystemAPI.GetComponentTypeHandle<StartNodeGeometry>();
-            filterEdgesJob.thEndNodeGeometry = SystemAPI.GetComponentTypeHandle<EndNodeGeometry>();
-            filterEdgesJob.thComposition = SystemAPI.GetComponentTypeHandle<Composition>();
-            filterEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
-            filterEdgesJob.filterRange = FillMaxRange;
-            filterEdgesJob.hitPoint = raycastPoint.m_HitPosition.xz;
-            filterEdgesJob.filterResults = bezierCurvesCache;
+            var jobContext = new CommonContext(); // Area bucket jobs common context
+            jobContext.Init(raycastPoint.m_HitPosition.xz, FillRange);
+
+
+            var lot2LinesJob = default(Lot2LinesJob);
+            lot2LinesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
+            lot2LinesJob.thTransform = SystemAPI.GetComponentTypeHandle<Game.Objects.Transform>();
+            lot2LinesJob.thBuilding = SystemAPI.GetComponentTypeHandle<Building>();
+            lot2LinesJob.luBuildingData = SystemAPI.GetComponentLookup<BuildingData>();
+            lot2LinesJob.luObjectGeoData = SystemAPI.GetComponentLookup<ObjectGeometryData>();
+            lot2LinesJob.context = jobContext;
+
+
+            var collectNetEdgesJob = default(CollectNetEdges);
+            collectNetEdgesJob.thEdgeGeo = SystemAPI.GetComponentTypeHandle<EdgeGeometry>();
+            collectNetEdgesJob.thStartNodeGeometry = SystemAPI.GetComponentTypeHandle<StartNodeGeometry>();
+            collectNetEdgesJob.thEndNodeGeometry = SystemAPI.GetComponentTypeHandle<EndNodeGeometry>();
+            collectNetEdgesJob.thComposition = SystemAPI.GetComponentTypeHandle<Composition>();
+            collectNetEdgesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
+            collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
+            collectNetEdgesJob.context = jobContext;
+            collectNetEdgesJob.filterResults = bezierCurvesCache;
+            collectNetEdgesJob.mask = BoundaryMask;
+            // subnet mask is experimental (for performance issue)
+            if (!UseExperimentalOptions && (collectNetEdgesJob.mask & BoundaryMask.SubNet) != 0)
+            {
+                collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
+            }
+
 
             var curve2LinesJob = default(Curve2Lines);
             curve2LinesJob.chopCount = 8;
             curve2LinesJob.curves = bezierCurvesCache;
-            curve2LinesJob.linesCache = linesCache;
-            curve2LinesJob.pointsCache = pointsCache;
+            curve2LinesJob.context = jobContext;
+
 
             var area2LinesJob = default(Areas2Lines);
-            area2LinesJob.lines = linesCache;
-            area2LinesJob.checklines = checkLinesCache;
-            area2LinesJob.points = pointsCache;
-            area2LinesJob.hitPos = raycastPoint.m_HitPosition.xz;
-            area2LinesJob.range = FillMaxRange;
             area2LinesJob.bthNode = SystemAPI.GetBufferTypeHandle<Game.Areas.Node>();
             area2LinesJob.thArea = SystemAPI.GetComponentTypeHandle<Area>();
+            area2LinesJob.checklines = checkLinesCache;
+            area2LinesJob.context = jobContext;
+
+
+            var genExtraPointsJob = default(GenIntersectedPoints);
+            genExtraPointsJob.context = jobContext;
+
 
             var filterPointsJob = default(FilterPoints);
-            filterPointsJob.points = pointsCache;
             filterPointsJob.overlayDist = 0.1f;
-            filterPointsJob.range = FillMaxRange;
-            filterPointsJob.hitPos = raycastPoint.m_HitPosition.xz;
+            filterPointsJob.context = jobContext;
+
 
             var generateRaysJob = default(GenerateRays);
-            generateRaysJob.lines = linesCache;
-            generateRaysJob.points = pointsCache;
-            generateRaysJob.rays = raysCache;
-            generateRaysJob.rayStartPoint = raycastPoint.m_HitPosition.xz;
+            generateRaysJob.context = jobContext;
+
 
             var dropRaysJob = default(DropIntersectedRays);
-            dropRaysJob.raysStartPoint = raycastPoint.m_HitPosition.xz;
-            dropRaysJob.checkLines = linesCache;
-            dropRaysJob.rays = raysCache;
+            dropRaysJob.context = jobContext;
+
 
             var mergeRaysJob = default(MergeRays);
-            mergeRaysJob.rays = raysCache;
+            mergeRaysJob.context = jobContext;
             mergeRaysJob.angleBound = 5 * Mathf.Deg2Rad;
             mergeRaysJob.minEdgeLength = MinEdgeLength;
 
+
             var rays2AreaJob = default(Rays2AreaDefinition);
-            rays2AreaJob.sortedRays = raysCache;
+            rays2AreaJob.context = jobContext;
             rays2AreaJob.prefab = m_PrefabSystem.GetEntity(_selectedPrefab);
             rays2AreaJob.terrianHeightData = _terrianSystem.GetHeightData();
             rays2AreaJob.gameRaycastPoint = raycastPoint;
             rays2AreaJob.commandBuffer = _toolOutputBarrier.CreateCommandBuffer();
 
+
             // run
-            if (FillWithNet) jobHandle = Schedule(() => filterEdgesJob.Schedule(edgeGeoEntityQuery, jobHandle), "collect edges");
+            if ((BoundaryMask & BoundaryMask.Net) != 0) jobHandle = Schedule(() => collectNetEdgesJob.Schedule(edgeGeoEntityQuery, jobHandle), "collect edges");
             jobHandle = Schedule(() => curve2LinesJob.Schedule(jobHandle), "curves to lines");
-            if (FillWithArea) jobHandle = Schedule(() => area2LinesJob.Schedule(areaEntityQuery, jobHandle), "area to lines");
+            if ((BoundaryMask & BoundaryMask.Lot) != 0) jobHandle = Schedule(() => lot2LinesJob.Schedule(lotEntityQuery, jobHandle), "collect lots");
+            if ((BoundaryMask & BoundaryMask.Area) != 0) jobHandle = Schedule(() => area2LinesJob.Schedule(areaEntityQuery, jobHandle), "area to lines");
+            
+            if (CheckOcclusion) // TODO: drop lines being obscured
+            {
+                var sortLinesJob = jobContext.lines.SortJob(new CenterAroundComparer { hitPos = jobContext.hitPos });
+                jobHandle = Schedule(() => sortLinesJob.Schedule(jobHandle), "sort lines");
+            }
+            
+            // extra points is experimental for performance issue
+            if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(() => genExtraPointsJob.Schedule(jobHandle), "generate extra points");
             jobHandle = Schedule(() => filterPointsJob.Schedule(jobHandle), "filter points");
             jobHandle = Schedule(() => generateRaysJob.Schedule(jobHandle), "generate rays");
             if (CheckIntersection) jobHandle = Schedule(() => dropRaysJob.Schedule(jobHandle), "drop rays");
@@ -263,16 +348,16 @@ namespace AreaBucket.Systems
 
             if (frameCount == 0 && Log4Debug)
             {
-                Mod.log.Info($"hit point: {raycastPoint.m_HitPosition.x} " +
+                Mod.Logger.Info($"hit point: {raycastPoint.m_HitPosition.x} " +
                     $"{raycastPoint.m_HitPosition.y} " +
                     $"{raycastPoint.m_HitPosition.z}");
                 /*if (filterNetsJob.filterResults.Length > 0)
                 {
                     LogNetShape(filterNetsJob.filterResults[0]);
                 }*/
-                Mod.log.Info($"generated rays count: {raysCache.Length}");
-                Mod.log.Info($"lines count {curve2LinesJob.linesCache.Length}");
-                Mod.log.Info($"area lines count {checkLinesCache.Length}");
+                Mod.Logger.Info($"generated rays count: {jobContext.rays.Length}");
+                Mod.Logger.Info($"lines count {jobContext.lines.Length}");
+                Mod.Logger.Info($"area lines count {checkLinesCache.Length}");
                 // Mod.log.Info($"generated area nodes count: {rays2AreaJob.generateNodesCount}");
                 //for (var i = 0; i < raysCache.Length; i++) LogRay(raysCache[i]);
                 //for (var i = 0; i < checkLinesCache.Length; i++)
@@ -280,18 +365,16 @@ namespace AreaBucket.Systems
                     // Mod.log.Info($"area line: {checkLinesCache[i].ToStringEx()}");
                 }
             }
-            linesCache.Dispose();
-            pointsCache.Dispose();
-            raysCache.Dispose();
             checkLinesCache.Dispose();
             bezierCurvesCache.Dispose();
+            jobContext.Dispose();
 
             return jobHandle;
         }
 
         private void LogNetShape(Bezier4x3 curve)
         {
-            Mod.log.Info($"net data: " +
+            Mod.Logger.Info($"net data: " +
                 $"{curve.a.x} {curve.a.z}\n" +
                 $"{curve.b.x} {curve.b.z}\n" +
                 $"{curve.c.x} {curve.c.z}\n" +
@@ -301,7 +384,7 @@ namespace AreaBucket.Systems
 
         private void LogRay(AreaBucketToolJobs.Ray ray)
         {
-            Mod.log.Info($"ray: (ray {ray.radian}) {ray.vector.x} {ray.vector.y}");
+            Mod.Logger.Info($"ray: (ray {ray.radian}) {ray.vector.x} {ray.vector.y}");
         }
 
         private void LogAreaPrefab(AreaPrefab prefab)
@@ -310,7 +393,7 @@ namespace AreaBucket.Systems
             prefab.GetArchetypeComponents(components);
             foreach (var comp in components)
             {
-                Mod.log.Info($"componentType: {comp.GetManagedType().Name}");
+                Mod.Logger.Info($"componentType: {comp.GetManagedType().Name}");
             }
         }
 
@@ -323,14 +406,27 @@ namespace AreaBucket.Systems
             }
             var jobHandle = scheduleFunc();
             if (JobImmediate) jobHandle.Complete();
-            timer.Stop();
-            Log($"job {name} time cost(ms): {timer.ElapsedMilliseconds}");
+            if (WatchJobTime)
+            {
+                timer.Stop();
+                Log($"job {name} time cost(ms): {timer.ElapsedMilliseconds}");
+            }
             return jobHandle;
         }
         
         private void Log(string msg)
         {
-            if (frameCount == 0 && Log4Debug) Mod.log.Info(msg);
+            if (frameCount == 0 && Log4Debug) Mod.Logger.Info(msg);
         }
     }
+
+    public enum BoundaryMask
+    {
+        None = 0,
+        Net = 1,
+        Lot = 2,
+        Area = 4,
+        SubNet = 8
+    }
+
 }

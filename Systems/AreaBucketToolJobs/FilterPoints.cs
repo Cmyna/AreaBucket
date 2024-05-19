@@ -11,31 +11,27 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct FilterPoints : IJob
     {
-        public NativeList<float2> points;
+        public CommonContext context;
 
         [ReadOnly] public float overlayDist;
-
-        [ReadOnly] public float2 hitPos;
-
-        [ReadOnly] public float range;
         public void Execute()
         {
-            var cellsMap = new NativeParallelMultiHashMap<int2, float2>(points.Capacity, Allocator.Temp);
+            var cellsMap = new NativeParallelMultiHashMap<int2, float2>(context.points.Capacity, Allocator.Temp);
 
             // add points to cells Map
-            for (var i = 0; i < points.Length; i++)
+            for (var i = 0; i < context.points.Length; i++)
             {
-                TryAddPoint(cellsMap, points[i]);
+                TryAddPoint(cellsMap, context.points[i]);
             }
 
             // all points back to 
-            points.Clear();
+            context.points.Clear();
 
             var enumerator = cellsMap.GetEnumerator();
             while(enumerator.MoveNext())
             {
                 var pair = enumerator.Current;
-                points.Add(pair.Value);
+                context.points.Add(pair.Value);
             }
 
             cellsMap.Dispose();
@@ -101,12 +97,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private bool InRange(float2 point)
         {
-            var vector = point - hitPos;
+            var vector = point - context.hitPos;
             // tollerance required from Area2Lines.CollectDivPoints
             // that the length from hit pos to cutted point could really closed to range length
             // which will cause unstable filtering here
             var tollerance = 0.1f; // 0.1m tollerance
-            return math.length(vector) <= (range + tollerance); 
+            return math.length(vector) <= (context.filterRange + tollerance); 
         }
 
         private bool Overlay(float2 p1, float2 p2)

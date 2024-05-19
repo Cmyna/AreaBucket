@@ -2,7 +2,11 @@
 using Game.Input;
 using Game.Tools;
 using Game.UI;
+using System.Reflection;
+using System;
 using Unity.Mathematics;
+using UnityEngine;
+using Game.Audio;
 
 namespace AreaBucket.Systems
 {
@@ -13,47 +17,106 @@ namespace AreaBucket.Systems
 
         private ToolSystem _toolSystem;
 
+        
+
         protected override void OnCreate()
         {
             base.OnCreate();
 
             _toolSystem = World.GetOrCreateSystemManaged<ToolSystem>();
             _bucketToolSystem = World.GetOrCreateSystemManaged<AreaBucketToolSystem>();
+            
 
-            // AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "showpanel", () => _toolSystem.activeTool is AreaBucketToolSystem) );
-            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "enabled", () => _bucketToolSystem.ToolEnabled));
-            AddUpdateBinding(new GetterValueBinding<float>(Mod.ToolId, "fillRange", () => _bucketToolSystem.FillMaxRange));
-            AddBinding(new TriggerBinding(Mod.ToolId, "switch", OnEnableSwitch));
-            AddBinding(new TriggerBinding<float>(Mod.ToolId, "setFillRange", OnChangingFillingRange));
+            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "ToolEnabled", () => _bucketToolSystem.ToolEnabled));
 
-            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "log4debug", () => _bucketToolSystem.Log4Debug));
-            AddBinding(new TriggerBinding(Mod.ToolId, "log4debugSwitch", () => {
-                _bucketToolSystem.Log4Debug = !_bucketToolSystem.Log4Debug;
-            }));
-
-            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "checkIntersection", () => _bucketToolSystem.CheckIntersection));
-            AddBinding(new TriggerBinding(Mod.ToolId, "checkIntersectionSwitch", () =>
+            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "Active", () => _bucketToolSystem.Active));
+            AddBinding(new TriggerBinding<bool>(Mod.ToolId, "SetActive", (v) =>
             {
-                _bucketToolSystem.CheckIntersection = !_bucketToolSystem.CheckIntersection;
+                _bucketToolSystem.Active = v;
+                ReActivateTool();
             }));
 
-            // TODO: lines source entites filter
+
+            //Add2WayBinding<float>(_bucketToolSystem, nameof(AreaBucketToolSystem.FillMaxRange));
+            Add2WayBinding<float>(
+                nameof(AreaBucketToolSystem.FillRange),
+                () => _bucketToolSystem.FillRange,
+                (v) => _bucketToolSystem.FillRange = Mathf.Clamp(v, 10, _bucketToolSystem.MaxFillingRange)
+            );
+
+            AddUpdateBinding(new GetterValueBinding<uint>(Mod.ToolId, nameof(AreaBucketToolSystem.BoundaryMask), () => (uint)_bucketToolSystem.BoundaryMask));
+            AddBinding(new TriggerBinding<uint>(Mod.ToolId, "Set" + nameof(AreaBucketToolSystem.BoundaryMask), (v) => _bucketToolSystem.BoundaryMask = (BoundaryMask)v));
+            //Add2WayBinding<uint>(_bucketToolSystem, nameof(AreaBucketToolSystem.BoundaryMask));
+
+            // debug options bindings
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.ShowDebugOptions));
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.Log4Debug));
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.CheckIntersection));
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.JobImmediate));
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.WatchJobTime));
+
+            // experimental options binding
+            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "UseExperimentalOptions", () => _bucketToolSystem.UseExperimentalOptions));
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.ExtraPoints));
+
         }
 
-        /// <summary>
-        /// Switch area bucket tool enable state
-        /// </summary>
-        private void OnEnableSwitch()
-        {
-            var activePrefab = _toolSystem.activePrefab;
-            _bucketToolSystem.ToolEnabled = !_bucketToolSystem.ToolEnabled;
-            // TODO: handle vanilla area tool system
-            _toolSystem.ActivatePrefabTool(activePrefab); // re-activate tool
-        }
 
         private void OnChangingFillingRange(float number)
         {
-            _bucketToolSystem.FillMaxRange = math.clamp(number, 10, 100);
+            _bucketToolSystem.FillRange = math.clamp(number, 10, 300);
         }
+
+        private void ReActivateTool()
+        {
+            var activePrefab = _toolSystem.activePrefab;
+            _toolSystem.ActivatePrefabTool(activePrefab);
+        }
+
+
+        public void Add2WayBinding<T>(object obj, string propertyName)
+        {
+            var getterValueBinding = GetterValueBindingHelper<T>(obj, propertyName);
+            var triggerBinding = TriggerBindingHelper<T>(obj, propertyName);
+            AddUpdateBinding(getterValueBinding);
+            AddBinding(triggerBinding);
+        }
+
+        private void Add2WayBinding<T>(string name, Func<T> updateUICallback, Action<T> updateSystemCallback)
+        {
+            var getterValueBinding = new GetterValueBinding<T>(Mod.ToolId, name, updateUICallback);
+            var triggerBinding = new TriggerBinding<T>(Mod.ToolId, "Set" + name, updateSystemCallback);
+            AddUpdateBinding(getterValueBinding);
+            AddBinding(triggerBinding);
+        }
+
+        /// <summary>
+        /// helper method for binding one property of an object instance.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="obj"></param>
+        /// <param name="propertyName"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static GetterValueBinding<T> GetterValueBindingHelper<T>(object obj, string propertyName)
+        {
+            Type type = obj.GetType();
+            PropertyInfo propertyInfo = type.GetProperty(propertyName);
+
+            if (propertyInfo == null) throw new ArgumentException($"'{propertyName}' is not a valid property of type '{type.Name}'.");
+
+            return new GetterValueBinding<T>(Mod.ToolId, propertyName, () => (T)propertyInfo.GetValue(obj) );
+        }
+
+        public static TriggerBinding<T> TriggerBindingHelper<T>(object obj, string propertyName)
+        {
+            Type type = obj.GetType();
+            PropertyInfo propertyInfo = type.GetProperty(propertyName);
+
+            if (propertyInfo == null) throw new ArgumentException($"'{propertyName}' is not a valid property of type '{type.Name}'.");
+
+            return new TriggerBinding<T>(Mod.ToolId, "Set" + propertyName,  (v) => propertyInfo.SetValue(obj, v) );
+        }
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Colossal.Mathematics;
+using Game.Common;
 using Game.Net;
 using Game.Prefabs;
 using System;
@@ -12,8 +13,9 @@ using UnityEngine;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
+
     [BurstCompile]
-    public struct FilterEdgesGeos: IJobChunk
+    public struct CollectNetEdges: IJobChunk
     {
         [ReadOnly] public ComponentTypeHandle<EdgeGeometry> thEdgeGeo;
 
@@ -23,17 +25,23 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public ComponentTypeHandle<Composition> thComposition;
 
+        [ReadOnly] public ComponentTypeHandle<Owner> thOwner;
+
         [ReadOnly] public ComponentLookup<NetCompositionData> luCompositionData;
 
-        [ReadOnly] public float filterRange;
+        public CommonContext context;
 
-        [ReadOnly] public float2 hitPoint;
-
+        public BoundaryMask mask;
 
         public NativeList<Bezier4x3> filterResults;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
+            // check mask has subnet filter or not
+            var isSubnet = chunk.Has(ref thOwner);
+            var useSubNetAsBounds = (mask & BoundaryMask.SubNet) != 0;
+            if (isSubnet && !useSubNetAsBounds) return;
+
             var geos = chunk.GetNativeArray(ref thEdgeGeo);
             var startNodeGeos = chunk.GetNativeArray(ref thStartNodeGeometry);
             var endNodeGeos = chunk.GetNativeArray(ref thEndNodeGeometry);
@@ -43,8 +51,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 if (!IsBounds(luCompositionData[compositions[i].m_Edge])) continue;
                 var geo = geos[i];
                 
-                var distance = MathUtils.Distance(geo.m_Bounds.xz, hitPoint);
-                if (distance > filterRange) continue;
+                var distance = MathUtils.Distance(geo.m_Bounds.xz, context.hitPos);
+                if (distance > context.filterRange) continue;
 
                 filterResults.Add(geo.m_Start.m_Left);
                 filterResults.Add(geo.m_Start.m_Right);
@@ -103,6 +111,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             float3 float3 = nodeGeometry.m_Right.m_Left.d - nodeGeometry.m_Right.m_Left.a;
             float3 float4 = nodeGeometry.m_Right.m_Right.d - nodeGeometry.m_Right.m_Right.a;
             return math.lengthsq(@float + float2 + float3 + float4) > 1E-06f;
+        }
+
+
+        public void InitHandles(ref SystemState state)
+        {
+            thComposition.Update(ref state);
+            thEdgeGeo.Update(ref state);
+            thEndNodeGeometry.Update(ref state);
+            thEndNodeGeometry.Update(ref state);
+            luCompositionData.Update(ref state);
         }
     }
 }

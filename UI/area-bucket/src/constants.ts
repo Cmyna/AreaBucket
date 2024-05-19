@@ -13,3 +13,13 @@ export const pMouseToolTheme = "game-ui/game/components/tool-options/mouse-tool-
 export const pDescTooltip = "game-ui/common/tooltip/description-tooltip/description-tooltip.module.scss"
 
 export const pFocusKey = "game-ui/common/focus/focus-key.ts"
+
+export const boundMask = {
+    net: 1,
+    lot: 2,
+    area: 4,
+    subnet: 8
+}
+
+
+export const toolLocaleKey = "AREA_BUCKT_TOOL"

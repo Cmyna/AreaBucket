@@ -18,9 +18,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public int chopCount;
 
-        public NativeList<float2> pointsCache;
-
-        public NativeList<Line2> linesCache;
+        public CommonContext context;
 
         public void Execute()
         {
@@ -45,10 +43,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var cutted = MathUtils.Cut(curve, bounds);
                 var line = new Line2() { a = cutted.a.xz, b = cutted.d.xz };
 
-                pointsCache.Add(MathUtils.Position(curve, t).xz);
-                linesCache.Add(line);
+                context.points.Add(MathUtils.Position(curve, t).xz);
+                context.lines.Add(line);
             }
-            pointsCache.Add(curve.d.xz);
+            context.points.Add(curve.d.xz);
         }
     }
 }

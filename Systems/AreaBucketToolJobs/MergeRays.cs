@@ -18,10 +18,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     /// </summary>
     public struct MergeRays : IJob
     {
-        /// <summary>
-        /// the rays has been sorted in angle order
-        /// </summary>
-        public NativeList<Ray> rays;
+
+        public CommonContext context;
 
         /// <summary>
         /// out of conillear angle bound (in radian)
@@ -36,28 +34,28 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
-            if (rays.Length < 2) return;
+            if (context.rays.Length < 2) return;
 
             var cache = new NativeList<Ray>(Allocator.Temp);
 
             // boundary (special) case, if while loop below ends at input cursor value `rays.Length - 1`
             // may cause one ray duplicate
-            cache.Add(rays[0]); 
+            cache.Add(context.rays[0]); 
 
-            var checkVector = rays[1].vector - rays[0].vector;
+            var checkVector = context.rays[1].vector - context.rays[0].vector;
             var cursor = 1;
             while(WalkConillearRays(0, cursor, checkVector, out var nextIdx, out var nextDir))
             {
                 var addedIdx = nextIdx - 1;
-                if (addedIdx < 0) addedIdx = rays.Length - 1;
-                cache.Add(rays[addedIdx]);
+                if (addedIdx < 0) addedIdx = context.rays.Length - 1;
+                cache.Add(context.rays[addedIdx]);
                 checkVector = nextDir;
                 cursor = nextIdx;
             }
 
             // write back
-            rays.Clear();
-            for (var i = 0; i < cache.Length; i++) rays.Add(cache[i]);
+            context.rays.Clear();
+            for (var i = 0; i < cache.Length; i++) context.rays.Add(cache[i]);
 
             cache.Dispose();
         }
@@ -77,11 +75,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             int cursor = currentIdx;
             nextIdx = startIdx;
             nextDir = dir;
-            var startRay = rays[cursor];
+            var startRay = context.rays[cursor];
             while (true)
             {
                 if (cursor == startIdx) return false; // break walk through
-                var r1 = rays[cursor];
+                var r1 = context.rays[cursor];
                 cursor = NextRay(cursor, out var r2);
                 var v = r2.vector - r1.vector;
                 var angle = Angle(dir, v);
@@ -113,8 +111,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         /// <returns>next index</returns>
         private int NextRay(int cursor, out Ray nextRay)
         {
-            int nextIdx = cursor == rays.Length - 1 ? 0 : cursor + 1;
-            nextRay = rays[nextIdx];
+            int nextIdx = cursor == context.rays.Length - 1 ? 0 : cursor + 1;
+            nextRay = context.rays[nextIdx];
             return nextIdx;
         }
 

@@ -28,7 +28,7 @@ namespace AreaBucket.Systems
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            Mod.log.Info($"blocking");
+            Mod.Logger.Info($"blocking");
             return base.OnUpdate(inputDeps);
         }
         private void UpdateBeforeAreaToolSystem()
