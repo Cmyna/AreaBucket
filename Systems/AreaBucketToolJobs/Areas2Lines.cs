@@ -48,7 +48,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var line = new Line2(p1, p2);
             if (!InRange(line)) return;
             // CollectedChoppedPoints(line, 50f);
-            UnamangedUtils.CollectDivPoints(line, context.hitPos, context.filterRange, ref context.points);
+            //UnamangedUtils.CollectDivPoints(line, context.hitPos, context.filterRange, ref context.points);
             //CollectDivPoints(line, ref points);
             checklines.Add(line);
             context.lines.Add(line);

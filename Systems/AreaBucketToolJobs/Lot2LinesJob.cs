@@ -141,10 +141,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             context.lines.Add(l3);
             context.lines.Add(l4);
 
-            UnamangedUtils.CollectDivPoints(l1, hitPos, filterRange, ref context.points);
-            UnamangedUtils.CollectDivPoints(l2, hitPos, filterRange, ref context.points);
-            UnamangedUtils.CollectDivPoints(l3, hitPos, filterRange, ref context.points);
-            UnamangedUtils.CollectDivPoints(l4, hitPos, filterRange, ref context.points);
+            //UnamangedUtils.CollectDivPoints(l1, hitPos, filterRange, ref context.points);
+            //UnamangedUtils.CollectDivPoints(l2, hitPos, filterRange, ref context.points);
+            //UnamangedUtils.CollectDivPoints(l3, hitPos, filterRange, ref context.points);
+            //UnamangedUtils.CollectDivPoints(l4, hitPos, filterRange, ref context.points);
 
             /*CollectDivPoints(l1);
             CollectDivPoints(l2);

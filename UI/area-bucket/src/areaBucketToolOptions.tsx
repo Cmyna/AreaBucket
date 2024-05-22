@@ -29,6 +29,7 @@ const simple2WayBindings = {
     checkIntersection: simple2WayBinding<boolean>("CheckIntersection"),
     jobImmediate: simple2WayBinding<boolean>("JobImmediate"),
     watchJobTime: simple2WayBinding<boolean>("WatchJobTime"),
+    checkOcclusion: simple2WayBinding<boolean>("CheckOcclusion"),
 }
 
 
@@ -92,23 +93,28 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
         if (activeBindings.showDebug.value) {
             result.props.children?.push(<>
                 <Radio title="Log For Debug"
-                    src={couiStandard + "MeasureEven.svg"}
+                    src={couiStandard + "HeadCode.svg"}
                     binding={activeBindings.log4Debug}
                     {...ctx}
                 />
                 <Radio title="Check Intersection"
-                    src={couiStandard + "MeasureEven.svg"}
+                    src={couiStandard + "HeadCode.svg"}
                     binding={activeBindings.checkIntersection}
                     {...ctx}
                 />
                 <Radio title="Complete Jobs Immediate"
-                    src={couiStandard + "MeasureEven.svg"}
+                    src={couiStandard + "HeadCode.svg"}
                     binding={activeBindings.jobImmediate}
                     {...ctx}
                 />
                 <Radio title="Profile Job Time"
-                    src={couiStandard + "MeasureEven.svg"}
+                    src={couiStandard + "HeadCode.svg"}
                     binding={activeBindings.watchJobTime}
+                    {...ctx}
+                />
+                <Radio title="filter occlusion"
+                    src={couiStandard + "HeadCode.svg"}
+                    binding={activeBindings.checkOcclusion}
                     {...ctx}
                 />
             </> )
@@ -160,6 +166,13 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
                 binding={activeBindings.boundaryMask}
                 targetMask={boundMask.area}
                 tooltip={translateTool("MaskArea")}
+                {...ctx}
+            />
+            <MaskCheckBox 
+                src={couiStandard + "Network.svg"}
+                binding={activeBindings.boundaryMask}
+                targetMask={boundMask.netlane}
+                tooltip={translateTool("MaskNetLane")}
                 {...ctx}
             />
             {

@@ -21,6 +21,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public NativeList<Ray> rays;
 
+        /// <summary>
+        /// something like Z-buffer in CG, for checking lines occlusions
+        /// </summary>
+        public NativeArray<float> occlusionsBuffer;
+
         public float2 hitPos;
 
         public float filterRange;
@@ -30,6 +35,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             points = new NativeList<float2>(allocator);
             lines = new NativeList<Line2>(allocator);
             rays = new NativeList<Ray>(allocator);
+            occlusionsBuffer = new NativeArray<float>(360, allocator); // 1 degree per unit
+            for (int i = 0; i < occlusionsBuffer.Length; i++) occlusionsBuffer[i] = float.MaxValue;
+ 
             this.hitPos = hitPos;
             this.filterRange = filterRange;
         }
@@ -40,6 +48,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             points.Dispose();
             lines.Dispose();
             rays.Dispose();
+            occlusionsBuffer.Dispose();
         }
 
         

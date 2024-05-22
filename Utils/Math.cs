@@ -77,10 +77,17 @@ namespace AreaBucket.Utils
             lines[3] = new Line2() { a = corners[3], b = corners[0] };
         }
 
+        /// <summary>
+        /// compute radian from a to b
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="clampBounds"></param>
+        /// <returns></returns>
         public static float RadianInClock(float2 a, float2 b, float clampBounds = float.MinValue)
         {
             var det = a.x * b.y - a.y * b.x;
-            if (math.abs(det) < clampBounds) return 0;
+            //if (math.abs(det) < clampBounds) return 0;
             bool isCounterClock = det < 0;
             var rad = Mathf.Deg2Rad * Vector2.Angle(a, b);
             if (isCounterClock)

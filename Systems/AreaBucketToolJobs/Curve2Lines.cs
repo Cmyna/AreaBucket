@@ -43,10 +43,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var cutted = MathUtils.Cut(curve, bounds);
                 var line = new Line2() { a = cutted.a.xz, b = cutted.d.xz };
 
-                context.points.Add(MathUtils.Position(curve, t).xz);
+                //context.points.Add(MathUtils.Position(curve, t).xz);
                 context.lines.Add(line);
             }
-            context.points.Add(curve.d.xz);
+            //context.points.Add(curve.d.xz);
         }
     }
 }

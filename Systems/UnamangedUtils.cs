@@ -58,8 +58,6 @@ namespace AreaBucket.Systems
             else pointList.Add(line.b);
         }
 
-
-        
     }
 
 }

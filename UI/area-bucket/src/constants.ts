@@ -1,5 +1,6 @@
 
 export const toolId = "Area Bucket"
+export const defaultAreaTool = "Area Tool"
 
 export const cUseToolOptionVisible: [string, string] = ['game-ui/game/components/tool-options/tool-options-panel.tsx', "useToolOptionsVisible"]
 export const cMouseToolOptions: [string, string] = ["game-ui/game/components/tool-options/mouse-tool-options/mouse-tool-options.tsx", "MouseToolOptions"]
@@ -18,7 +19,8 @@ export const boundMask = {
     net: 1,
     lot: 2,
     area: 4,
-    subnet: 8
+    subnet: 8,
+    netlane: 16,
 }
 
 

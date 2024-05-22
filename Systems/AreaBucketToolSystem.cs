@@ -105,6 +105,8 @@ namespace AreaBucket.Systems
 
         private EntityQuery lotEntityQuery;
 
+        private EntityQuery netLaneQuery;
+
         private int frameCount = 0;
 
         private System.Diagnostics.Stopwatch timer;
@@ -150,6 +152,11 @@ namespace AreaBucket.Systems
             lotEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
                 .WithAll<PrefabRef>().WithAll<Game.Objects.Transform>()
                 .WithAny<Building>().WithAny<Extension>()
+                .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
+                .Build(EntityManager);
+            netLaneQuery = new EntityQueryBuilder(Allocator.Persistent)
+                .WithAll<PrefabRef>()
+                .WithAll<Curve>()
                 .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
                 .Build(EntityManager);
         }
@@ -278,6 +285,16 @@ namespace AreaBucket.Systems
             }
 
 
+            var collectNetLanesJob = default(CollectNetLaneCurves);
+            collectNetLanesJob.context = jobContext;
+            collectNetLanesJob.curveList = bezierCurvesCache;
+            collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
+            collectNetLanesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
+            collectNetLanesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
+            collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
+            collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
+
+
             var curve2LinesJob = default(Curve2Lines);
             curve2LinesJob.chopCount = 8;
             curve2LinesJob.curves = bezierCurvesCache;
@@ -296,7 +313,7 @@ namespace AreaBucket.Systems
 
 
             var filterPointsJob = default(FilterPoints);
-            filterPointsJob.overlayDist = 0.1f;
+            filterPointsJob.overlayDist = 0.5f;
             filterPointsJob.context = jobContext;
 
 
@@ -324,16 +341,21 @@ namespace AreaBucket.Systems
 
             // run
             if ((BoundaryMask & BoundaryMask.Net) != 0) jobHandle = Schedule(() => collectNetEdgesJob.Schedule(edgeGeoEntityQuery, jobHandle), "collect edges");
+            if ((BoundaryMask & BoundaryMask.NetLane) != 0) jobHandle = Schedule(() => collectNetLanesJob.Schedule(netLaneQuery, jobHandle), "collect net lanes");
             jobHandle = Schedule(() => curve2LinesJob.Schedule(jobHandle), "curves to lines");
             if ((BoundaryMask & BoundaryMask.Lot) != 0) jobHandle = Schedule(() => lot2LinesJob.Schedule(lotEntityQuery, jobHandle), "collect lots");
             if ((BoundaryMask & BoundaryMask.Area) != 0) jobHandle = Schedule(() => area2LinesJob.Schedule(areaEntityQuery, jobHandle), "area to lines");
             
+
+            //var sortLinesJob = jobContext.lines.SortJob(new CenterAroundComparer { hitPos = jobContext.hitPos });
+            //jobHandle = Schedule(() => sortLinesJob.Schedule(jobHandle), "sort lines");
             if (CheckOcclusion) // TODO: drop lines being obscured
             {
-                var sortLinesJob = jobContext.lines.SortJob(new CenterAroundComparer { hitPos = jobContext.hitPos });
-                jobHandle = Schedule(() => sortLinesJob.Schedule(jobHandle), "sort lines");
+                var filterObscuredLinesJob = new DropObscuredLines { context = jobContext };
+                jobHandle = Schedule(() => filterObscuredLinesJob.Schedule(jobHandle), "filter obscured lines");
             }
-            
+
+            jobHandle = Schedule(() => new Lines2Points { context = jobContext }.Schedule(jobHandle), "lines to points");
             // extra points is experimental for performance issue
             if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(() => genExtraPointsJob.Schedule(jobHandle), "generate extra points");
             jobHandle = Schedule(() => filterPointsJob.Schedule(jobHandle), "filter points");
@@ -351,19 +373,9 @@ namespace AreaBucket.Systems
                 Mod.Logger.Info($"hit point: {raycastPoint.m_HitPosition.x} " +
                     $"{raycastPoint.m_HitPosition.y} " +
                     $"{raycastPoint.m_HitPosition.z}");
-                /*if (filterNetsJob.filterResults.Length > 0)
-                {
-                    LogNetShape(filterNetsJob.filterResults[0]);
-                }*/
                 Mod.Logger.Info($"generated rays count: {jobContext.rays.Length}");
                 Mod.Logger.Info($"lines count {jobContext.lines.Length}");
                 Mod.Logger.Info($"area lines count {checkLinesCache.Length}");
-                // Mod.log.Info($"generated area nodes count: {rays2AreaJob.generateNodesCount}");
-                //for (var i = 0; i < raysCache.Length; i++) LogRay(raysCache[i]);
-                //for (var i = 0; i < checkLinesCache.Length; i++)
-                {
-                    // Mod.log.Info($"area line: {checkLinesCache[i].ToStringEx()}");
-                }
             }
             checkLinesCache.Dispose();
             bezierCurvesCache.Dispose();
@@ -426,7 +438,8 @@ namespace AreaBucket.Systems
         Net = 1,
         Lot = 2,
         Area = 4,
-        SubNet = 8
+        SubNet = 8,
+        NetLane = 16,
     }
 
 }
