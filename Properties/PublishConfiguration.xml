@@ -3,52 +3,62 @@
 	<DisplayName Value="AreaBucket" />
 	<ShortDescription Value="(BETA) A Cities XL like surface filling tool" />
 	<LongDescription>
-    (BETA) A mod provides tool like Cities XL decoration tool,
-    should works on any prefab that can be created by vanilla surface/area tool(District, Lots, Surfaces, MapTiles, etcs.).
-    Now the tool will try to detect nearby roads/building lots/surface as filling boundaries.
+(BETA) A mod provides tool like Cities XL decoration tool,
+should works on any prefab that can be created by vanilla surface/area tool(District, Lots, Surfaces, MapTiles, etcs.).
+    
+The tool now can detect road edges, surfaces, sub net, net lanes (like assets in EDT's UI panel) as boundaries 
+and try to filling then in one click.
 
-    Please feel free to ask any questions, 
-    bugs or suggestions can be posted here, you can also see some demostration video for this tool: 
-    https://discord.com/channels/1024242828114673724/1237985243420561479
+Please feel free to ask any questions, 
+bugs or suggestions can be posted here, you can also see some demostration video for this tool: 
+https://discord.com/channels/1024242828114673724/1237985243420561479
 
-    After installing the mod, you can see extra "Area Bucket" switch button on tool options panel when picking any surface assets,
-    press to active it and more tool's options will be shown.
+After installing the mod, you can see extra "Area Bucket" switch button on tool options panel when picking any surface assets,
+press to active it and more tool's options will be shown.
 
-    ## IMPORTANT NOTES
-    Two experimental options(sun net boudaries, check crossing boundaries) have serious performance issues.
-    They will slow down the FPS on large filling range. Be careful to use them
+## IMPORTANT NOTES
+Two experimental options(sun net boudaries, check crossing boundaries) have serious performance issues.
+They will slow down the FPS on large filling range. Be careful to use them
 
-    ### Assets that can use this tool:
-    * Surfaces, including custom surfaces assets
-    ### Assets that can not use this tool currently (plan to bring this tool for those assets in the future):
-    * Specialized Industries Lot
-    * Garbage LandFill Lot
-    * Districts
-    * MapTiles
+### Assets that can use this tool:
+* Surfaces, including custom surfaces assets
+### Assets that can not use this tool currently (plan to bring this tool for those assets in the future):
+* Specialized Industries Lot
+* Garbage LandFill Lot
+* Districts
+* MapTiles
 
-    The mod now is on beta progress, known issues below:
-    * Pool performance for some options in large filling range (sub net boundaries, detect boundaries crossing,
-    significatly slower fps when filling range is over 50m)
-    * "Invalid Shape" notification happens offen, but the filling areas can still be plopped.
-    * still generate some gaps when filling, especially on the boundaries crossing
-    (enable experimental options and active boundaries crossing in tool option can alleviate the problem)
-
+The mod now is on beta progress, known issues below:
+* Minor Performance issue for some options in large filling range (sub net boundaries, detect boundaries crossing)
+* "Invalid Shape" notification happens offen, but the filling areas can still be plopped. 
+You can active Anarchy in tool options panel to hide the warning
+* still generate some gaps when filling, especially on the boundaries crossing
+(enable experimental options and active boundaries crossing in tool option can alleviate the problem)
   </LongDescription>
 	<Thumbnail Value="Properties/Thumbnail.png" />
 	<Screenshot Value="Properties/Images/img1.jpg" />
   <Screenshot Value="Properties/Images/img2.jpg" />
   <Screenshot Value="Properties/Images/img3.jpg" />
+  <Screenshot Value="Properties/Images/img4.jpg" />
+  <Screenshot Value="Properties/Images/img5.jpg" />
+  <Screenshot Value="Properties/Images/img6.jpg" />
+  <Screenshot Value="Properties/Images/img7.jpg" />
 	<Tag Value="Code Mod" />
 	<ForumLink Value="" />
-	<ModVersion Value="0.1.0" />
+	<ModVersion Value="0.2.0" />
 	<GameVersion Value="1.*" />
 
   <Dependency Id="74417" /> <!--Dependency Unified Icon Library -->
 
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="" />
-	<!--ChangeLog>
-	</ChangeLog-->
+  <ChangeLog>
+features: 
+* new filling boundary option - net lanes. It will be usefull filling polygons drawed by net lanes 
+(like net lanes provided by EDT's panel )
+* Anarchy support - the tool option panel will show anarchy's mod options. So you can hide overlapping/invalid shape warning when using the tool
+
+Performance improvement: new optimization for filling tools. It will be much smoother than before if setting filling range over 100m with experimental options
+  </ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/Cmyna/AreaBucket" />
   <ExternalLink Type="discord" Url="https://discord.com/channels/1024242828114673724/1237985243420561479" />

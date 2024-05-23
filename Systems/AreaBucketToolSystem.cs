@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
+using Colossal.Logging;
 using Colossal.Mathematics;
 using Game.Areas;
 using Game.Audio;
@@ -27,7 +28,8 @@ namespace AreaBucket.Systems
     public partial class AreaBucketToolSystem : ToolBaseSystem
     {
 
-        public override string toolID => Mod.ToolId;
+        //public override string toolID => Mod.ToolId;
+        public override string toolID => "Area Tool"; // use id same as vanilla area tool
 
         /// <summary>
         /// this property control the tool can be shown by player or not, it is determined by the selected prefab
@@ -65,7 +67,10 @@ namespace AreaBucket.Systems
 
         public bool UseExperimentalOptions { get; set; } = false;
 
-        public bool CheckOcclusion { get; set; } = false;
+        /// <summary>
+        /// performance optimization setting
+        /// </summary>
+        public bool CheckOcclusion { get; set; } = true;
 
         public bool ExtraPoints { get; set; } = false;
 
@@ -79,6 +84,11 @@ namespace AreaBucket.Systems
         public bool JobImmediate { get; set; } = false;
 
         public bool WatchJobTime { get; set; } = false;
+
+        /// <summary>
+        /// actually drop net lane owned by road or building
+        /// </summary>
+        public bool DropOwnedLane { get; set; } = true;
 
 
         private AudioManager _audioManager;
@@ -288,11 +298,15 @@ namespace AreaBucket.Systems
             var collectNetLanesJob = default(CollectNetLaneCurves);
             collectNetLanesJob.context = jobContext;
             collectNetLanesJob.curveList = bezierCurvesCache;
+            collectNetLanesJob.DropLaneOwnedByRoad = DropOwnedLane;
+            collectNetLanesJob.DropLaneOwnedByBuilding = DropOwnedLane;
             collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
             collectNetLanesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
             collectNetLanesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
             collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
             collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
+            collectNetLanesJob.luRoad = SystemAPI.GetComponentLookup<Road>();
+            collectNetLanesJob.luBuilding = SystemAPI.GetComponentLookup<Building>();
 
 
             var curve2LinesJob = default(Curve2Lines);
@@ -429,6 +443,27 @@ namespace AreaBucket.Systems
         private void Log(string msg)
         {
             if (frameCount == 0 && Log4Debug) Mod.Logger.Info(msg);
+        }
+
+        public void LogToolState(ILog logger, string headMsg)
+        {
+            var msg = $"{headMsg}\n" +
+                $"\ttool ID: {toolID}\n" +
+                $"\ttool enabled: {ToolEnabled}\n" +
+                $"\ttool active: {Active}\n" +
+                $"\tfill range: {FillRange}\n" +
+                $"\tmax fill range: {MaxFillingRange}\n" +
+                $"\tmin edge length: {MinEdgeLength}\n" +
+                $"\tuse experimental: {UseExperimentalOptions}\n" +
+                $"\tcheck occlusions: {CheckOcclusion}\n" +
+                $"\textra points: {ExtraPoints}\n" +
+                $"\tdebug: {ShowDebugOptions}\n" +
+                $"\tlog for debug: {Log4Debug}\n" +
+                $"\tcheck intersection: {CheckIntersection}\n" +
+                $"\tjob immediate: {JobImmediate}\n" +
+                $"\tprofile job time: {WatchJobTime}\n" +
+                $"\tdrop lanes owned by road: {DropOwnedLane}\n";
+            logger.Info(msg);
         }
     }
 

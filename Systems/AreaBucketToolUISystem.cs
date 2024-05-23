@@ -55,6 +55,7 @@ namespace AreaBucket.Systems
             Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.JobImmediate));
             Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.WatchJobTime));
             Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.CheckOcclusion));
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.DropOwnedLane));
 
             // experimental options binding
             AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "UseExperimentalOptions", () => _bucketToolSystem.UseExperimentalOptions));

@@ -30,6 +30,7 @@ const simple2WayBindings = {
     jobImmediate: simple2WayBinding<boolean>("JobImmediate"),
     watchJobTime: simple2WayBinding<boolean>("WatchJobTime"),
     checkOcclusion: simple2WayBinding<boolean>("CheckOcclusion"),
+    dropOwnedLane: simple2WayBinding<boolean>("DropOwnedLane"),
 }
 
 
@@ -117,6 +118,11 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
                     binding={activeBindings.checkOcclusion}
                     {...ctx}
                 />
+                <Radio title="Drop Owned Lane"
+                    src={couiStandard + "HeadCode.svg"}
+                    binding={activeBindings.dropOwnedLane}
+                    {...ctx}
+                />
             </> )
         }
 
@@ -168,21 +174,25 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
                 tooltip={translateTool("MaskArea")}
                 {...ctx}
             />
-            <MaskCheckBox 
-                src={couiStandard + "Network.svg"}
-                binding={activeBindings.boundaryMask}
-                targetMask={boundMask.netlane}
-                tooltip={translateTool("MaskNetLane")}
-                {...ctx}
-            />
+
             {
-                useExpOptions && <MaskCheckBox
-                    src={couiStandard + "DottedLinesMarkers.svg"}
-                    binding={activeBindings.boundaryMask}
-                    targetMask={boundMask.subnet}
-                    tooltip={translateTool("MaskSubNet")}
-                    {...ctx}
-                />
+                useExpOptions && 
+                (<>
+                    <MaskCheckBox 
+                        src={couiStandard + "Network.svg"}
+                        binding={activeBindings.boundaryMask}
+                        targetMask={boundMask.netlane}
+                        tooltip={translateTool("MaskNetLane")}
+                        {...ctx}
+                    />
+                    <MaskCheckBox
+                        src={couiStandard + "DottedLinesMarkers.svg"}
+                        binding={activeBindings.boundaryMask}
+                        targetMask={boundMask.subnet}
+                        tooltip={translateTool("MaskSubNet")}
+                        {...ctx}
+                    />
+                </>)
             }
         </Section>)
 

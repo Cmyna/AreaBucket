@@ -36,7 +36,7 @@ namespace AreaBucket
                 { ToolOptionKey("MaskNet"), "Road & Net" },
                 { ToolOptionKey("MaskLot"), "Building Lot" },
                 { ToolOptionKey("MaskArea"), "Surface & Area" },
-                { ToolOptionKey("MaskNetLane"), "Lane (performance issue)" },
+                { ToolOptionKey("MaskNetLane"), "Net Lane (performance issue)" },
                 { ToolOptionKey("MaskSubNet"), "Sub Net (performance issue)" },
                 
 

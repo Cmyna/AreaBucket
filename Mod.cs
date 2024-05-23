@@ -77,6 +77,7 @@ namespace AreaBucket
             // UIManager.defaultUISystem.AddHostLocation("areabucket", AssemblyPath + "/Icons/");
 
             modSetting.Apply(); // apply once
+            areaBucketToolSystem.LogToolState(Logger, "Initial Area Bucket Tool States: ");
         }
 
         public void OnDispose()
