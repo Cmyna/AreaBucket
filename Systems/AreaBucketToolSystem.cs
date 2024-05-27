@@ -143,6 +143,8 @@ namespace AreaBucket.Systems
             _secondaryApplyAction.shouldBeEnabled = true;
 
             applyMode = ApplyMode.Clear;
+
+            RefreshDevPanel();
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
@@ -224,7 +226,6 @@ namespace AreaBucket.Systems
             // prepare jobs data
 
             var checkLinesCache = new NativeList<Line2>(Allocator.TempJob);
-            var bezierCurvesCache = new NativeList<Bezier4x3>(Allocator.TempJob);
 
             var jobContext = new CommonContext(); // Area bucket jobs common context
             jobContext.Init(raycastPoint.m_HitPosition.xz, FillRange);
@@ -247,10 +248,9 @@ namespace AreaBucket.Systems
             collectNetEdgesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
             collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
             collectNetEdgesJob.context = jobContext;
-            collectNetEdgesJob.filterResults = bezierCurvesCache;
             collectNetEdgesJob.mask = BoundaryMask;
             // subnet mask is experimental (for performance issue)
-            if (!UseExperimentalOptions && (collectNetEdgesJob.mask & BoundaryMask.SubNet) != 0)
+            if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet))
             {
                 collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
             }
@@ -258,7 +258,6 @@ namespace AreaBucket.Systems
 
             var collectNetLanesJob = default(CollectNetLaneCurves);
             collectNetLanesJob.context = jobContext;
-            collectNetLanesJob.curveList = bezierCurvesCache;
             collectNetLanesJob.DropLaneOwnedByRoad = DropOwnedLane;
             collectNetLanesJob.DropLaneOwnedByBuilding = DropOwnedLane;
             collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
@@ -273,7 +272,6 @@ namespace AreaBucket.Systems
 
             var curve2LinesJob = default(Curve2Lines);
             curve2LinesJob.chopCount = 8;
-            curve2LinesJob.curves = bezierCurvesCache;
             curve2LinesJob.context = jobContext;
 
 
@@ -316,11 +314,11 @@ namespace AreaBucket.Systems
 
 
             // run
-            if ((BoundaryMask & BoundaryMask.Net) != 0) jobHandle = Schedule(() => collectNetEdgesJob.Schedule(edgeGeoEntityQuery, jobHandle), "collect edges");
-            if ((BoundaryMask & BoundaryMask.NetLane) != 0) jobHandle = Schedule(() => collectNetLanesJob.Schedule(netLaneQuery, jobHandle), "collect net lanes");
-            jobHandle = Schedule(() => curve2LinesJob.Schedule(jobHandle), "curves to lines");
-            if ((BoundaryMask & BoundaryMask.Lot) != 0) jobHandle = Schedule(() => lot2LinesJob.Schedule(lotEntityQuery, jobHandle), "collect lots");
-            if ((BoundaryMask & BoundaryMask.Area) != 0) jobHandle = Schedule(() => area2LinesJob.Schedule(areaEntityQuery, jobHandle), "area to lines");
+            if (BoundaryMask.Match(BoundaryMask.Net)) jobHandle = Schedule(collectNetEdgesJob, edgeGeoEntityQuery, jobHandle);
+            if (BoundaryMask.Match(BoundaryMask.NetLane)) jobHandle = Schedule(collectNetLanesJob, netLaneQuery, jobHandle);
+            jobHandle = Schedule(curve2LinesJob, jobHandle);
+            if (BoundaryMask.Match(BoundaryMask.Lot)) jobHandle = Schedule(lot2LinesJob, lotEntityQuery, jobHandle);
+            if (BoundaryMask.Match(BoundaryMask.Area)) jobHandle = Schedule(area2LinesJob, areaEntityQuery, jobHandle);
             
 
             //var sortLinesJob = jobContext.lines.SortJob(new CenterAroundComparer { hitPos = jobContext.hitPos });
@@ -328,17 +326,17 @@ namespace AreaBucket.Systems
             if (CheckOcclusion) // TODO: drop lines being obscured
             {
                 var filterObscuredLinesJob = new DropObscuredLines { context = jobContext };
-                jobHandle = Schedule(() => filterObscuredLinesJob.Schedule(jobHandle), "filter obscured lines");
+                jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
             }
 
             jobHandle = Schedule(() => new Lines2Points { context = jobContext }.Schedule(jobHandle), "lines to points");
             // extra points is experimental for performance issue
-            if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(() => genExtraPointsJob.Schedule(jobHandle), "generate extra points");
-            jobHandle = Schedule(() => filterPointsJob.Schedule(jobHandle), "filter points");
-            jobHandle = Schedule(() => generateRaysJob.Schedule(jobHandle), "generate rays");
-            if (CheckIntersection) jobHandle = Schedule(() => dropRaysJob.Schedule(jobHandle), "drop rays");
-            jobHandle = Schedule(() => mergeRaysJob.Schedule(jobHandle), "merge rays");
-            jobHandle = Schedule(() => rays2AreaJob.Schedule(jobHandle), "create definitions");
+            if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(genExtraPointsJob, jobHandle);
+            jobHandle = Schedule(filterPointsJob, jobHandle);
+            jobHandle = Schedule(generateRaysJob, jobHandle);
+            if (CheckIntersection) jobHandle = Schedule(dropRaysJob, jobHandle);
+            jobHandle = Schedule(mergeRaysJob, jobHandle);
+            jobHandle = Schedule(rays2AreaJob, jobHandle);
             
             jobHandle.Complete();
 
@@ -354,7 +352,6 @@ namespace AreaBucket.Systems
                 Mod.Logger.Info($"area lines count {checkLinesCache.Length}");
             }
             checkLinesCache.Dispose();
-            bezierCurvesCache.Dispose();
             jobContext.Dispose();
 
             return jobHandle;
@@ -385,19 +382,40 @@ namespace AreaBucket.Systems
             }
         }
 
+
+        private JobHandle Schedule<T>(T job, JobHandle handle) where T : struct, IJob
+        {
+            return Schedule(() => job.Schedule(handle), job.GetType().Name);
+        }
+
+
+        private JobHandle Schedule<T>(T job, EntityQuery query, JobHandle handle) where T : struct, IJobChunk
+        {
+            return Schedule(() => job.Schedule(query, handle), job.GetType().Name);
+        }
+
         private JobHandle Schedule(Func<JobHandle> scheduleFunc, string name)
         {
+            if (!jobTimeProfile.ContainsKey(name))
+            {
+                jobTimeProfile.Add(name, 0);
+                RefreshDevPanel();
+            } else
+            {
+                jobTimeProfile[name] = 0;
+            }
+
             if (WatchJobTime)
             {
                 timer.Reset();
                 timer.Start();
             }
             var jobHandle = scheduleFunc();
-            if (JobImmediate) jobHandle.Complete();
             if (WatchJobTime)
             {
+                jobHandle.Complete();
                 timer.Stop();
-                Log($"job {name} time cost(ms): {timer.ElapsedMilliseconds}");
+                jobTimeProfile[name] = timer.ElapsedMilliseconds;
             }
             return jobHandle;
         }
@@ -427,6 +445,8 @@ namespace AreaBucket.Systems
                 $"\tdrop lanes owned by road: {DropOwnedLane}\n";
             logger.Info(msg);
         }
+
+        
     }
 
     public enum BoundaryMask
@@ -437,6 +457,14 @@ namespace AreaBucket.Systems
         Area = 4,
         SubNet = 8,
         NetLane = 16,
+    }
+
+    public static class ToolHelper
+    {
+        public static bool Match(this BoundaryMask mask, BoundaryMask targetMask)
+        {
+            return (mask & targetMask) != 0;
+        }
     }
 
 }

@@ -33,8 +33,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public BoundaryMask mask;
 
-        public NativeList<Bezier4x3> filterResults;
-
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             // check mask has subnet filter or not
@@ -54,11 +52,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var distance = MathUtils.Distance(geo.m_Bounds.xz, context.hitPos);
                 if (distance > context.filterRange) continue;
 
-                filterResults.Add(geo.m_Start.m_Left);
-                filterResults.Add(geo.m_Start.m_Right);
+                context.curves.Add(geo.m_Start.m_Left);
+                context.curves.Add(geo.m_Start.m_Right);
 
-                filterResults.Add(geo.m_End.m_Left);
-                filterResults.Add(geo.m_End.m_Right);
+                context.curves.Add(geo.m_End.m_Left);
+                context.curves.Add(geo.m_End.m_Right);
 
                 TryAddNodeGeometry(startNodeGeos[i].m_Geometry);
                 TryAddNodeGeometry(endNodeGeos[i].m_Geometry);
@@ -85,16 +83,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (isValid) 
             {
                 // add outside edges of node
-                filterResults.Add(node.m_Left.m_Left);
-                filterResults.Add(node.m_Right.m_Right);
+                context.curves.Add(node.m_Left.m_Left);
+                context.curves.Add(node.m_Right.m_Right);
             }
 
             // TODO: I am not sure this code should be used or not..
             // guess the inside edge used if the node is part of roundabout
             if (isValid && node.m_MiddleRadius > 0f)
             {
-                filterResults.Add(node.m_Left.m_Right);
-                filterResults.Add(node.m_Right.m_Left);
+                context.curves.Add(node.m_Left.m_Right);
+                context.curves.Add(node.m_Right.m_Left);
             }
         }
 

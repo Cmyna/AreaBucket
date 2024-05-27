@@ -29,37 +29,81 @@ namespace AreaBucket.Systems
 
         private EntityQuery netLaneQuery;
 
+        private EntityQueryDesc CommonDroppedEntites;
+
         private void OnInitEntityQueries()
         {
-            netEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<Curve>()
-                .WithAll<Edge>()
-                .Build(EntityManager);
-            areaEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<Area>()
-                .WithAll<Game.Areas.Node>()
-                .WithNone<Updated>()
-                .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
-                .WithNone<CreationDefinition>()
-                .WithNone<MapTile>()
-                .WithNone<District>() // exclude district polygons
-                .Build(EntityManager);
-            edgeGeoEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAny<EdgeGeometry>()
-                .WithAny<Game.Net.Node>()
-                .WithNone<Hidden>().WithNone<Deleted>()
-                .Build(EntityManager);
-            lotEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<PrefabRef>().WithAll<Game.Objects.Transform>()
-                .WithAny<Building>().WithAny<Extension>()
-                .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
-                .Build(EntityManager);
+            CommonDroppedEntites = new EntityQueryDesc 
+            {
+                None = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Deleted>(),
+                    ComponentType.ReadOnly<Temp>(),
+                    ComponentType.ReadOnly<Overridden>(),
+                    ComponentType.ReadOnly<Hidden>(),
+                }
+            };
 
-            netLaneQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<PrefabRef>()
-                .WithAll<Curve>()
-                .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
-                .Build(EntityManager);
+            netEntityQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Curve>(),
+                    ComponentType.ReadOnly<Edge>()
+                }
+            });
+
+            areaEntityQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Area>(),
+                    ComponentType.ReadOnly<Game.Areas.Node>()
+                },
+                None = CommonDroppedEntites.None.Concat(new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Updated>(),
+                    ComponentType.ReadOnly<MapTile>(),
+                    ComponentType.ReadOnly<CreationDefinition>(),
+                    ComponentType.ReadOnly<District>(),
+                }).ToArray()
+            });
+
+            edgeGeoEntityQuery = GetEntityQuery(new EntityQueryDesc 
+            {
+                Any = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Game.Net.Node>(),
+                    ComponentType.ReadOnly<EdgeGeometry>(),
+                },
+                None = CommonDroppedEntites.None
+            });
+
+            lotEntityQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new ComponentType[]
+                {
+                     ComponentType.ReadOnly<PrefabRef>(),
+                     ComponentType.ReadOnly<Game.Objects.Transform>(),
+                },
+                Any = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Building>(),
+                    ComponentType.ReadOnly<Extension>(),
+                },
+                None = CommonDroppedEntites.None
+            });
+
+            netLaneQuery = GetEntityQuery(new EntityQueryDesc 
+            {
+                All = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<PrefabRef>(),
+                    ComponentType.ReadOnly<Curve>(),
+                },
+                None = CommonDroppedEntites.None
+            });
+
         }
 
         private void OnDisposeEntityQueries()

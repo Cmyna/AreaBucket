@@ -15,8 +15,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
-        public NativeList<Bezier4x3> curveList;
-
         [ReadOnly] public bool DropLaneOwnedByRoad;
 
         [ReadOnly] public bool DropLaneOwnedByBuilding;
@@ -63,7 +61,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var curve = curves[i].m_Bezier;
                 var bounds = MathUtils.Bounds(curve).xz;
                 var distance = MathUtils.Distance(bounds, context.hitPos);
-                if (distance <= context.filterRange) curveList.Add(curve);
+                if (distance <= context.filterRange) context.curves.Add(curve);
             }
         }
 

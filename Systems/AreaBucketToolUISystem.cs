@@ -7,6 +7,10 @@ using System;
 using Unity.Mathematics;
 using UnityEngine;
 using Game.Audio;
+using Game.UI.InGame;
+using Game.Debug;
+using UnityEngine.Rendering;
+using System.Collections.Generic;
 
 namespace AreaBucket.Systems
 {
@@ -16,8 +20,6 @@ namespace AreaBucket.Systems
         private AreaBucketToolSystem _bucketToolSystem;
 
         private ToolSystem _toolSystem;
-
-        
 
         protected override void OnCreate()
         {
@@ -61,6 +63,7 @@ namespace AreaBucket.Systems
             AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "UseExperimentalOptions", () => _bucketToolSystem.UseExperimentalOptions));
             Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.ExtraPoints));
 
+            
         }
 
 

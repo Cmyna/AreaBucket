@@ -14,7 +14,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct Curve2Lines : IJob
     {
-        [ReadOnly] public NativeList<Bezier4x3> curves;
 
         [ReadOnly] public int chopCount;
 
@@ -22,9 +21,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
-            for (var i = 0; i < curves.Length; i++)
+            for (var i = 0; i < context.curves.Length; i++)
             {
-                Chop(curves[i], chopCount);
+                Chop(context.curves[i], chopCount);
             }
         }
 
