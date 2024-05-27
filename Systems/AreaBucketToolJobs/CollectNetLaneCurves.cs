@@ -3,6 +3,7 @@ using Game.Buildings;
 using Game.Common;
 using Game.Net;
 using Game.Prefabs;
+using Game.Tools;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
@@ -32,6 +33,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public ComponentLookup<Building> luBuilding;
 
+        [ReadOnly] public ComponentLookup<Game.Tools.EditorContainer> luEditorContainer;
+
         [ReadOnly] public BufferLookup<Game.Net.SubLane> luSubLane;
 
         
@@ -50,8 +53,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                 if (!luNetLaneGeoData.HasComponent(prefabEntity)) continue; // should have LaneGeometryData
                 //if (hasOwner && IsSubLane(owners[i])) continue; // drop net lane that is sub lane
-                if (hasOwner && DropLaneOwnedByRoad && OwnedByRoad(owners[i])) continue;
-                else if (hasOwner && DropLaneOwnedByBuilding && OwnedByBuilding(owners[i])) continue;
+                //if (hasOwner && DropLaneOwnedByRoad && OwnedByRoad(owners[i])) continue;
+                //else if (hasOwner && DropLaneOwnedByBuilding && OwnedByBuilding(owners[i])) continue;
+
+                // only collect net lanes created by dev tools / mods (assets from Find it/EDT etc.)
+                // the charactor is net lane entities owned by an entity with EditorContianer component
+                if (hasOwner && !OwnedByEditorContianer(owners[i])) continue;
 
                 var curve = curves[i].m_Bezier;
                 var bounds = MathUtils.Bounds(curve).xz;
@@ -69,6 +76,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private bool OwnedByBuilding(Owner owner)
         {
             return luBuilding.HasComponent(owner.m_Owner);
+        }
+
+        /// <summary>
+        /// for net lanes drawed by dev tool/ EDT tools, its owner is entity from EditorContainer
+        /// </summary>
+        /// <param name="owner"></param>
+        /// <returns></returns>
+        private bool OwnedByEditorContianer(Owner owner)
+        {
+            return luEditorContainer.HasComponent(owner.m_Owner);
         }
 
         private bool IsSubLane(Owner owner)

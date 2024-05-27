@@ -107,15 +107,7 @@ namespace AreaBucket.Systems
 
         private ProxyAction _secondaryApplyAction;
 
-        private EntityQuery netEntityQuery;
 
-        private EntityQuery areaEntityQuery;
-
-        private EntityQuery edgeGeoEntityQuery;
-
-        private EntityQuery lotEntityQuery;
-
-        private EntityQuery netLaneQuery;
 
         private int frameCount = 0;
 
@@ -130,8 +122,8 @@ namespace AreaBucket.Systems
             m_ToolSystem.tools.Remove(this); // rollback added self in base.OnCreate 
             m_ToolSystem.tools.Insert(0, this); // applied before vanilla systems
 
-            _terrianSystem = base.World.GetOrCreateSystemManaged<TerrainSystem>();
-            _toolOutputBarrier = base.World.GetOrCreateSystemManaged<ToolOutputBarrier>();
+            _terrianSystem = World.GetOrCreateSystemManaged<TerrainSystem>();
+            _toolOutputBarrier = World.GetOrCreateSystemManaged<ToolOutputBarrier>();
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
@@ -140,35 +132,7 @@ namespace AreaBucket.Systems
 
             timer = new System.Diagnostics.Stopwatch();
 
-            netEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<Curve>()
-                .WithAll<Edge>()
-                .Build(EntityManager);
-            areaEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<Area>()
-                .WithAll<Game.Areas.Node>()
-                .WithNone<Updated>()
-                .WithNone<Temp>()
-                .WithNone<CreationDefinition>()
-                .WithNone<Deleted>()
-                .WithNone<MapTile>()
-                .WithNone<District>() // exclude district polygons
-                .Build(EntityManager);
-            edgeGeoEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAny<EdgeGeometry>()
-                .WithAny<Game.Net.Node>()
-                .WithNone<Hidden>().WithNone<Deleted>()
-                .Build(EntityManager);
-            lotEntityQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<PrefabRef>().WithAll<Game.Objects.Transform>()
-                .WithAny<Building>().WithAny<Extension>()
-                .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
-                .Build(EntityManager);
-            netLaneQuery = new EntityQueryBuilder(Allocator.Persistent)
-                .WithAll<PrefabRef>()
-                .WithAll<Curve>()
-                .WithNone<Deleted>().WithNone<Temp>().WithNone<Overridden>()
-                .Build(EntityManager);
+            OnInitEntityQueries();
         }
 
         protected override void OnStartRunning()
@@ -216,10 +180,7 @@ namespace AreaBucket.Systems
         protected override void OnDestroy()
         {
             _controlPoints.Dispose();
-            netEntityQuery.Dispose();
-            areaEntityQuery.Dispose();
-            edgeGeoEntityQuery.Dispose();
-            lotEntityQuery.Dispose();
+            OnDisposeEntityQueries();
             base.OnDestroy();
         }
 
@@ -307,6 +268,7 @@ namespace AreaBucket.Systems
             collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
             collectNetLanesJob.luRoad = SystemAPI.GetComponentLookup<Road>();
             collectNetLanesJob.luBuilding = SystemAPI.GetComponentLookup<Building>();
+            collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
 
 
             var curve2LinesJob = default(Curve2Lines);
