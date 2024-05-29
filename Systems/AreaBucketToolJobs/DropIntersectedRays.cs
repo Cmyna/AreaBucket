@@ -20,6 +20,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
+        public DebugContext debugContext;
+
+        public float2 rayTollerance;
+
         public void Execute()
         {
             var raysCache = new NativeList<Ray>(Allocator.Temp);
@@ -37,8 +41,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 for (var j = 0; j < context.lines.Length; j++)
                 {
                     hasIntersction = Intersect(context.lines[j], rayline);
-                    if (!hasIntersction) continue;
-                    else break;
+                    if (hasIntersction)
+                    {
+                        debugContext.intersectedLines.Add(context.lines[j]);
+                        debugContext.intersectedRays.Add(rayline);
+                        break;
+                    }
                 }
                 if (hasIntersction) continue; // drop ray
                 raysCache.Add(ray);
@@ -77,10 +85,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var dist2 = math.length(divPoint1 - ray.b);
             // if ray intersect happens nears to ray's start, the tollerance is stricter,
             // when intersect happens at far side, tollerance is weaker
-            var rayUnderTollerance = dist1 < 0.2f || dist2 < 0.4f || t.x < 0 || t.x > 1;
+            var rayUnderTollerance = dist1 < rayTollerance.x || dist2 < rayTollerance.y || t.x <= 0 || t.x >= 1;
             if (rayUnderTollerance) return false;
 
-            return (t.y > 0 && t.y < 1);
+            return (t.y >= 0 && t.y <= 1);
         }
 
 

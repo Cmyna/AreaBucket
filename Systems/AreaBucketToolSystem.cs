@@ -1,4 +1,6 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
+using AreaBucket.Systems.DebugHelperJobs;
+using Colossal;
 using Colossal.Logging;
 using Colossal.Mathematics;
 using Game.Areas;
@@ -15,6 +17,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace AreaBucket.Systems
@@ -74,21 +77,19 @@ namespace AreaBucket.Systems
 
         public bool ExtraPoints { get; set; } = false;
 
-
-        public bool ShowDebugOptions { get; set; } = false;
-
-        public bool Log4Debug { get; set; } = false;
-
         public bool CheckIntersection { get; set; } = true;
-
-        public bool JobImmediate { get; set; } = false;
 
         public bool WatchJobTime { get; set; } = false;
 
-        /// <summary>
-        /// actually drop net lane owned by road or building
-        /// </summary>
-        public bool DropOwnedLane { get; set; } = true;
+        public bool DrawBoundaries { get; set; } = false;
+
+        public bool DrawIntersections { get; set; } = false;
+
+        public bool DrawGeneratedRays { get; set; } = false;
+
+        public bool MergeRays { get; set; } = true;
+
+        public float2 RayTollerance { get; set; } = new float2 { x = 0.2f, y = 0.4f };
 
 
         private AudioManager _audioManager;
@@ -107,6 +108,8 @@ namespace AreaBucket.Systems
 
         private ProxyAction _secondaryApplyAction;
 
+        private GizmosSystem _gizmosSystem;
+
 
 
         private int frameCount = 0;
@@ -124,6 +127,7 @@ namespace AreaBucket.Systems
 
             _terrianSystem = World.GetOrCreateSystemManaged<TerrainSystem>();
             _toolOutputBarrier = World.GetOrCreateSystemManaged<ToolOutputBarrier>();
+            _gizmosSystem = World.GetOrCreateSystemManaged<GizmosSystem>();
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
@@ -133,6 +137,7 @@ namespace AreaBucket.Systems
             timer = new System.Diagnostics.Stopwatch();
 
             OnInitEntityQueries();
+            RefreshDevPanel();
         }
 
         protected override void OnStartRunning()
@@ -143,8 +148,6 @@ namespace AreaBucket.Systems
             _secondaryApplyAction.shouldBeEnabled = true;
 
             applyMode = ApplyMode.Clear;
-
-            RefreshDevPanel();
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
@@ -223,63 +226,25 @@ namespace AreaBucket.Systems
         private JobHandle ApplyBucket(JobHandle inputDeps, ControlPoint raycastPoint)
         {
             var jobHandle = inputDeps;
-            // prepare jobs data
+            var debugDrawJobHandle = jobHandle;
 
-            var checkLinesCache = new NativeList<Line2>(Allocator.TempJob);
+            GizmoBatcher gizmosBatcher = default;
+            var terrainHeightData = _terrianSystem.GetHeightData();
+
+            var debugJobActive = DrawIntersections || DrawBoundaries || DrawGeneratedRays;
+
+            if (debugJobActive)
+            {
+                gizmosBatcher = _gizmosSystem.GetGizmosBatcher(out var gizmosSysDeps);
+                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, gizmosSysDeps);
+            }
+            // prepare jobs data
 
             var jobContext = new CommonContext(); // Area bucket jobs common context
             jobContext.Init(raycastPoint.m_HitPosition.xz, FillRange);
 
-
-            var lot2LinesJob = default(Lot2LinesJob);
-            lot2LinesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
-            lot2LinesJob.thTransform = SystemAPI.GetComponentTypeHandle<Game.Objects.Transform>();
-            lot2LinesJob.thBuilding = SystemAPI.GetComponentTypeHandle<Building>();
-            lot2LinesJob.luBuildingData = SystemAPI.GetComponentLookup<BuildingData>();
-            lot2LinesJob.luObjectGeoData = SystemAPI.GetComponentLookup<ObjectGeometryData>();
-            lot2LinesJob.context = jobContext;
-
-
-            var collectNetEdgesJob = default(CollectNetEdges);
-            collectNetEdgesJob.thEdgeGeo = SystemAPI.GetComponentTypeHandle<EdgeGeometry>();
-            collectNetEdgesJob.thStartNodeGeometry = SystemAPI.GetComponentTypeHandle<StartNodeGeometry>();
-            collectNetEdgesJob.thEndNodeGeometry = SystemAPI.GetComponentTypeHandle<EndNodeGeometry>();
-            collectNetEdgesJob.thComposition = SystemAPI.GetComponentTypeHandle<Composition>();
-            collectNetEdgesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
-            collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
-            collectNetEdgesJob.context = jobContext;
-            collectNetEdgesJob.mask = BoundaryMask;
-            // subnet mask is experimental (for performance issue)
-            if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet))
-            {
-                collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
-            }
-
-
-            var collectNetLanesJob = default(CollectNetLaneCurves);
-            collectNetLanesJob.context = jobContext;
-            collectNetLanesJob.DropLaneOwnedByRoad = DropOwnedLane;
-            collectNetLanesJob.DropLaneOwnedByBuilding = DropOwnedLane;
-            collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
-            collectNetLanesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
-            collectNetLanesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
-            collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
-            collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
-            collectNetLanesJob.luRoad = SystemAPI.GetComponentLookup<Road>();
-            collectNetLanesJob.luBuilding = SystemAPI.GetComponentLookup<Building>();
-            collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
-
-
-            var curve2LinesJob = default(Curve2Lines);
-            curve2LinesJob.chopCount = 8;
-            curve2LinesJob.context = jobContext;
-
-
-            var area2LinesJob = default(Areas2Lines);
-            area2LinesJob.bthNode = SystemAPI.GetBufferTypeHandle<Game.Areas.Node>();
-            area2LinesJob.thArea = SystemAPI.GetComponentTypeHandle<Area>();
-            area2LinesJob.checklines = checkLinesCache;
-            area2LinesJob.context = jobContext;
+            var debugContext = default(DebugContext);
+            debugContext.Init();
 
 
             var genExtraPointsJob = default(GenIntersectedPoints);
@@ -287,7 +252,7 @@ namespace AreaBucket.Systems
 
 
             var filterPointsJob = default(FilterPoints);
-            filterPointsJob.overlayDist = 0.5f;
+            filterPointsJob.overlayDist = float.MinValue;
             filterPointsJob.context = jobContext;
 
 
@@ -296,7 +261,9 @@ namespace AreaBucket.Systems
 
 
             var dropRaysJob = default(DropIntersectedRays);
+            dropRaysJob.rayTollerance = RayTollerance;
             dropRaysJob.context = jobContext;
+            dropRaysJob.debugContext = debugContext;
 
 
             var mergeRaysJob = default(MergeRays);
@@ -308,18 +275,32 @@ namespace AreaBucket.Systems
             var rays2AreaJob = default(Rays2AreaDefinition);
             rays2AreaJob.context = jobContext;
             rays2AreaJob.prefab = m_PrefabSystem.GetEntity(_selectedPrefab);
-            rays2AreaJob.terrianHeightData = _terrianSystem.GetHeightData();
+            rays2AreaJob.terrianHeightData = terrainHeightData;
             rays2AreaJob.gameRaycastPoint = raycastPoint;
             rays2AreaJob.commandBuffer = _toolOutputBarrier.CreateCommandBuffer();
 
 
             // run
-            if (BoundaryMask.Match(BoundaryMask.Net)) jobHandle = Schedule(collectNetEdgesJob, edgeGeoEntityQuery, jobHandle);
+            jobHandle = ScheduleDataCollection(jobHandle, jobContext);
+            /*if (BoundaryMask.Match(BoundaryMask.Net)) jobHandle = Schedule(collectNetEdgesJob, edgeGeoEntityQuery, jobHandle);
             if (BoundaryMask.Match(BoundaryMask.NetLane)) jobHandle = Schedule(collectNetLanesJob, netLaneQuery, jobHandle);
-            jobHandle = Schedule(curve2LinesJob, jobHandle);
             if (BoundaryMask.Match(BoundaryMask.Lot)) jobHandle = Schedule(lot2LinesJob, lotEntityQuery, jobHandle);
-            if (BoundaryMask.Match(BoundaryMask.Area)) jobHandle = Schedule(area2LinesJob, areaEntityQuery, jobHandle);
-            
+            if (BoundaryMask.Match(BoundaryMask.Area)) jobHandle = Schedule(area2LinesJob, areaEntityQuery, jobHandle);*/
+
+            var curve2LinesJob = default(Curve2Lines);
+            curve2LinesJob.chopCount = 8;
+            curve2LinesJob.context = jobContext;
+            jobHandle = Schedule(curve2LinesJob, jobHandle);
+
+            if (DrawBoundaries)
+            {
+                var drawBoundariesJob = default(DrawBoundaries);
+                drawBoundariesJob.context = jobContext;
+                drawBoundariesJob.heightData = terrainHeightData;
+                drawBoundariesJob.gizmoBatcher = gizmosBatcher;
+                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
+                debugDrawJobHandle = Schedule(drawBoundariesJob, debugDrawJobHandle);
+            }
 
             //var sortLinesJob = jobContext.lines.SortJob(new CenterAroundComparer { hitPos = jobContext.hitPos });
             //jobHandle = Schedule(() => sortLinesJob.Schedule(jobHandle), "sort lines");
@@ -334,25 +315,130 @@ namespace AreaBucket.Systems
             if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(genExtraPointsJob, jobHandle);
             jobHandle = Schedule(filterPointsJob, jobHandle);
             jobHandle = Schedule(generateRaysJob, jobHandle);
+
             if (CheckIntersection) jobHandle = Schedule(dropRaysJob, jobHandle);
-            jobHandle = Schedule(mergeRaysJob, jobHandle);
+            if (DrawIntersections)
+            {
+                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
+
+                debugDrawJobHandle = Schedule(new DrawLinesJob
+                {
+                    lines = debugContext.intersectedLines,
+                    gizmoBatcher = gizmosBatcher,
+                    heightData = terrainHeightData,
+                    color = Color.blue
+                }, debugDrawJobHandle);
+                debugDrawJobHandle = Schedule(new DrawLinesJob
+                {
+                    lines = debugContext.intersectedRays,
+                    gizmoBatcher = gizmosBatcher,
+                    heightData = terrainHeightData,
+                    color = Color.magenta
+                }, debugDrawJobHandle);
+            }
+
+            if (MergeRays) jobHandle = Schedule(mergeRaysJob, jobHandle);
+
+            if (DrawGeneratedRays)
+            {
+                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
+                var raylines = new NativeList<Line2>(Allocator.TempJob);
+                debugDrawJobHandle = Job.WithCode(() =>
+                {
+                    for (int i = 0; i < jobContext.rays.Length; i++)
+                    {
+                        var v = jobContext.rays[i].vector;
+                        var line = new Line2 { a = jobContext.hitPos, b = jobContext.hitPos + v };
+                        raylines.Add(line);
+                    }
+                }).Schedule(debugDrawJobHandle);
+                debugDrawJobHandle = Schedule(new DrawLinesJob 
+                { 
+                    lines = raylines,
+                    gizmoBatcher = gizmosBatcher,
+                    heightData = terrainHeightData,
+                    color = new Color(0.3f, 0.5f, 0.7f, 1)
+                }, debugDrawJobHandle);
+                debugDrawJobHandle.Complete();
+                raylines.Dispose();
+                //debugDrawJobHandle = Job.WithCode(() => raylines.Dispose() ).Schedule(debugDrawJobHandle);
+            }
+
+
             jobHandle = Schedule(rays2AreaJob, jobHandle);
+
+            if (debugJobActive)
+            {
+                _gizmosSystem.AddGizmosBatcherWriter(debugDrawJobHandle);
+                debugDrawJobHandle.Complete();
+                //Job.WithCode(() => debugContext.Dispose()).Schedule(debugDrawJobHandle);
+            }
+
+            jobHandle = Job.WithCode(() => { }).Schedule(jobHandle);
+
             
             jobHandle.Complete();
 
-            // dispose
-
-            if (frameCount == 0 && Log4Debug)
-            {
-                Mod.Logger.Info($"hit point: {raycastPoint.m_HitPosition.x} " +
-                    $"{raycastPoint.m_HitPosition.y} " +
-                    $"{raycastPoint.m_HitPosition.z}");
-                Mod.Logger.Info($"generated rays count: {jobContext.rays.Length}");
-                Mod.Logger.Info($"lines count {jobContext.lines.Length}");
-                Mod.Logger.Info($"area lines count {checkLinesCache.Length}");
-            }
-            checkLinesCache.Dispose();
+            // disposes
             jobContext.Dispose();
+            debugContext.Dispose();
+
+            return jobHandle;
+        }
+
+
+        private JobHandle ScheduleDataCollection(JobHandle inputDeps, CommonContext context)
+        {
+            var jobHandle = inputDeps;
+            if (BoundaryMask.Match(BoundaryMask.Net))
+            {
+                var collectNetEdgesJob = default(CollectNetEdges);
+                collectNetEdgesJob.thEdgeGeo = SystemAPI.GetComponentTypeHandle<EdgeGeometry>();
+                collectNetEdgesJob.thStartNodeGeometry = SystemAPI.GetComponentTypeHandle<StartNodeGeometry>();
+                collectNetEdgesJob.thEndNodeGeometry = SystemAPI.GetComponentTypeHandle<EndNodeGeometry>();
+                collectNetEdgesJob.thComposition = SystemAPI.GetComponentTypeHandle<Composition>();
+                collectNetEdgesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
+                collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
+                collectNetEdgesJob.context = context;
+                collectNetEdgesJob.mask = BoundaryMask;
+                // subnet mask is experimental (for performance issue)
+                if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
+                jobHandle = Schedule(collectNetEdgesJob, netEntityQuery, jobHandle);
+            }
+            if (BoundaryMask.Match(BoundaryMask.Area))
+            {
+                var collectAreaLinesJob = default(CollectAreaLines);
+                collectAreaLinesJob.bthNode = SystemAPI.GetBufferTypeHandle<Game.Areas.Node>();
+                collectAreaLinesJob.bthTriangle = SystemAPI.GetBufferTypeHandle<Triangle>();
+                collectAreaLinesJob.thArea = SystemAPI.GetComponentTypeHandle<Area>();
+                collectAreaLinesJob.context = context;
+                jobHandle = Schedule(collectAreaLinesJob, areaEntityQuery, jobHandle);
+            }
+            if (BoundaryMask.Match(BoundaryMask.Lot))
+            {
+                var collectLotLines = default(CollectLotLines);
+                collectLotLines.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
+                collectLotLines.thTransform = SystemAPI.GetComponentTypeHandle<Game.Objects.Transform>();
+                collectLotLines.thBuilding = SystemAPI.GetComponentTypeHandle<Building>();
+                collectLotLines.luBuildingData = SystemAPI.GetComponentLookup<BuildingData>();
+                collectLotLines.luObjectGeoData = SystemAPI.GetComponentLookup<ObjectGeometryData>();
+                collectLotLines.context = context;
+                jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
+            }
+            if (BoundaryMask.Match(BoundaryMask.NetLane))
+            {
+                var collectNetLanesJob = default(CollectNetLaneCurves);
+                collectNetLanesJob.context = context;
+                collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
+                collectNetLanesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
+                collectNetLanesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
+                collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
+                collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
+                collectNetLanesJob.luRoad = SystemAPI.GetComponentLookup<Road>();
+                collectNetLanesJob.luBuilding = SystemAPI.GetComponentLookup<Building>();
+                collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
+                jobHandle = Schedule(collectNetLanesJob, netLaneQuery, jobHandle);
+            }
 
             return jobHandle;
         }
@@ -419,11 +505,6 @@ namespace AreaBucket.Systems
             }
             return jobHandle;
         }
-        
-        private void Log(string msg)
-        {
-            if (frameCount == 0 && Log4Debug) Mod.Logger.Info(msg);
-        }
 
         public void LogToolState(ILog logger, string headMsg)
         {
@@ -437,12 +518,8 @@ namespace AreaBucket.Systems
                 $"\tuse experimental: {UseExperimentalOptions}\n" +
                 $"\tcheck occlusions: {CheckOcclusion}\n" +
                 $"\textra points: {ExtraPoints}\n" +
-                $"\tdebug: {ShowDebugOptions}\n" +
-                $"\tlog for debug: {Log4Debug}\n" +
                 $"\tcheck intersection: {CheckIntersection}\n" +
-                $"\tjob immediate: {JobImmediate}\n" +
-                $"\tprofile job time: {WatchJobTime}\n" +
-                $"\tdrop lanes owned by road: {DropOwnedLane}\n";
+                $"\tprofile job time: {WatchJobTime}\n";
             logger.Info(msg);
         }
 

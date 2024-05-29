@@ -50,15 +50,6 @@ namespace AreaBucket.Systems
             AddBinding(new TriggerBinding<uint>(Mod.ToolId, "Set" + nameof(AreaBucketToolSystem.BoundaryMask), (v) => _bucketToolSystem.BoundaryMask = (BoundaryMask)v));
             //Add2WayBinding<uint>(_bucketToolSystem, nameof(AreaBucketToolSystem.BoundaryMask));
 
-            // debug options bindings
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.ShowDebugOptions));
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.Log4Debug));
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.CheckIntersection));
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.JobImmediate));
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.WatchJobTime));
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.CheckOcclusion));
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.DropOwnedLane));
-
             // experimental options binding
             AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "UseExperimentalOptions", () => _bucketToolSystem.UseExperimentalOptions));
             Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.ExtraPoints));

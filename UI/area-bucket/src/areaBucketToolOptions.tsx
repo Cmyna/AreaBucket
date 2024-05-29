@@ -17,20 +17,13 @@ const useExperimentalOptions$ = bindValue<boolean>(toolId, "UseExperimentalOptio
 
 
 const simple2WayBindings = {
-    showDebug: simple2WayBinding<boolean>("ShowDebugOptions"),
-    log4Debug: simple2WayBinding<boolean>("Log4Debug"),
+    //showDebug: simple2WayBinding<boolean>("ShowDebugOptions"),
+    //log4Debug: simple2WayBinding<boolean>("Log4Debug"),
     active: simple2WayBinding<boolean>("Active"),
     fillRange: simple2WayBinding<number>("FillRange"),
     boundaryMask: simple2WayBinding<number>("BoundaryMask"),
     
     extraPoints: simple2WayBinding<boolean>("ExtraPoints"),
-
-    // debugs
-    checkIntersection: simple2WayBinding<boolean>("CheckIntersection"),
-    jobImmediate: simple2WayBinding<boolean>("JobImmediate"),
-    watchJobTime: simple2WayBinding<boolean>("WatchJobTime"),
-    checkOcclusion: simple2WayBinding<boolean>("CheckOcclusion"),
-    dropOwnedLane: simple2WayBinding<boolean>("DropOwnedLane"),
 }
 
 
@@ -91,40 +84,40 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
 
         if (!activeBindings.active.value) return result // shows tool options iff it is active
 
-        if (activeBindings.showDebug.value) {
-            result.props.children?.push(<>
-                <Radio title="Log For Debug"
-                    src={couiStandard + "HeadCode.svg"}
-                    binding={activeBindings.log4Debug}
-                    {...ctx}
-                />
-                <Radio title="Check Intersection"
-                    src={couiStandard + "HeadCode.svg"}
-                    binding={activeBindings.checkIntersection}
-                    {...ctx}
-                />
-                <Radio title="Complete Jobs Immediate"
-                    src={couiStandard + "HeadCode.svg"}
-                    binding={activeBindings.jobImmediate}
-                    {...ctx}
-                />
-                <Radio title="Profile Job Time"
-                    src={couiStandard + "HeadCode.svg"}
-                    binding={activeBindings.watchJobTime}
-                    {...ctx}
-                />
-                <Radio title="filter occlusion"
-                    src={couiStandard + "HeadCode.svg"}
-                    binding={activeBindings.checkOcclusion}
-                    {...ctx}
-                />
-                <Radio title="Drop Owned Lane"
-                    src={couiStandard + "HeadCode.svg"}
-                    binding={activeBindings.dropOwnedLane}
-                    {...ctx}
-                />
-            </> )
-        }
+        // if (activeBindings.showDebug.value) {
+        //     result.props.children?.push(<>
+        //         <Radio title="Log For Debug"
+        //             src={couiStandard + "HeadCode.svg"}
+        //             binding={activeBindings.log4Debug}
+        //             {...ctx}
+        //         />
+        //         <Radio title="Check Intersection"
+        //             src={couiStandard + "HeadCode.svg"}
+        //             binding={activeBindings.checkIntersection}
+        //             {...ctx}
+        //         />
+        //         <Radio title="Complete Jobs Immediate"
+        //             src={couiStandard + "HeadCode.svg"}
+        //             binding={activeBindings.jobImmediate}
+        //             {...ctx}
+        //         />
+        //         <Radio title="Profile Job Time"
+        //             src={couiStandard + "HeadCode.svg"}
+        //             binding={activeBindings.watchJobTime}
+        //             {...ctx}
+        //         />
+        //         <Radio title="filter occlusion"
+        //             src={couiStandard + "HeadCode.svg"}
+        //             binding={activeBindings.checkOcclusion}
+        //             {...ctx}
+        //         />
+        //         <Radio title="Drop Owned Lane"
+        //             src={couiStandard + "HeadCode.svg"}
+        //             binding={activeBindings.dropOwnedLane}
+        //             {...ctx}
+        //         />
+        //     </> )
+        // }
 
         if (useExpOptions) result.props.children?.push(
         <Radio title={translateTool("DetectCrossing")}

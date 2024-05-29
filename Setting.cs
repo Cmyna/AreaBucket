@@ -44,7 +44,6 @@ namespace AreaBucket
             base.Apply();
             _bucketToolSystem.MinEdgeLength = MinGeneratedLineLength;
             _bucketToolSystem.UseExperimentalOptions = UseExperientalOption;
-            _bucketToolSystem.ShowDebugOptions = ShowDebugOption;
             _bucketToolSystem.MaxFillingRange = MaxFillingRange;
         }
 

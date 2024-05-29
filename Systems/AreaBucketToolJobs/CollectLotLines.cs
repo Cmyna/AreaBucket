@@ -18,7 +18,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     /// <summary>
     /// convert building lots to lines
     /// </summary>
-    public struct Lot2LinesJob : IJobChunk
+    public struct CollectLotLines : IJobChunk
     {
 
         [ReadOnly] public ComponentTypeHandle<PrefabRef> thPrefabRef;
