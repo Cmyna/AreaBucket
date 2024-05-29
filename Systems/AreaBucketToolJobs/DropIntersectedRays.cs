@@ -67,6 +67,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             // check bounds first
             if (!MathUtils.Intersect(GetBounds(line1), GetBounds(ray))) return false;
 
+            // TODO: parallel iff crossing from two lines exactly zero
+            // it is too strict, while if angle between two lines extremely small, the t calcuation seems has 'visible' deivation
+            // (visible: false intersection checking failed)
             var isParallel = !MathUtils.Intersect(ray, line1, out var t);
             if (isParallel) return false;
             // should both t.x and t.y between 0-1 iff intersected: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/1201356#1201356

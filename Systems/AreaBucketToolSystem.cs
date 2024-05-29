@@ -89,7 +89,23 @@ namespace AreaBucket.Systems
 
         public bool MergeRays { get; set; } = true;
 
-        public float2 RayTollerance { get; set; } = new float2 { x = 0.2f, y = 0.4f };
+        /// <summary>
+        /// (magic number?) in practice, 0.01 (1cm) is a feasible setting
+        /// if value too slow, will keeps rays that too closed and affect merge ray calculation 
+        /// (I guess too closed rays will make some value like walking vector becomes 0, then breaks some calcs)
+        /// value too high will affect intersections checking between rays and boundary lines ()
+        /// </summary>
+        public float MergePointDist { get; set; } = 0.01f;
+
+        public float MergeRayAngleThreshold { get; set; } = 0.5f;
+
+        public float StrictBreakMergeRayAngleThreshold { get; set; } = 30f;
+
+        /// <summary>
+        /// ray intersection tollerance distance seems can be slightly higher than 0 (here choose 1cm as default)
+        /// zero will cause twicking, while higher value may cause false positive intersection pass
+        /// </summary>
+        public float2 RayTollerance { get; set; } = new float2 { x = 0.01f, y = 0.01f };
 
 
         private AudioManager _audioManager;
@@ -250,9 +266,10 @@ namespace AreaBucket.Systems
             var genExtraPointsJob = default(GenIntersectedPoints);
             genExtraPointsJob.context = jobContext;
 
-
+            // only drop points totally overlayed. higher range causes accidently intersection dropping
+            // (points are merged and moved, which cause rays generated from those points becomes intersected)
             var filterPointsJob = default(FilterPoints);
-            filterPointsJob.overlayDist = float.MinValue;
+            filterPointsJob.overlayDist = MergePointDist;
             filterPointsJob.context = jobContext;
 
 
@@ -268,7 +285,8 @@ namespace AreaBucket.Systems
 
             var mergeRaysJob = default(MergeRays);
             mergeRaysJob.context = jobContext;
-            mergeRaysJob.angleBound = 5 * Mathf.Deg2Rad;
+            mergeRaysJob.strictBreakMergeAngleThreshold = StrictBreakMergeRayAngleThreshold * Mathf.Deg2Rad;
+            mergeRaysJob.breakMergeAngleThreshold = MergeRayAngleThreshold * Mathf.Deg2Rad;
             mergeRaysJob.minEdgeLength = MinEdgeLength;
 
 

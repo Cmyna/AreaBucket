@@ -62,6 +62,31 @@ namespace AreaBucket.Systems
                     getter = () => MergeRays,
                     setter = (v) => MergeRays = v,
                 },
+                new DebugUI.BoolField
+                {
+                    displayName = "Merge Points Excatly Overlayed",
+                    getter = () => MergePointDist <= 0.01f,
+                    setter = (v) =>
+                    {
+                        if (v) MergePointDist = 0.01f;
+                        else MergePointDist = 0.5f;
+                    },
+                },
+                new DebugUI.FloatField
+                {
+                    displayName = "Merge Rays Angle Threshold",
+                    incStep = 0.5f,
+                    getter = () => MergeRayAngleThreshold,
+                    setter = (v) => MergeRayAngleThreshold = math.clamp(v, 0, 5),
+                },
+                new DebugUI.FloatField
+                {
+                    displayName = "Merge Rays Angle Threshold Strict",
+                    incStep = 5f,
+                    getter = () => StrictBreakMergeRayAngleThreshold,
+                    setter = (v) => StrictBreakMergeRayAngleThreshold = math.clamp(v, 0, 90),
+                },
+
                 new DebugUI.Container(
                     "Ray Intersection Tollerance",
                     new ObservableList<DebugUI.Widget>
@@ -69,6 +94,7 @@ namespace AreaBucket.Systems
                         new DebugUI.FloatField
                         {
                             displayName = "Start",
+                            incStep = 0.01f,
                             getter = () => RayTollerance.x,
                             setter = (v) =>
                             {
@@ -79,6 +105,7 @@ namespace AreaBucket.Systems
                         new DebugUI.FloatField
                         {
                             displayName = "End",
+                            incStep = 0.01f,
                             getter = () => RayTollerance.y,
                             setter = (v) =>
                             {
@@ -87,7 +114,7 @@ namespace AreaBucket.Systems
                             }
                         }
                     }
-                ),
+                )
                 
             };
 

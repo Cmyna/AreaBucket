@@ -22,79 +22,58 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public CommonContext context;
 
         /// <summary>
-        /// out of conillear angle bound (in radian)
-        /// </summary>
-        public float angleBound;
-
-        /// <summary>
         /// final polygon edges min length,
         /// for merge rays where their end points too close
         /// </summary>
         public float minEdgeLength;
+
+        /// <summary>
+        /// a softer threshold, only if over walking distances and over this angle threshold will break merging
+        /// </summary>
+        public float breakMergeAngleThreshold;
+
+        /// <summary>
+        /// a larger threshold, the merging should be break whatever
+        /// </summary>
+        internal float strictBreakMergeAngleThreshold;
 
         public void Execute()
         {
             if (context.rays.Length < 2) return;
 
             var cache = new NativeList<Ray>(Allocator.Temp);
+            var count = context.rays.Length;
 
             // boundary (special) case, if while loop below ends at input cursor value `rays.Length - 1`
             // may cause one ray duplicate
             cache.Add(context.rays[0]); 
 
             var checkVector = context.rays[1].vector - context.rays[0].vector;
-            var cursor = 1;
-            while(WalkConillearRays(0, cursor, checkVector, out var nextIdx, out var nextDir))
+
+            float walkThroughDist = 0;
+            for (int i = 1; i < count; i++)
             {
-                var addedIdx = nextIdx - 1;
-                if (addedIdx < 0) addedIdx = context.rays.Length - 1;
-                cache.Add(context.rays[addedIdx]);
-                checkVector = nextDir;
-                cursor = nextIdx;
+                var r1 = context.rays[i];
+                var r2 = context.rays[(i + 1) % count];
+                var v = r2.vector - r1.vector;
+                var angle = Angle(checkVector, v);
+                walkThroughDist += math.length(v);
+
+                var overWalkThroughDist = walkThroughDist >= minEdgeLength;
+                var overSoftAngleThreshold = angle > breakMergeAngleThreshold;
+                var overStrictAngleThreshold = angle > strictBreakMergeAngleThreshold;
+                var generateBreak = (overSoftAngleThreshold && overWalkThroughDist) || overStrictAngleThreshold;
+                if (!generateBreak) continue;
+                walkThroughDist = 0f;
+                checkVector = v;
+                cache.Add(r1);
             }
 
             // write back
             context.rays.Clear();
-            for (var i = 0; i < cache.Length; i++) context.rays.Add(cache[i]);
+            context.rays.AddRange(cache.AsArray());
 
             cache.Dispose();
-        }
-
-        /// <summary>
-        /// the method will stop just one index after "breakpoint"
-        /// </summary>
-        /// <param name="startIdx">also the stop index (for walking)</param>
-        /// <param name="currentIdx"></param>
-        /// <param name="dir"></param>
-        /// <param name="nextIdx">the index to next point (denoted as n1) just after the next breakpoint (denoted as n2) since the method started</param>
-        /// <param name="nextDir">vector n1n2</param>
-        /// <returns></returns>
-        public bool WalkConillearRays(int startIdx, int currentIdx, float2 dir, out int nextIdx, out float2 nextDir)
-        {
-            // assume checking starts at 0
-            int cursor = currentIdx;
-            nextIdx = startIdx;
-            nextDir = dir;
-            var startRay = context.rays[cursor];
-            while (true)
-            {
-                if (cursor == startIdx) return false; // break walk through
-                var r1 = context.rays[cursor];
-                cursor = NextRay(cursor, out var r2);
-                var v = r2.vector - r1.vector;
-                var angle = Angle(dir, v);
-
-                // if too close, continue walk
-                if (math.length(r2.vector - startRay.vector) <= minEdgeLength) continue;
-
-                // over angle turn bound or walk back
-                if (angle > angleBound || cursor == currentIdx)
-                {
-                    nextIdx = cursor;
-                    nextDir = v; // modified ref to next dir
-                    return true;
-                }
-            }
         }
 
         private float Angle(float2 a, float2 b)

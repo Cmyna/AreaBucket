@@ -36,40 +36,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             cellsMap.Dispose();
 
-            /**
-            var pointsCache = new NativeList<float2>(Allocator.Temp);
-
-            for (var i = 0; i < points.Length; i++)
-            {
-                var p1 = points[i];
-
-                // check point in range
-                if (!InRange(p1)) continue;
-
-                var hasOverlay = false;
-                for (var j = i + 1; j < points.Length; j++)
-                {
-                    var p2 = points[j];
-                    var vector = p2 - p1;
-                    var distance = math.dot(vector, vector);
-
-                    hasOverlay = distance <= overlayedDistSquare;
-                    if (hasOverlay) break;
-                }
-
-                if (hasOverlay) continue; // drop point
-                pointsCache.Add(p1);
-            }
-
-            points.Clear();
-
-            for (var i = 0; i < pointsCache.Length; i++)
-            {
-                points.Add(pointsCache[i]);
-            }
-
-            pointsCache.Dispose();*/
-
         }
 
 
