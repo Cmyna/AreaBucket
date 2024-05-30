@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,12 +39,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     b = context.hitPos + ray.vector
                 };
                 bool hasIntersction = false;
-                for (var j = 0; j < context.lines.Length; j++)
+                for (var j = 0; j < context.usedBoundaryLines.Length; j++)
                 {
-                    hasIntersction = Intersect(context.lines[j], rayline);
+                    hasIntersction = Intersect(context.usedBoundaryLines[j], rayline);
                     if (hasIntersction)
                     {
-                        debugContext.intersectedLines.Add(context.lines[j]);
+                        debugContext.intersectedLines.Add(context.usedBoundaryLines[j]);
                         debugContext.intersectedRays.Add(rayline);
                         break;
                     }
@@ -69,7 +70,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             // TODO: parallel iff crossing from two lines exactly zero
             // it is too strict, while if angle between two lines extremely small, the t calcuation seems has 'visible' deivation
-            // (visible: false intersection checking failed)
+            // (visible: false intersection detection)
             var isParallel = !MathUtils.Intersect(ray, line1, out var t);
             if (isParallel) return false;
             // should both t.x and t.y between 0-1 iff intersected: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/1201356#1201356

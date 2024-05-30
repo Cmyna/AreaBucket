@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
+using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
 using Colossal;
 using Colossal.Logging;
@@ -19,6 +20,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace AreaBucket.Systems
 {
@@ -87,7 +89,11 @@ namespace AreaBucket.Systems
 
         public bool DrawGeneratedRays { get; set; } = false;
 
+        public bool DrawFloodingCandidates { get; set; } = false;
+
         public bool MergeRays { get; set; } = true;
+
+        public bool MergePoints { get; set; } = true;
 
         /// <summary>
         /// (magic number?) in practice, 0.01 (1cm) is a feasible setting
@@ -153,7 +159,7 @@ namespace AreaBucket.Systems
             timer = new System.Diagnostics.Stopwatch();
 
             OnInitEntityQueries();
-            RefreshDevPanel();
+            CreateDebugPanel();
         }
 
         protected override void OnStartRunning()
@@ -168,6 +174,7 @@ namespace AreaBucket.Systems
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+
             frameCount++;
             if (frameCount >= 10) frameCount = 0;
             // if not active, do nothing
@@ -186,7 +193,9 @@ namespace AreaBucket.Systems
                 return inputDeps;
             }
             
-            return ApplyBucket(inputDeps, raycastPoint);
+            var newHandle = ApplyBucket(inputDeps, raycastPoint);
+
+            return newHandle;
         }
 
 
@@ -262,15 +271,18 @@ namespace AreaBucket.Systems
             var debugContext = default(DebugContext);
             debugContext.Init();
 
+            var relations = new RayHitPointsRelations().Init();
 
-            var genExtraPointsJob = default(GenIntersectedPoints);
-            genExtraPointsJob.context = jobContext;
+            var genIntersectionPointsJob = default(GenIntersectedPoints);
+            genIntersectionPointsJob.context = jobContext;
+            genIntersectionPointsJob.relations = relations;
 
             // only drop points totally overlayed. higher range causes accidently intersection dropping
             // (points are merged and moved, which cause rays generated from those points becomes intersected)
-            var filterPointsJob = default(FilterPoints);
-            filterPointsJob.overlayDist = MergePointDist;
-            filterPointsJob.context = jobContext;
+            var mergePointsJob = default(MergePoints);
+            mergePointsJob.overlayDist = MergePointDist;
+            mergePointsJob.context = jobContext;
+            mergePointsJob.relations = relations;
 
 
             var generateRaysJob = default(GenerateRays);
@@ -300,10 +312,6 @@ namespace AreaBucket.Systems
 
             // run
             jobHandle = ScheduleDataCollection(jobHandle, jobContext);
-            /*if (BoundaryMask.Match(BoundaryMask.Net)) jobHandle = Schedule(collectNetEdgesJob, edgeGeoEntityQuery, jobHandle);
-            if (BoundaryMask.Match(BoundaryMask.NetLane)) jobHandle = Schedule(collectNetLanesJob, netLaneQuery, jobHandle);
-            if (BoundaryMask.Match(BoundaryMask.Lot)) jobHandle = Schedule(lot2LinesJob, lotEntityQuery, jobHandle);
-            if (BoundaryMask.Match(BoundaryMask.Area)) jobHandle = Schedule(area2LinesJob, areaEntityQuery, jobHandle);*/
 
             var curve2LinesJob = default(Curve2Lines);
             curve2LinesJob.chopCount = 8;
@@ -322,16 +330,16 @@ namespace AreaBucket.Systems
 
             //var sortLinesJob = jobContext.lines.SortJob(new CenterAroundComparer { hitPos = jobContext.hitPos });
             //jobHandle = Schedule(() => sortLinesJob.Schedule(jobHandle), "sort lines");
-            if (CheckOcclusion) // TODO: drop lines being obscured
+            if (CheckOcclusion) 
             {
                 var filterObscuredLinesJob = new DropObscuredLines { context = jobContext };
                 jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
             }
 
-            jobHandle = Schedule(() => new Lines2Points { context = jobContext }.Schedule(jobHandle), "lines to points");
+            jobHandle = Schedule(new Lines2Points { context = jobContext, relations = relations }, jobHandle);
             // extra points is experimental for performance issue
-            if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(genExtraPointsJob, jobHandle);
-            jobHandle = Schedule(filterPointsJob, jobHandle);
+            if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(genIntersectionPointsJob, jobHandle);
+            if (MergePoints) jobHandle = Schedule(mergePointsJob, jobHandle);
             jobHandle = Schedule(generateRaysJob, jobHandle);
 
             if (CheckIntersection) jobHandle = Schedule(dropRaysJob, jobHandle);
@@ -354,6 +362,13 @@ namespace AreaBucket.Systems
                     color = Color.magenta
                 }, debugDrawJobHandle);
             }
+
+            /*var exposedLines = new NativeList<Line2>(Allocator.TempJob);
+            jobHandle = Job.WithCode(() => 
+            {
+
+            }).Schedule(jobHandle);
+            exposedLines.Dispose();*/
 
             if (MergeRays) jobHandle = Schedule(mergeRaysJob, jobHandle);
 
@@ -392,13 +407,19 @@ namespace AreaBucket.Systems
                 //Job.WithCode(() => debugContext.Dispose()).Schedule(debugDrawJobHandle);
             }
 
-            jobHandle = Job.WithCode(() => { }).Schedule(jobHandle);
-
             
             jobHandle.Complete();
 
+            UpdateOtherFieldView("Collected Line Sources Relations Count", relations.lineSourcesMap.Count());
+            UpdateOtherFieldView("Rays Count", jobContext.rays.Length);
+            UpdateOtherFieldView("Boundary Curves Count", jobContext.curves.Length);
+            UpdateOtherFieldView("Total Boundary Lines Count", jobContext.totalBoundaryLines.Length);
+            UpdateOtherFieldView("Used Boundary Lines Count", jobContext.usedBoundaryLines.Length);
+
+
             // disposes
             jobContext.Dispose();
+            relations.Dispose();
             debugContext.Dispose();
 
             return jobHandle;
@@ -500,14 +521,9 @@ namespace AreaBucket.Systems
 
         private JobHandle Schedule(Func<JobHandle> scheduleFunc, string name)
         {
-            if (!jobTimeProfile.ContainsKey(name))
-            {
-                jobTimeProfile.Add(name, 0);
-                RefreshDevPanel();
-            } else
-            {
-                jobTimeProfile[name] = 0;
-            }
+            var missingDebugField = !jobTimeProfile.ContainsKey(name);
+            jobTimeProfile[name] = 0;
+            if (missingDebugField) AppendJobTimeProfileView(name);
 
             if (WatchJobTime)
             {

@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
 
-namespace AreaBucket.Systems.AreaBucketToolJobs
+namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 {
-    public struct DebugContext: IDisposable
+    public struct DebugContext : IDisposable
     {
         public NativeList<Line2> intersectedLines;
 

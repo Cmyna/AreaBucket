@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using System;
 using System.Collections.Generic;
 using Unity.Burst;
@@ -32,7 +33,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             for (var i = 0; i < context.points.Length; i++)
             {
                 var vector = context.points[i] - context.hitPos;
-                var radian = AreaBucket.Utils.Math.RadianInClock(xzUp, vector);
+                var radian = Utils.Math.RadianInClock(xzUp, vector);
                 var ray = new Ray() { vector = vector, radian = radian };
                 raysCache.Add(ray);
             }

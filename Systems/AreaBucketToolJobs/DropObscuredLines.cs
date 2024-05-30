@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities.UniversalDelegates;
@@ -14,12 +15,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public CommonContext context;
         public void Execute()
         {
-            var linesCache = new NativeList<Line2>(Allocator.Temp);
+            //var linesCache = new NativeList<Line2>(Allocator.Temp);
             var metasCache = new NativeList<LineMeta>(Allocator.Temp);
 
-            for (int i = 0; i < context.lines.Length; i++)
+            for (int i = 0; i < context.totalBoundaryLines.Length; i++)
             {
-                var line = context.lines[i];
+                var line = context.totalBoundaryLines[i];
                 var v1 = line.a - context.hitPos;
                 var v2 = line.b - context.hitPos;
 
@@ -39,16 +40,17 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
 
             // drop obscured lines
-            for (int i = 0; i < context.lines.Length; i++)
+            for (int i = 0; i < context.totalBoundaryLines.Length; i++)
             {
                 if (IsObscured(metasCache[i])) continue;
-                linesCache.Add(context.lines[i]);
+                context.usedBoundaryLines.Add(context.totalBoundaryLines[i]);
+                //linesCache.Add(context.totalBoundaryLines[i]);
             }
 
 
-            context.lines.Clear();
-            context.lines.AddRange(linesCache.AsArray());
-            linesCache.Dispose();
+            //context.totalBoundaryLines.Clear();
+            //context.totalBoundaryLines.AddRange(linesCache.AsArray());
+            //linesCache.Dispose();
             metasCache.Dispose();
         }
 

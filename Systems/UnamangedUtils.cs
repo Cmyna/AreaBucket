@@ -27,12 +27,15 @@ namespace AreaBucket.Systems
         /// term1 = (AB * OA)^2 - AB^2*OA^2 + AB^2*r^2
         /// </summary>
         /// <param name="line"></param>
-        public static void CollectDivPoints(
+        public static bool CollectDivPoints(
             Line2 line, 
             float2 hitPos, 
             float filterRange,
-            ref NativeList<float2> pointList
+            out float2 p1, 
+            out float2 p2
         ) {
+            p1 = default; p2 = default;
+
             var ab = line.b - line.a;
             var oa = line.a - hitPos;
             var abDoa = math.dot(ab, oa);
@@ -42,7 +45,7 @@ namespace AreaBucket.Systems
 
             // term sqrt(b^2 - 4ac) / 4 in Quadratic formula
             var term1 = abDoa * abDoa - abSqr * oaSqr + abSqr * rSqr;
-            if (term1 < 0) return; // no solution(no cutting points)
+            if (term1 < 0) return false; // no solution(no cutting points)
 
             var term2 = math.sqrt(term1);
 
@@ -50,12 +53,20 @@ namespace AreaBucket.Systems
             var t1 = (-abDoa - term2) / abSqr; // point should near A
 
             // check t1, t2 on the line or not
+            if (t1 >= 0 && t1 <= 1) p1 = math.lerp(line.a, line.b, t1);
+            else p1 = line.a;
 
-            if (t1 >= 0 && t1 <= 1) pointList.Add(math.lerp(line.a, line.b, t1));
+            if (t2 >= 0 && t2 <= 1) p2 = math.lerp(line.a, line.b, t2);
+            else p2 = line.b;
+
+
+            /*if (t1 >= 0 && t1 <= 1) pointList.Add(math.lerp(line.a, line.b, t1));
             else pointList.Add(line.a);
 
             if (t2 >= 0 && t2 <= 1) pointList.Add(math.lerp(line.a, line.b, t2));
-            else pointList.Add(line.b);
+            else pointList.Add(line.b);*/
+
+            return true;
         }
 
     }

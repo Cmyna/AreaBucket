@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using Game.Common;
 using Game.Net;
 using Game.Prefabs;

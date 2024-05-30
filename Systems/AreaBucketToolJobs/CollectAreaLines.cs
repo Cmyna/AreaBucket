@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using Game.Areas;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
@@ -57,7 +58,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             // CollectedChoppedPoints(line, 50f);
             //UnamangedUtils.CollectDivPoints(line, context.hitPos, context.filterRange, ref context.points);
             //CollectDivPoints(line, ref points);
-            context.lines.Add(line);
+            context.totalBoundaryLines.Add(line);
         }
 
         private bool InRange(Line2 line)

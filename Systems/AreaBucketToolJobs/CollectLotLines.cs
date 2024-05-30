@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using Game.Buildings;
 using Game.Objects;
 using Game.Prefabs;
@@ -136,20 +137,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var l3 = new Line2(p3.xz, p4.xz);
             var l4 = new Line2(p4.xz, p1.xz);
 
-            context.lines.Add(l1);
-            context.lines.Add(l2);
-            context.lines.Add(l3);
-            context.lines.Add(l4);
-
-            //UnamangedUtils.CollectDivPoints(l1, hitPos, filterRange, ref context.points);
-            //UnamangedUtils.CollectDivPoints(l2, hitPos, filterRange, ref context.points);
-            //UnamangedUtils.CollectDivPoints(l3, hitPos, filterRange, ref context.points);
-            //UnamangedUtils.CollectDivPoints(l4, hitPos, filterRange, ref context.points);
-
-            /*CollectDivPoints(l1);
-            CollectDivPoints(l2);
-            CollectDivPoints(l3);
-            CollectDivPoints(l4);*/
+            context.totalBoundaryLines.Add(l1);
+            context.totalBoundaryLines.Add(l2);
+            context.totalBoundaryLines.Add(l3);
+            context.totalBoundaryLines.Add(l4);
         }
 
     }

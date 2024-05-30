@@ -1,4 +1,5 @@
-﻿using Game.Areas;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Game.Areas;
 using Game.Common;
 using Game.Simulation;
 using Game.Tools;
@@ -51,7 +52,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             commandBuffer.AddComponent(defEntity, default(Updated));
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="maxSectorRadian"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="buffer"></param>
         private void BuildArea(float maxSectorRadian, int startIndex, ref DynamicBuffer<Node> buffer)
         {
             var sortedRays = context.rays;

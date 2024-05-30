@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,15 +21,17 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
+        public RayHitPointsRelations relations;
+
         public void Execute()
         {
             // TODO: just use brutal intersection check now, should be optimized for performance
-            for (int i = 0; i < context.lines.Length; i++)
+            for (int i = 0; i < context.usedBoundaryLines.Length; i++)
             {
-                for (int j = i + 1; j < context.lines.Length; j++)
+                for (int j = i + 1; j < context.usedBoundaryLines.Length; j++)
                 {
-                    var line1 = context.lines[i];
-                    var line2 = context.lines[j];
+                    var line1 = context.usedBoundaryLines[i];
+                    var line2 = context.usedBoundaryLines[j];
 
                     if (!MathUtils.Intersect(GetBounds(line1), GetBounds(line2))) continue;
 
@@ -41,6 +44,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     // add one point
                     var p = math.lerp(line1.a, line1.b, t.x);
                     context.points.Add(p);
+                    // add relations
+                    var key = context.points.Length - 1;
+                    relations.lineSourcesMap.Add(key, i);
+                    relations.lineSourcesMap.Add(key, j);
                 }
             }
         }

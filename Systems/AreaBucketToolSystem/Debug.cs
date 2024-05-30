@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
+using Game.Buildings;
 using Game.Debug;
 using Game.Tools;
 using System;
@@ -15,14 +16,25 @@ namespace AreaBucket.Systems
         /// <summary>
         /// dictionary stores jobs time cost
         /// </summary>
-        private Dictionary<string, float> jobTimeProfile = new Dictionary<string, float>();
+        private readonly Dictionary<string, float> jobTimeProfile = new Dictionary<string, float>();
 
+        private readonly Dictionary<string, string> otherProfile = new Dictionary<string, string>();
+
+        private readonly DebugUI.Container jobTimeProfileContainer = new DebugUI.Container("Job Time Cost");
+
+        private readonly DebugUI.Container otherProfileContainer = new DebugUI.Container("Others");
 
         /// <summary>
         /// Here we borrow Unity's HDRP debug panel (also the CO developer panel) to shows our debug options
         /// </summary>
-        private void RefreshDevPanel()
+        private void CreateDebugPanel()
         {
+            jobTimeProfileContainer.children.Add(new DebugUI.BoolField
+            {
+                displayName = "Profile Job Time",
+                getter = () => WatchJobTime,
+                setter = (v) => WatchJobTime = v
+            });
             var panel = DebugManager.instance.GetPanel("Area Bucket Tool", createIfNull: true, groupIndex: 0, overrideIfExist: true);
             List<DebugUI.Widget> list = new List<DebugUI.Widget>
             {
@@ -38,40 +50,14 @@ namespace AreaBucket.Systems
                     getter = () => CheckOcclusion,
                     setter = (v) => CheckOcclusion = v,
                 },
-                new DebugUI.BoolField
-                {
-                    displayName = "Draw Boundaries",
-                    getter = () => DrawBoundaries,
-                    setter = (v) => DrawBoundaries = v,
-                },
-                new DebugUI.BoolField
-                {
-                    displayName = "Draw Generated Rays",
-                    getter = () => DrawGeneratedRays,
-                    setter = (v) => DrawGeneratedRays = v,
-                },
-                new DebugUI.BoolField
-                {
-                    displayName = "Draw Intersections",
-                    getter = () => DrawIntersections,
-                    setter = (v) => DrawIntersections = v,
-                },
+                
                 new DebugUI.BoolField
                 {
                     displayName = "Merge Rays",
                     getter = () => MergeRays,
                     setter = (v) => MergeRays = v,
                 },
-                new DebugUI.BoolField
-                {
-                    displayName = "Merge Points Excatly Overlayed",
-                    getter = () => MergePointDist <= 0.01f,
-                    setter = (v) =>
-                    {
-                        if (v) MergePointDist = 0.01f;
-                        else MergePointDist = 0.5f;
-                    },
-                },
+                
                 new DebugUI.FloatField
                 {
                     displayName = "Merge Rays Angle Threshold",
@@ -86,7 +72,8 @@ namespace AreaBucket.Systems
                     getter = () => StrictBreakMergeRayAngleThreshold,
                     setter = (v) => StrictBreakMergeRayAngleThreshold = math.clamp(v, 0, 90),
                 },
-
+                CreateVisualizeDebugUI(),
+                CreateMergePointsDebugUI(),
                 new DebugUI.Container(
                     "Ray Intersection Tollerance",
                     new ObservableList<DebugUI.Widget>
@@ -114,36 +101,114 @@ namespace AreaBucket.Systems
                             }
                         }
                     }
-                )
-                
-            };
+                ),
 
-            var profileListContainer = new DebugUI.Container("Job Time Cost (ms)");
-            RefreshProfiledJobTime(profileListContainer);
-            list.Add(profileListContainer);
+                jobTimeProfileContainer,
+                otherProfileContainer,
+                // OtherProfiles(),
+
+            };
             panel.children.Clear();
             panel.children.Add(list);
         }
 
-        private void RefreshProfiledJobTime(DebugUI.Container container)
+        
+
+
+        private DebugUI.Container CreateMergePointsDebugUI()
         {
-            List<DebugUI.Widget> list = new List<DebugUI.Widget>()
+            return new DebugUI.Container("Merge Points", new ObservableList<DebugUI.Widget>
             {
+                new DebugUI.BoolField { displayName = "enable", getter = () => MergePoints, setter = (v) => MergePoints = v },
                 new DebugUI.BoolField
                 {
-                    displayName = "Profile Job Time",
-                    getter = () => WatchJobTime,
-                    setter = (v) => WatchJobTime = v
+                    displayName = "Merge Points Excatly Overlayed",
+                    getter = () => MergePointDist <= 0.01f,
+                    setter = (v) =>
+                    {
+                        if (v) MergePointDist = 0.01f;
+                        else MergePointDist = 0.5f;
+                    },
                 },
-            };
-
-            foreach (var entry in jobTimeProfile)
-            {
-                var jobName = entry.Key;
-                list.Add(new DebugUI.Value { displayName = jobName, getter = () => jobTimeProfile[jobName] });
-            }
-            container.children.Add(list);
+            });
         }
 
+        private DebugUI.Container CreateVisualizeDebugUI()
+        {
+            return new DebugUI.Container(
+                "Visualize",
+                new ObservableList<DebugUI.Widget>
+                {
+                    new DebugUI.BoolField
+                    {
+                        displayName = "Draw Boundaries",
+                        getter = () => DrawBoundaries,
+                        setter = (v) => DrawBoundaries = v,
+                    },
+                    new DebugUI.BoolField
+                    {
+                        displayName = "Draw Generated Rays",
+                        getter = () => DrawGeneratedRays,
+                        setter = (v) => DrawGeneratedRays = v,
+                    },
+                    new DebugUI.BoolField
+                    {
+                        displayName = "Draw Intersections",
+                        getter = () => DrawIntersections,
+                        setter = (v) => DrawIntersections = v,
+                    },
+                    new DebugUI.BoolField
+                    {
+                        displayName = "Draw Flooding Candidate Rays",
+                        getter = () => DrawFloodingCandidates,
+                        setter = (v) => DrawFloodingCandidates = v,
+                    },
+                }
+            );
+        }
+
+
+        private void RefreshOtherProfilesDebugUI()
+        {
+            List<DebugUI.Widget> list = new List<DebugUI.Widget>();
+            foreach (var entry in otherProfile)
+            {
+                var key = entry.Key;
+                list.Add(new DebugUI.Value 
+                {
+                    displayName = entry.Key,
+                    getter = () =>
+                    {
+                        if (!otherProfile.ContainsKey(key)) return "null";
+                        else return otherProfile[key];
+                    }
+                });
+            }
+            otherProfileContainer.children.Clear();
+            otherProfileContainer.children.Add(list);
+        }
+
+
+        private void AppendJobTimeProfileView(string jobName)
+        {
+            jobTimeProfileContainer.children.Add(new DebugUI.Value
+            {
+                displayName = jobName,
+                getter = () => jobTimeProfile[jobName]
+            });
+        }
+
+        private void UpdateOtherFieldView<V>(string key, V value)
+        {
+            if (!otherProfile.ContainsKey(key))
+            {
+                otherProfileContainer.children.Add(new DebugUI.Value
+                {
+                    displayName = key,
+                    getter = () => otherProfile[key]
+                });
+            }
+            otherProfile[key] = value.ToString();
+        }
     }
 }

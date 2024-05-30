@@ -1,4 +1,5 @@
-﻿using Colossal;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal;
 using Game.Simulation;
 using System;
 using System.Collections.Generic;
@@ -28,9 +29,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             {
                 gizmoBatcher.DrawBezier(context.curves[i], color);
             }
-            for (int i = 0;i < context.lines.Length; i++)
+            for (int i = 0;i < context.totalBoundaryLines.Length; i++)
             {
-                var line = context.lines[i];
+                var line = context.totalBoundaryLines[i];
                 gizmoBatcher.DrawLine(GetWorldPos(line.a), GetWorldPos(line.b), color);
             }
         }
