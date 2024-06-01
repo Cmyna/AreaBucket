@@ -256,7 +256,7 @@ namespace AreaBucket.Systems
             GizmoBatcher gizmosBatcher = default;
             var terrainHeightData = _terrianSystem.GetHeightData();
 
-            var debugJobActive = DrawIntersections || DrawBoundaries || DrawGeneratedRays || DrawFloodingCandidates;
+            var debugJobActive = DrawIntersections || DrawBoundaries || DrawGeneratedRays;
 
             if (debugJobActive)
             {
@@ -271,8 +271,7 @@ namespace AreaBucket.Systems
             var debugContext = default(DebugContext);
             debugContext.Init();
 
-            var relations = new Relations().Init();
-            var generatedAreaData = new GeneratedArea().Init();
+            var relations = new RayHitPointsRelations().Init();
 
             var genIntersectionPointsJob = default(GenIntersectedPoints);
             genIntersectionPointsJob.context = jobContext;
@@ -288,13 +287,11 @@ namespace AreaBucket.Systems
 
             var generateRaysJob = default(GenerateRays);
             generateRaysJob.context = jobContext;
-            generateRaysJob.relations = relations;
 
 
             var dropRaysJob = default(DropIntersectedRays);
             dropRaysJob.rayTollerance = RayTollerance;
             dropRaysJob.context = jobContext;
-            dropRaysJob.relations = relations;
             dropRaysJob.debugContext = debugContext;
 
 
@@ -364,85 +361,14 @@ namespace AreaBucket.Systems
                     heightData = terrainHeightData,
                     color = Color.magenta
                 }, debugDrawJobHandle);
-                debugDrawJobHandle = Schedule(new DrawLinesJob
-                {
-                    lines = debugContext.intersectedRays,
-                    gizmoBatcher = gizmosBatcher,
-                    heightData = terrainHeightData,
-                    color = Color.magenta
-                }, debugDrawJobHandle);
             }
 
-            jobHandle = Schedule(new Rays2Polylines
+            /*var exposedLines = new NativeList<Line2>(Allocator.TempJob);
+            jobHandle = Job.WithCode(() => 
             {
-                context = jobContext,
-                generatedArea = generatedAreaData,
-                relations = relations
-            }, jobHandle);
 
-
-            var exposedLines = new NativeList<Line2>(Allocator.TempJob);
-            if (true) jobHandle = Job.WithCode(() =>
-            {
-                var lines = generatedAreaData.polyLines;
-                var r2pMap = relations.rays2pointsMap;
-                var p2lMap = relations.points2linesMap;
-                var tempSet = new NativeHashSet<int>(1000, Allocator.Temp);
-                for (int i = 0; i < lines.Length; i++)
-                {
-
-                    var line = lines[i];
-                    if (!relations.genAreaLine2raysMap.TryGetValue(i, out var rIndices))
-                    {
-                        exposedLines.Add(line);
-                        continue;
-                    }
-                    if (!r2pMap.TryGetValue(rIndices.x, out var pIndex1))
-                    {
-                        exposedLines.Add(line);
-                        continue;
-                    }
-                    if (!r2pMap.TryGetValue(rIndices.y, out var pIndex2))
-                    {
-                        exposedLines.Add(line);
-                        continue;
-                    }
-
-                    var enumerator1 = p2lMap.GetValuesForKey(pIndex1);
-                    var enumerator2 = p2lMap.GetValuesForKey(pIndex2);
-                    var hasSameLineSources = false;
-                    // check if any same value in two values enumerator
-                    tempSet.Clear();
-                    while (enumerator1.MoveNext()) tempSet.Add(enumerator1.Current);
-                    while (enumerator2.MoveNext())
-                    {
-                        if (tempSet.Contains(enumerator2.Current))
-                        {
-                            hasSameLineSources = true;
-                            break;
-                        }
-                    }
-                    if (hasSameLineSources) continue;
-                    exposedLines.Add(line);
-                }
-                tempSet.Dispose();
             }).Schedule(jobHandle);
-
-            if (DrawFloodingCandidates)
-            {
-                // jobHandle.Complete();
-                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
-                debugDrawJobHandle = Schedule(new DrawLinesJob
-                {
-                    color = Color.green,
-                    gizmoBatcher = gizmosBatcher,
-                    heightData = terrainHeightData,
-                    lines = exposedLines,
-                    offset = new float3(0, 2f, 0f)
-                }, debugDrawJobHandle);
-                debugDrawJobHandle.Complete();
-            }
-
+            exposedLines.Dispose();*/
 
             if (MergeRays) jobHandle = Schedule(mergeRaysJob, jobHandle);
 
@@ -484,21 +410,17 @@ namespace AreaBucket.Systems
             
             jobHandle.Complete();
 
-            UpdateOtherFieldView("Collected Line Sources Relations Count", relations.points2linesMap.Count());
+            UpdateOtherFieldView("Collected Line Sources Relations Count", relations.lineSourcesMap.Count());
             UpdateOtherFieldView("Rays Count", jobContext.rays.Length);
             UpdateOtherFieldView("Boundary Curves Count", jobContext.curves.Length);
             UpdateOtherFieldView("Total Boundary Lines Count", jobContext.totalBoundaryLines.Length);
             UpdateOtherFieldView("Used Boundary Lines Count", jobContext.usedBoundaryLines.Length);
-            UpdateOtherFieldView("Generated Polylines", generatedAreaData.polyLines.Length);
 
-            UpdateOtherFieldView("Flooding Candidates Count", exposedLines.Length);
-            exposedLines.Dispose();
 
             // disposes
             jobContext.Dispose();
             relations.Dispose();
             debugContext.Dispose();
-            generatedAreaData.Dispose();
 
             return jobHandle;
         }

@@ -14,7 +14,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
-        public Relations relations;
+        public RayHitPointsRelations relations;
 
         [ReadOnly] public float overlayDist;
         public void Execute()
@@ -24,8 +24,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             // a mapping from new merged points list index to old points list indices
             var p2pIndexMap = new NativeParallelMultiHashMap<int, int>(context.points.Capacity, Allocator.Temp);
 
-            // new point index to boundary lines indices map
-            var p2lIndexMapNew = new NativeParallelMultiHashMap<int, int>(relations.points2linesMap.Capacity, Allocator.Temp);
+            var p2lIndexMapNew = new NativeParallelMultiHashMap<int, int>(relations.lineSourcesMap.Capacity, Allocator.Temp);
 
             var mergedPoints = new NativeList<float2>(Allocator.Temp);
             for (int i = 0; i < context.points.Length; i++)
@@ -49,15 +48,15 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
 
             // remap points index to lines index
-            RemapLineSources(p2pIndexMap, relations.points2linesMap, p2lIndexMapNew);
+            RemapLineSources(p2pIndexMap, relations.lineSourcesMap, p2lIndexMapNew);
 
             // clear and write back
-            relations.points2linesMap.Clear();
+            relations.lineSourcesMap.Clear();
             var p2lEnumeratorNew = p2lIndexMapNew.GetEnumerator();
             while(p2lEnumeratorNew.MoveNext())
             {
                 p2lEnumeratorNew.Current.GetKeyValue(out var key, out var value);
-                relations.points2linesMap.Add(key, value);
+                relations.lineSourcesMap.Add(key, value);
             }
             context.points.Clear();
             context.points.AddRange(mergedPoints.AsArray());

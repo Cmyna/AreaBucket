@@ -25,13 +25,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public float2 rayTollerance;
 
-        public Relations relations;
-
         public void Execute()
         {
             var raysCache = new NativeList<Ray>(Allocator.Temp);
-
-            var r2pRelationsCache = new NativeParallelHashMap<int, int>(relations.rays2pointsMap.Capacity, Allocator.Temp);
 
             // drop rays has intersection with any check lines
             for (var i = 0; i < context.rays.Length; i++)
@@ -55,28 +51,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 }
                 if (hasIntersction) continue; // drop ray
                 raysCache.Add(ray);
-                // collect relations
-                if (relations.rays2pointsMap.TryGetValue(i, out var pIndex))
-                {
-                    r2pRelationsCache.Add(raysCache.Length - 1, pIndex);
-                }
-                
             }
 
             context.rays.Clear();
-            context.rays.AddRange(raysCache.AsArray());
 
-            // update relations
-            relations.rays2pointsMap.Clear();
-            var enumerator = r2pRelationsCache.GetEnumerator();
-            while(enumerator.MoveNext())
+            for (var i = 0; i < raysCache.Length; i++)
             {
-                var entry = enumerator.Current;
-                relations.rays2pointsMap.Add(entry.Key, entry.Value);
+                context.rays.Add(raysCache[i]);
             }
 
             raysCache.Dispose();
-            r2pRelationsCache.Dispose();
         }
 
         private bool Intersect(Line2 line1, Line2 ray)

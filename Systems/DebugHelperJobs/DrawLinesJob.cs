@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace AreaBucket.Systems.DebugHelperJobs
 {
-
+    [BurstCompile]
     public struct DrawLinesJob : IJob
     {
         public NativeList<Line2> lines;
@@ -24,8 +24,6 @@ namespace AreaBucket.Systems.DebugHelperJobs
         public TerrainHeightData heightData;
 
         public Color color;
-
-        public float3 offset;
 
         public void Execute()
         {
@@ -41,7 +39,6 @@ namespace AreaBucket.Systems.DebugHelperJobs
             var worldPos = new float3 { x = pos.x, y = 0, z = pos.y };
             var height = TerrainUtils.SampleHeight(ref heightData, worldPos);
             worldPos.y = height;
-            worldPos += offset;
             return worldPos;
         }
 

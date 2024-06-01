@@ -159,7 +159,7 @@ namespace AreaBucket.Systems
                     },
                     new DebugUI.BoolField
                     {
-                        displayName = "Draw Flooding Candidate Lines",
+                        displayName = "Draw Flooding Candidate Rays",
                         getter = () => DrawFloodingCandidates,
                         setter = (v) => DrawFloodingCandidates = v,
                     },
