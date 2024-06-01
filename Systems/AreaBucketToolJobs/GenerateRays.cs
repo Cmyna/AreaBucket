@@ -14,6 +14,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
+        public Relations relations;
+
         public static readonly float2 xzUp = new float2(0, 1);
 
         public void Execute()
@@ -23,10 +25,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             context.rays.Sort(new RayComparer());
 
-            // TODO check intersections
-
-            //raysCache1.Dispose();
+            // update relations (sorting cause relation broken, hense build relations after sorting)
+            for (int i = 0; i < context.rays.Length; i++)
+            {
+                relations.rays2pointsMap.Add(i, context.rays[i].pointSourceIndex);
+            }
         }
+
 
         private void GenerateData(ref NativeList<Ray> raysCache)
         {
@@ -34,8 +39,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             {
                 var vector = context.points[i] - context.hitPos;
                 var radian = Utils.Math.RadianInClock(xzUp, vector);
-                var ray = new Ray() { vector = vector, radian = radian };
+                var ray = new Ray
+                {
+                    vector = vector,
+                    radian = radian,
+                    pointSourceIndex = i
+                };
                 raysCache.Add(ray);
+               
             }
         }
     }
@@ -47,6 +58,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         /// the rays signed radian angle (swept clockwise from vector xz(0, 1), 0-2PI)
         /// </summary>
         public float radian;
+        /// <summary>
+        /// index of which point generate this ray
+        /// </summary>
+        public int pointSourceIndex;
     }
 
     public struct RayComparer : IComparer<Ray>

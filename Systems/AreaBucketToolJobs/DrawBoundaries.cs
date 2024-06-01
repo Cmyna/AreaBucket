@@ -13,7 +13,6 @@ using UnityEngine;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
-    [BurstCompile]
     public struct DrawBoundaries : IJob
     {
         public CommonContext context;

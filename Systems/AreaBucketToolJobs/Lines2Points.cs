@@ -9,12 +9,15 @@ using Unity.Jobs;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
+    /// <summary>
+    /// Convert boundary lines to points
+    /// </summary>
     [BurstCompile]
     public struct Lines2Points : IJob
     {
         public CommonContext context;
 
-        public RayHitPointsRelations relations;
+        public Relations relations;
         public void Execute()
         {
             context.points.Clear();
@@ -25,11 +28,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 if (UnamangedUtils.CollectDivPoints(line, context.hitPos, context.filterRange, out var p1, out var p2))
                 {
                     context.points.Add(p1);
-                    relations.lineSourcesMap.Add(cursor, i);
+                    relations.points2linesMap.Add(cursor, i);
                     cursor++;
 
                     context.points.Add(p2);
-                    relations.lineSourcesMap.Add(cursor, i);
+                    relations.points2linesMap.Add(cursor, i);
                     cursor++;
                 }
             }

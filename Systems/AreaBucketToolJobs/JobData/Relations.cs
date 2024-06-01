@@ -11,7 +11,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
     /// <summary>
     /// struct storing candidate points for new area polygons (or its predecessor, the generated rays)
     /// </summary>
-    public struct RayHitPointsRelations : IDisposable
+    public struct Relations : IDisposable
     {
 
         /// <summary>
@@ -20,17 +20,25 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         /// the value is the index of a NativeList<Line2> lines (now fields of CommonContext?).
         /// one point may have multiple line sources (because the point may from touching point of two/three/more lines, or intersection point from two lines)
         /// </summary>
-        public NativeParallelMultiHashMap<int, int> lineSourcesMap;
+        public NativeParallelMultiHashMap<int, int> points2linesMap;
 
-        public RayHitPointsRelations Init(Allocator allocator = Allocator.TempJob)
+        public NativeParallelHashMap<int, int> rays2pointsMap;
+
+        public NativeParallelHashMap<int, int2> genAreaLine2raysMap;
+
+        public Relations Init(Allocator allocator = Allocator.TempJob)
         {
-            lineSourcesMap = new NativeParallelMultiHashMap<int, int>(10000, allocator);
+            points2linesMap = new NativeParallelMultiHashMap<int, int>(10000, allocator);
+            rays2pointsMap = new NativeParallelHashMap<int, int>(10000, allocator);
+            genAreaLine2raysMap = new NativeParallelHashMap<int, int2>(10000, allocator);
             return this;
         }
 
         public void Dispose()
         {
-            lineSourcesMap.Dispose();
+            points2linesMap.Dispose();
+            rays2pointsMap.Dispose();
+            genAreaLine2raysMap.Dispose();
         }
     }
 }

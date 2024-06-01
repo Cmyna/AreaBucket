@@ -21,7 +21,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
-        public RayHitPointsRelations relations;
+        public Relations relations;
 
         public void Execute()
         {
@@ -46,8 +46,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     context.points.Add(p);
                     // add relations
                     var key = context.points.Length - 1;
-                    relations.lineSourcesMap.Add(key, i);
-                    relations.lineSourcesMap.Add(key, j);
+                    relations.points2linesMap.Add(key, i);
+                    relations.points2linesMap.Add(key, j);
                 }
             }
         }
