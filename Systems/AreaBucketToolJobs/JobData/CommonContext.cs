@@ -34,7 +34,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public float filterRange;
 
-        public void Init(float2 hitPos, float filterRange, Allocator allocator = Allocator.TempJob)
+        public CommonContext Init(float2 hitPos, float filterRange, Allocator allocator = Allocator.TempJob)
         {
             points = new NativeList<float2>(allocator);
             totalBoundaryLines = new NativeList<Line2>(allocator);
@@ -46,6 +46,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
             this.hitPos = hitPos;
             this.filterRange = filterRange;
+            return this;
         }
 
 

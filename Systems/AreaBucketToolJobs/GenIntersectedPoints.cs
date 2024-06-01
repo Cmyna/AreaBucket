@@ -21,8 +21,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
-        public RayHitPointsRelations relations;
-
         public void Execute()
         {
             // TODO: just use brutal intersection check now, should be optimized for performance
@@ -44,10 +42,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     // add one point
                     var p = math.lerp(line1.a, line1.b, t.x);
                     context.points.Add(p);
-                    // add relations
-                    var key = context.points.Length - 1;
-                    relations.lineSourcesMap.Add(key, i);
-                    relations.lineSourcesMap.Add(key, j);
                 }
             }
         }

@@ -265,24 +265,20 @@ namespace AreaBucket.Systems
             }
             // prepare jobs data
 
-            var jobContext = new CommonContext(); // Area bucket jobs common context
-            jobContext.Init(raycastPoint.m_HitPosition.xz, FillRange);
+            var jobContext = new CommonContext().Init(raycastPoint.m_HitPosition.xz, FillRange); // Area bucket jobs common context
 
-            var debugContext = default(DebugContext);
-            debugContext.Init();
+            var debugContext = default(DebugContext).Init();
 
-            var relations = new RayHitPointsRelations().Init();
+            var generatedAreaData = new GeneratedArea().Init();
 
             var genIntersectionPointsJob = default(GenIntersectedPoints);
             genIntersectionPointsJob.context = jobContext;
-            genIntersectionPointsJob.relations = relations;
 
             // only drop points totally overlayed. higher range causes accidently intersection dropping
             // (points are merged and moved, which cause rays generated from those points becomes intersected)
             var mergePointsJob = default(MergePoints);
             mergePointsJob.overlayDist = MergePointDist;
             mergePointsJob.context = jobContext;
-            mergePointsJob.relations = relations;
 
 
             var generateRaysJob = default(GenerateRays);
@@ -336,7 +332,7 @@ namespace AreaBucket.Systems
                 jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
             }
 
-            jobHandle = Schedule(new Lines2Points { context = jobContext, relations = relations }, jobHandle);
+            jobHandle = Schedule(new Lines2Points { context = jobContext }, jobHandle);
             // extra points is experimental for performance issue
             if (UseExperimentalOptions && ExtraPoints) jobHandle = Schedule(genIntersectionPointsJob, jobHandle);
             if (MergePoints) jobHandle = Schedule(mergePointsJob, jobHandle);
@@ -363,12 +359,12 @@ namespace AreaBucket.Systems
                 }, debugDrawJobHandle);
             }
 
-            /*var exposedLines = new NativeList<Line2>(Allocator.TempJob);
-            jobHandle = Job.WithCode(() => 
+            jobHandle = Schedule(new Rays2Polylines
             {
+                context = jobContext,
+                generatedArea = generatedAreaData
+            }, jobHandle);
 
-            }).Schedule(jobHandle);
-            exposedLines.Dispose();*/
 
             if (MergeRays) jobHandle = Schedule(mergeRaysJob, jobHandle);
 
@@ -398,6 +394,8 @@ namespace AreaBucket.Systems
             }
 
 
+
+
             jobHandle = Schedule(rays2AreaJob, jobHandle);
 
             if (debugJobActive)
@@ -410,7 +408,6 @@ namespace AreaBucket.Systems
             
             jobHandle.Complete();
 
-            UpdateOtherFieldView("Collected Line Sources Relations Count", relations.lineSourcesMap.Count());
             UpdateOtherFieldView("Rays Count", jobContext.rays.Length);
             UpdateOtherFieldView("Boundary Curves Count", jobContext.curves.Length);
             UpdateOtherFieldView("Total Boundary Lines Count", jobContext.totalBoundaryLines.Length);
@@ -419,7 +416,6 @@ namespace AreaBucket.Systems
 
             // disposes
             jobContext.Dispose();
-            relations.Dispose();
             debugContext.Dispose();
 
             return jobHandle;

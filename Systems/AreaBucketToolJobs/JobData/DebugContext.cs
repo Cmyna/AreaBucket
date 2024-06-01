@@ -14,10 +14,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public NativeList<Line2> intersectedRays;
 
-        public void Init(Allocator allocator = Allocator.TempJob)
+        public DebugContext Init(Allocator allocator = Allocator.TempJob)
         {
             intersectedLines = new NativeList<Line2>(allocator);
             intersectedRays = new NativeList<Line2>(allocator);
+            return this;
         }
 
         public void Dispose()
