@@ -16,9 +16,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
-        [ReadOnly] public bool DropLaneOwnedByRoad;
+        //[ReadOnly] public bool DropLaneOwnedByRoad;
 
-        [ReadOnly] public bool DropLaneOwnedByBuilding;
+        //[ReadOnly] public bool DropLaneOwnedByBuilding;
 
         [ReadOnly] public ComponentTypeHandle<Curve> thCurve;
 
@@ -36,7 +36,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public BufferLookup<Game.Net.SubLane> luSubLane;
 
-        
+        public SingletonData signletonData;
+        public CollectNetLaneCurves InitContext(
+            CommonContext context, SingletonData signletonData
+        ) {
+            this.context = context;
+            this.signletonData = signletonData;
+            return this;
+        }
 
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -62,19 +69,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var curve = curves[i].m_Bezier;
                 var bounds = MathUtils.Bounds(curve).xz;
                 var distance = MathUtils.Distance(bounds, context.hitPos);
-                if (distance <= context.filterRange) context.curves.Add(curve);
+                if (distance <= context.filterRange)
+                {
+                    signletonData.curves.Add(curve); //context.curves.Add(curve); 
+                }
             }
-        }
-
-        private bool OwnedByRoad(Owner owner)
-        {
-            var ownerEntity = owner.m_Owner;
-            return luRoad.HasComponent(ownerEntity);
-        }
-
-        private bool OwnedByBuilding(Owner owner)
-        {
-            return luBuilding.HasComponent(owner.m_Owner);
         }
 
         /// <summary>
@@ -87,11 +86,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             return luEditorContainer.HasComponent(owner.m_Owner);
         }
 
-        private bool IsSubLane(Owner owner)
-        {
-            var ownerEntity = owner.m_Owner;
-            return luSubLane.HasBuffer(ownerEntity);
-        }
 
     }
 }

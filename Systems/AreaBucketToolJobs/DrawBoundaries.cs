@@ -21,17 +21,32 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public GizmoBatcher gizmoBatcher;
 
         public TerrainHeightData heightData;
+
+        public SingletonData signletonData;
+
+        public DrawBoundaries Init(
+            CommonContext context, 
+            GizmoBatcher batcher, 
+            TerrainHeightData heightData, 
+            SingletonData signletonData
+        ) {
+            this.context = context;
+            this.gizmoBatcher = batcher;
+            this.heightData = heightData;
+            this.signletonData = signletonData;
+            return this;
+        }
         public void Execute()
         {
             var color = Color.red;
             // draw lines collected by areas and curves collect from net lanes/road edges
-            for (int i = 0; i < context.curves.Length; i++)
+            for (int i = 0; i < signletonData.curves.Length; i++)
             {
-                gizmoBatcher.DrawBezier(context.curves[i], color);
+                gizmoBatcher.DrawBezier(signletonData.curves[i], color);
             }
-            for (int i = 0;i < context.totalBoundaryLines.Length; i++)
+            for (int i = 0;i < signletonData.totalBoundaryLines.Length; i++)
             {
-                var line = context.totalBoundaryLines[i];
+                var line = signletonData.totalBoundaryLines[i];
                 gizmoBatcher.DrawLine(GetWorldPos(line.a), GetWorldPos(line.b), color);
             }
         }

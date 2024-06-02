@@ -15,6 +15,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public CommonContext context;
 
         [ReadOnly] public float overlayDist;
+
+        public MergePoints Init(CommonContext contextIn, float overlayDistIn)
+        {
+            context = contextIn;
+            overlayDist = overlayDistIn;
+            return this;
+        }
+
         public void Execute()
         {
             var cellsMap = new NativeParallelMultiHashMap<int2, TracedPoint>(context.points.Capacity, Allocator.Temp);

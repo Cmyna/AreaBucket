@@ -38,6 +38,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public CommonContext context;
 
+        public SingletonData signletonData;
+
+        public CollectLotLines InitContext(CommonContext context, SingletonData signletonData)
+        {
+            this.context = context;
+            this.signletonData = signletonData;
+            return this;
+        }
 
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -137,10 +145,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var l3 = new Line2(p3.xz, p4.xz);
             var l4 = new Line2(p4.xz, p1.xz);
 
-            context.totalBoundaryLines.Add(l1);
-            context.totalBoundaryLines.Add(l2);
-            context.totalBoundaryLines.Add(l3);
-            context.totalBoundaryLines.Add(l4);
+            signletonData.totalBoundaryLines.Add(l1); //context.totalBoundaryLines.Add(l1); 
+            signletonData.totalBoundaryLines.Add(l2); //context.totalBoundaryLines.Add(l2); 
+            signletonData.totalBoundaryLines.Add(l3); //context.totalBoundaryLines.Add(l3); 
+            signletonData.totalBoundaryLines.Add(l4); //context.totalBoundaryLines.Add(l4); 
+
         }
 
     }

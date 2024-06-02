@@ -34,6 +34,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public BoundaryMask mask;
 
+        public SingletonData signletonData;
+
+        public CollectNetEdges InitContext(CommonContext context, SingletonData signletonData, BoundaryMask mask)
+        {
+            this.context = context;
+            this.mask = mask;
+            this.signletonData = signletonData;
+            return this;
+        }
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             // check mask has subnet filter or not
@@ -53,11 +63,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var distance = MathUtils.Distance(geo.m_Bounds.xz, context.hitPos);
                 if (distance > context.filterRange) continue;
 
-                context.curves.Add(geo.m_Start.m_Left);
-                context.curves.Add(geo.m_Start.m_Right);
+                signletonData.curves.Add(geo.m_Start.m_Left); //context.curves.Add(geo.m_Start.m_Left);
+                signletonData.curves.Add(geo.m_Start.m_Right); //context.curves.Add(geo.m_Start.m_Right); 
 
-                context.curves.Add(geo.m_End.m_Left);
-                context.curves.Add(geo.m_End.m_Right);
+                signletonData.curves.Add(geo.m_End.m_Left); //context.curves.Add(geo.m_End.m_Left);
+                signletonData.curves.Add(geo.m_End.m_Right); //context.curves.Add(geo.m_End.m_Right);
 
                 TryAddNodeGeometry(startNodeGeos[i].m_Geometry);
                 TryAddNodeGeometry(endNodeGeos[i].m_Geometry);
@@ -84,16 +94,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (isValid) 
             {
                 // add outside edges of node
-                context.curves.Add(node.m_Left.m_Left);
-                context.curves.Add(node.m_Right.m_Right);
+                signletonData.curves.Add(node.m_Left.m_Left); signletonData.curves.Add(node.m_Left.m_Left);
+                signletonData.curves.Add(node.m_Right.m_Right); signletonData.curves.Add(node.m_Right.m_Right);
             }
 
             // TODO: I am not sure this code should be used or not..
             // guess the inside edge used if the node is part of roundabout
             if (isValid && node.m_MiddleRadius > 0f)
             {
-                context.curves.Add(node.m_Left.m_Right);
-                context.curves.Add(node.m_Right.m_Left);
+                signletonData.curves.Add(node.m_Left.m_Right); signletonData.curves.Add(node.m_Left.m_Right);
+                signletonData.curves.Add(node.m_Right.m_Left); signletonData.curves.Add(node.m_Right.m_Left);
             }
         }
 

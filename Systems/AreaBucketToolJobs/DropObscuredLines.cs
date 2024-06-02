@@ -13,14 +13,23 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     public struct DropObscuredLines : IJob
     {
         public CommonContext context;
+
+        public SingletonData signletonData;
+
+        public DropObscuredLines Init(CommonContext context, SingletonData signletonData)
+        {
+            this.context = context;
+            this.signletonData = signletonData;
+            return this;
+        }
+
         public void Execute()
         {
-            //var linesCache = new NativeList<Line2>(Allocator.Temp);
             var metasCache = new NativeList<LineMeta>(Allocator.Temp);
 
-            for (int i = 0; i < context.totalBoundaryLines.Length; i++)
+            for (int i = 0; i < signletonData.totalBoundaryLines.Length; i++)
             {
-                var line = context.totalBoundaryLines[i];
+                var line = signletonData.totalBoundaryLines[i];
                 var v1 = line.a - context.hitPos;
                 var v2 = line.b - context.hitPos;
 
@@ -40,17 +49,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
 
             // drop obscured lines
-            for (int i = 0; i < context.totalBoundaryLines.Length; i++)
+            for (int i = 0; i < signletonData.totalBoundaryLines.Length; i++)
             {
                 if (IsObscured(metasCache[i])) continue;
-                context.usedBoundaryLines.Add(context.totalBoundaryLines[i]);
-                //linesCache.Add(context.totalBoundaryLines[i]);
+                context.usedBoundaryLines.Add(signletonData.totalBoundaryLines[i]);
             }
 
 
-            //context.totalBoundaryLines.Clear();
-            //context.totalBoundaryLines.AddRange(linesCache.AsArray());
-            //linesCache.Dispose();
             metasCache.Dispose();
         }
 

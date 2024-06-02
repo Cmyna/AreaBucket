@@ -18,14 +18,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
-            //NativeList<Ray> raysCache1 = new NativeList<Ray>(points.Length, Allocator.Temp);
             GenerateData(ref context.rays);
 
             context.rays.Sort(new RayComparer());
-
-            // TODO check intersections
-
-            //raysCache1.Dispose();
         }
 
         private void GenerateData(ref NativeList<Ray> raysCache)

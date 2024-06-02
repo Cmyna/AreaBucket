@@ -20,11 +20,21 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public CommonContext context;
 
+        public SingletonData staticData;
+
+        public Curve2Lines Init(CommonContext context, SingletonData signletonData, int chopCount)
+        {
+            this.context = context;
+            this.chopCount = chopCount;
+            this.staticData = signletonData;
+            return this;
+        }
+
         public void Execute()
         {
-            for (var i = 0; i < context.curves.Length; i++)
+            for (var i = 0; i < staticData.curves.Length; i++)
             {
-                Chop(context.curves[i], chopCount);
+                Chop(staticData.curves[i], chopCount);
             }
         }
 
@@ -44,7 +54,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var line = new Line2() { a = cutted.a.xz, b = cutted.d.xz };
 
                 //context.points.Add(MathUtils.Position(curve, t).xz);
-                context.totalBoundaryLines.Add(line);
+                // context.totalBoundaryLines.Add(line);
+                staticData.totalBoundaryLines.Add(line);
             }
             //context.points.Add(curve.d.xz);
         }

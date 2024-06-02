@@ -12,16 +12,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public GeneratedArea generatedArea;
 
-        //private NativeParallelHashMap<int, int> p2rMap;
 
         public void Execute()
         {
-            //p2rMap = new NativeParallelHashMap<int, int>(1000, Allocator.Temp);
             FindLargestSector(out var maxSectorRadian, out var maxSectorRayIndex);
             BuildPoints(maxSectorRadian, maxSectorRayIndex);
             UnamangedUtils.BuildPolylines(ref generatedArea.points, ref generatedArea.polyLines);
-            //BuildPolylines();
-            //p2rMap.Dispose();
         }
 
 
@@ -38,28 +34,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var ray = rays[i % raysCount];
                 var p = context.hitPos + ray.vector;
                 generatedArea.points.Add(p);
-                //p2rMap.Add(generatedArea.points.Length - 1, i % raysCount);
             }
         }
-
-        private void BuildPolylines()
-        {
-            generatedArea.polyLines.Clear();
-            for (int i = 0; i < generatedArea.points.Length; i++)
-            {
-                var i1 = i;
-                var i2 = (i + 1) % generatedArea.points.Length;
-                var p1 = generatedArea.points[i1];
-                var p2 = generatedArea.points[i2];
-                generatedArea.polyLines.Add(new Line2 { a = p1, b = p2 });
-
-                //var plIndex = generatedArea.polyLines.Length - 1;
-                //int2 rIndices = new int2(-1, -1);
-                //if (p2rMap.TryGetValue(i1, out var rIndex)) rIndices.x = rIndex;
-                //if (p2rMap.TryGetValue(i2, out var rIndex2)) rIndices.y = rIndex2;
-            }
-        }
-
 
         private void FindLargestSector(out float maxSectorRadian, out int maxSectorIndex)
         {

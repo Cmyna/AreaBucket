@@ -22,6 +22,15 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public CommonContext context;
 
+        public SingletonData signletonData;
+
+        public CollectAreaLines InitContext(CommonContext context, SingletonData signletonData)
+        {
+            this.context = context;
+            this.signletonData = signletonData;
+            return this;
+        }
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             if (!chunk.Has(ref bthTriangle)) return;
@@ -58,7 +67,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             // CollectedChoppedPoints(line, 50f);
             //UnamangedUtils.CollectDivPoints(line, context.hitPos, context.filterRange, ref context.points);
             //CollectDivPoints(line, ref points);
-            context.totalBoundaryLines.Add(line);
+            //context.totalBoundaryLines.Add(line);
+            signletonData.totalBoundaryLines.Add(line);
         }
 
         private bool InRange(Line2 line)
@@ -82,28 +92,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var dist2 = math.length(line.b - hitPos);
             var minDist = math.min(dist1, dist2);
             return minDist <= context.filterRange;
-        }
-
-
-        private void CollectedChoppedPoints(Line2 line, float maxLength = 4f)
-        {
-            var count = (int)(math.length(line.a - line.b) / maxLength) + 1;
-            float tStep = 1 / (float)count;
-            for (var i = 0; i < count; i++)
-            {
-                float t = tStep * i;
-                float t2 = tStep * (i + 1);
-                t2 = math.min(t2, 1);
-                t = math.max(t, 0);
-
-                var p1 = math.lerp(line.a, line.b, t);
-                var p2 = math.lerp(line.a, line.b, t2);
-
-                //checklines.Add(line);
-                //lines.Add(line);
-                context.points.Add(p1);
-                context.points.Add(p2);
-            }
         }
     }
 }
