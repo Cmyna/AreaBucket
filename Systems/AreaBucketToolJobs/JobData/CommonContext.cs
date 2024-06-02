@@ -26,20 +26,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         /// </summary>
         public NativeArray<float> occlusionsBuffer;
 
-        public float2 hitPos;
-
-        public float filterRange;
-
-        public CommonContext Init(float2 hitPos, float filterRange, Allocator allocator = Allocator.TempJob)
+        public CommonContext Init(Allocator allocator = Allocator.TempJob)
         {
             points = new NativeList<float2>(allocator);
             usedBoundaryLines = new NativeList<Line2>(allocator);
             rays = new NativeList<Ray>(allocator);
             occlusionsBuffer = new NativeArray<float>(360, allocator); // 1 degree per unit
             for (int i = 0; i < occlusionsBuffer.Length; i++) occlusionsBuffer[i] = float.MaxValue;
-
-            this.hitPos = hitPos;
-            this.filterRange = filterRange;
             return this;
         }
 

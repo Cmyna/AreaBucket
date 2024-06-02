@@ -14,7 +14,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
+        public SingletonData singletonData;
+
         public static readonly float2 xzUp = new float2(0, 1);
+
+        public GenerateRays Init(CommonContext context, SingletonData singletonData)
+        {
+            this.context = context;
+            this.singletonData = singletonData;
+            return this;
+        }
 
         public void Execute()
         {
@@ -27,7 +36,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             for (var i = 0; i < context.points.Length; i++)
             {
-                var vector = context.points[i] - context.hitPos;
+                var vector = context.points[i] - singletonData.playerHitPos;
                 var radian = Utils.Math.RadianInClock(xzUp, vector);
                 var ray = new Ray() { vector = vector, radian = radian };
                 raysCache.Add(ray);

@@ -130,8 +130,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var max = math.max(p1, p2); max = math.max(max, p3); max = math.max(max, p4);
             var bounds = new Bounds2(min.xz, max.xz);
 
-            var hitPos = context.hitPos;
-            var filterRange = context.filterRange;
+            var hitPos = signletonData.playerHitPos;
+            var filterRange = signletonData.fillingRange;
             var dist = MathUtils.Distance(bounds, hitPos);
             if (dist > filterRange) return;
 

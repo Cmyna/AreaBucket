@@ -12,6 +12,15 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public GeneratedArea generatedArea;
 
+        public SingletonData singletonData;
+
+        public Rays2Polylines Init(CommonContext context, SingletonData singletonData, GeneratedArea generatedAreaData)
+        {
+            this.context = context;
+            this.generatedArea = generatedAreaData;
+            this.singletonData = singletonData;
+            return this;
+        }
 
         public void Execute()
         {
@@ -26,13 +35,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             generatedArea.points.Clear();
 
             bool addHitPoint = maxSectorRadian > Mathf.PI;
-            if (addHitPoint) generatedArea.points.Add(context.hitPos);
+            if (addHitPoint) generatedArea.points.Add(singletonData.playerHitPos);
             var rays = context.rays;
             var raysCount = rays.Length;
             for (int i = startIndex; i < startIndex + raysCount; i++)
             {
                 var ray = rays[i % raysCount];
-                var p = context.hitPos + ray.vector;
+                var p = singletonData.playerHitPos + ray.vector;
                 generatedArea.points.Add(p);
             }
         }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
+using Unity.Mathematics;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 {
@@ -14,10 +15,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public NativeList<Bezier4x3> curves;
 
-        public SingletonData Init(Allocator allocator = Allocator.TempJob)
+        public float2 playerHitPos;
+
+        public float fillingRange;
+
+        public SingletonData Init(float2 playerHitPos, float fillingRange, Allocator allocator = Allocator.TempJob)
         {
             curves = new NativeList<Bezier4x3>(allocator);
             totalBoundaryLines = new NativeList<Line2>(allocator);
+            this.playerHitPos = playerHitPos;
+            this.fillingRange = fillingRange;
             return this;
         }
 

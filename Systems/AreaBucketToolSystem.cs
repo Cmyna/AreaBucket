@@ -268,35 +268,35 @@ namespace AreaBucket.Systems
             }
             // prepare jobs data
 
-            var jobContext = new CommonContext().Init(raycastPoint.m_HitPosition.xz, FillRange); // Area bucket jobs common context
+            var jobContext = new CommonContext().Init(); // Area bucket jobs common context
 
             var debugContext = default(DebugContext).Init();
 
             var generatedAreaData = new GeneratedArea().Init();
 
-            var signletonData = new SingletonData().Init();
+            var singletonData = new SingletonData().Init(raycastPoint.m_HitPosition.xz, FillRange);
 
 
             // run
-            jobHandle = ScheduleDataCollection(jobHandle, jobContext, signletonData);
+            jobHandle = ScheduleDataCollection(jobHandle, jobContext, singletonData);
 
-            var curve2LinesJob = default(Curve2Lines).Init(jobContext, signletonData, 8);
+            var curve2LinesJob = default(Curve2Lines).Init(jobContext, singletonData, 8);
             jobHandle = Schedule(curve2LinesJob, jobHandle);
 
             if (DrawBoundaries)
             {
-                var drawBoundariesJob = default(DrawBoundaries).Init(jobContext, gizmosBatcher, terrainHeightData, signletonData);
+                var drawBoundariesJob = default(DrawBoundaries).Init(jobContext, gizmosBatcher, terrainHeightData, singletonData);
                 debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
                 debugDrawJobHandle = Schedule(drawBoundariesJob, debugDrawJobHandle);
             }
 
             if (CheckOcclusion) 
             {
-                var filterObscuredLinesJob = new DropObscuredLines().Init(jobContext, signletonData);
+                var filterObscuredLinesJob = new DropObscuredLines().Init(jobContext, singletonData);
                 jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
             }
 
-            jobHandle = Schedule(new Lines2Points { context = jobContext }, jobHandle);
+            jobHandle = Schedule(new Lines2Points().Init(jobContext, singletonData), jobHandle);
             // extra points is experimental for performance issue
             if (UseExperimentalOptions && ExtraPoints)
             {
@@ -308,20 +308,16 @@ namespace AreaBucket.Systems
             {
                 // only drop points totally overlayed. higher range causes accidently intersection dropping
                 // (points are merged and moved, which cause rays generated from those points becomes intersected)
-                var mergePointsJob = default(MergePoints).Init(jobContext, MergePointDist);
+                var mergePointsJob = default(MergePoints).Init(jobContext, singletonData, MergePointDist);
                 jobHandle = Schedule(mergePointsJob, jobHandle);
             }
 
-            var generateRaysJob = default(GenerateRays);
-            generateRaysJob.context = jobContext;
+            var generateRaysJob = default(GenerateRays).Init(jobContext, singletonData);
             jobHandle = Schedule(generateRaysJob, jobHandle);
 
             if (CheckIntersection)
             {
-                var dropRaysJob = default(DropIntersectedRays);
-                dropRaysJob.rayTollerance = RayTollerance;
-                dropRaysJob.context = jobContext;
-                dropRaysJob.debugContext = debugContext;
+                var dropRaysJob = default(DropIntersectedRays).Init(jobContext, debugContext, RayTollerance, singletonData);
                 jobHandle = Schedule(dropRaysJob, jobHandle);
             }
             if (DrawIntersections)
@@ -344,11 +340,7 @@ namespace AreaBucket.Systems
                 }, debugDrawJobHandle);
             }
 
-            jobHandle = Schedule(new Rays2Polylines
-            {
-                context = jobContext,
-                generatedArea = generatedAreaData
-            }, jobHandle);
+            jobHandle = Schedule(new Rays2Polylines().Init(jobContext, singletonData, generatedAreaData), jobHandle);
 
             var exposedList = new NativeList<Line2>(Allocator.TempJob);
             jobHandle = Schedule(new FilterExposedPolylines
@@ -393,7 +385,7 @@ namespace AreaBucket.Systems
                     for (int i = 0; i < jobContext.rays.Length; i++)
                     {
                         var v = jobContext.rays[i].vector;
-                        var line = new Line2 { a = jobContext.hitPos, b = jobContext.hitPos + v };
+                        var line = new Line2 { a = singletonData.playerHitPos, b = singletonData.playerHitPos + v };
                         raylines.Add(line);
                     }
                 }).Schedule(debugDrawJobHandle);
@@ -432,8 +424,8 @@ namespace AreaBucket.Systems
             jobHandle.Complete();
 
             UpdateOtherFieldView("Rays Count", jobContext.rays.Length);
-            UpdateOtherFieldView("Boundary Curves Count", signletonData.curves.Length);
-            UpdateOtherFieldView("Total Boundary Lines Count", signletonData.totalBoundaryLines.Length);
+            UpdateOtherFieldView("Boundary Curves Count", singletonData.curves.Length);
+            UpdateOtherFieldView("Total Boundary Lines Count", singletonData.totalBoundaryLines.Length);
             UpdateOtherFieldView("Used Boundary Lines Count", jobContext.usedBoundaryLines.Length);
             UpdateOtherFieldView("Generated Area Poly Lines Count", generatedAreaData.polyLines.Length);
             UpdateOtherFieldView("Gened Area Points Count", generatedAreaData.points.Length);
@@ -445,7 +437,7 @@ namespace AreaBucket.Systems
             debugContext.Dispose(); 
             exposedList.Dispose();
             generatedAreaData.Dispose();
-            signletonData.Dispose();
+            singletonData.Dispose();
 
             return jobHandle;
         }

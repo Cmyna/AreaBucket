@@ -14,12 +14,15 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
+        public SingletonData singletonData;
+
         [ReadOnly] public float overlayDist;
 
-        public MergePoints Init(CommonContext contextIn, float overlayDistIn)
+        public MergePoints Init(CommonContext contextIn, SingletonData singletonData, float overlayDistIn)
         {
             context = contextIn;
             overlayDist = overlayDistIn;
+            this.singletonData = singletonData;
             return this;
         }
 
@@ -87,12 +90,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private bool InRange(float2 point)
         {
-            var vector = point - context.hitPos;
+            var vector = point - singletonData.playerHitPos;
             // tollerance required from Area2Lines.CollectDivPoints
             // that the length from hit pos to cutted point could really closed to range length
             // which will cause unstable filtering here
             var tollerance = 0.1f; // 0.1m tollerance
-            return math.length(vector) <= (context.filterRange + tollerance); 
+            return math.length(vector) <= (singletonData.fillingRange + tollerance); 
         }
 
         private bool Overlay(float2 p1, float2 p2)

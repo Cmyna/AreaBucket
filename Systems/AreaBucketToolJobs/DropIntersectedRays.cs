@@ -25,6 +25,21 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public float2 rayTollerance;
 
+        public SingletonData signletonData;
+
+        public DropIntersectedRays Init(
+            CommonContext context, 
+            DebugContext debugContext, 
+            float2 rayTollerance, 
+            SingletonData singletonData
+        ) {
+            this.context = context;
+            this.debugContext = debugContext;
+            this.rayTollerance = rayTollerance;
+            this.signletonData = singletonData;
+            return this;
+        }
+
         public void Execute()
         {
             var raysCache = new NativeList<Ray>(Allocator.Temp);
@@ -35,8 +50,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var ray = context.rays[i];
                 var rayline = new Line2()
                 {
-                    a = context.hitPos,
-                    b = context.hitPos + ray.vector
+                    a = signletonData.playerHitPos,
+                    b = signletonData.playerHitPos + ray.vector
                 };
                 bool hasIntersction = false;
                 for (var j = 0; j < context.usedBoundaryLines.Length; j++)

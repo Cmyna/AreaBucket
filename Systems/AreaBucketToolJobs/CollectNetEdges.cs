@@ -60,8 +60,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 if (!IsBounds(luCompositionData[compositions[i].m_Edge])) continue;
                 var geo = geos[i];
                 
-                var distance = MathUtils.Distance(geo.m_Bounds.xz, context.hitPos);
-                if (distance > context.filterRange) continue;
+                var distance = MathUtils.Distance(geo.m_Bounds.xz, signletonData.playerHitPos);
+                if (distance > signletonData.fillingRange) continue;
 
                 signletonData.curves.Add(geo.m_Start.m_Left); //context.curves.Add(geo.m_Start.m_Left);
                 signletonData.curves.Add(geo.m_Start.m_Right); //context.curves.Add(geo.m_Start.m_Right); 

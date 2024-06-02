@@ -68,8 +68,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                 var curve = curves[i].m_Bezier;
                 var bounds = MathUtils.Bounds(curve).xz;
-                var distance = MathUtils.Distance(bounds, context.hitPos);
-                if (distance <= context.filterRange)
+                var distance = MathUtils.Distance(bounds, signletonData.playerHitPos);
+                if (distance <= signletonData.fillingRange)
                 {
                     signletonData.curves.Add(curve); //context.curves.Add(curve); 
                 }

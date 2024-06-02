@@ -73,25 +73,25 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private bool InRange(Line2 line)
         {
-            var hitPos = context.hitPos;
+            var hitPos = signletonData.playerHitPos;
             var dist1 = MathUtils.Distance(line, hitPos, out var t);
             var onSegment = t >= 0 && t <= 1;
-            if (onSegment) return dist1 <= context.filterRange;
+            if (onSegment) return dist1 <= signletonData.fillingRange;
             else
             {
                 var dist2 = math.distance(line.a, hitPos);
                 var dist3 = math.distance(line.b, hitPos);
-                return math.min(dist2, dist3) <= context.filterRange;
+                return math.min(dist2, dist3) <= signletonData.fillingRange;
             }
         }
 
         private bool InRange2(Line2 line)
         {
-            var hitPos = context.hitPos;
+            var hitPos = signletonData.playerHitPos;
             var dist1 = math.length(line.a - hitPos);
             var dist2 = math.length(line.b - hitPos);
             var minDist = math.min(dist1, dist2);
-            return minDist <= context.filterRange;
+            return minDist <= signletonData.fillingRange;
         }
     }
 }

@@ -14,13 +14,22 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
+        public SingletonData singletonData;
+
+        public Lines2Points Init(CommonContext context, SingletonData singletonData)
+        {
+            this.context = context;
+            this.singletonData = singletonData;
+            return this;
+        }
+
         public void Execute()
         {
             context.points.Clear();
             for (int i = 0; i < context.usedBoundaryLines.Length; i++)
             {
                 var line = context.usedBoundaryLines[i];
-                if (UnamangedUtils.CollectDivPoints(line, context.hitPos, context.filterRange, out var p1, out var p2))
+                if (UnamangedUtils.CollectDivPoints(line, singletonData.playerHitPos, singletonData.fillingRange, out var p1, out var p2))
                 {
                     context.points.Add(p1);
 
