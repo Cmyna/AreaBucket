@@ -25,6 +25,8 @@ namespace AreaBucket.Systems.DebugHelperJobs
 
         public Color color;
 
+        public float yOffset;
+
         public void Execute()
         {
             for (int i = 0; i < lines.Length; i++)
@@ -38,7 +40,7 @@ namespace AreaBucket.Systems.DebugHelperJobs
         {
             var worldPos = new float3 { x = pos.x, y = 0, z = pos.y };
             var height = TerrainUtils.SampleHeight(ref heightData, worldPos);
-            worldPos.y = height;
+            worldPos.y = height + yOffset;
             return worldPos;
         }
 

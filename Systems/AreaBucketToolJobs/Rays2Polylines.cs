@@ -1,17 +1,6 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using Colossal.Mathematics;
-using Game.Simulation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mime;
-using System.Text;
-using System.Threading.Tasks;
-using Unity.Burst;
-using Unity.Collections;
-using Unity.Entities;
 using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
@@ -23,15 +12,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public GeneratedArea generatedArea;
 
-        private NativeParallelHashMap<int, int> p2rMap;
+        //private NativeParallelHashMap<int, int> p2rMap;
 
         public void Execute()
         {
-            p2rMap = new NativeParallelHashMap<int, int>(1000, Allocator.Temp);
+            //p2rMap = new NativeParallelHashMap<int, int>(1000, Allocator.Temp);
             FindLargestSector(out var maxSectorRadian, out var maxSectorRayIndex);
             BuildPoints(maxSectorRadian, maxSectorRayIndex);
-            BuildPolylines();
-            p2rMap.Dispose();
+            UnamangedUtils.BuildPolylines(ref generatedArea.points, ref generatedArea.polyLines);
+            //BuildPolylines();
+            //p2rMap.Dispose();
         }
 
 
@@ -48,7 +38,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var ray = rays[i % raysCount];
                 var p = context.hitPos + ray.vector;
                 generatedArea.points.Add(p);
-                p2rMap.Add(generatedArea.points.Length - 1, i % raysCount);
+                //p2rMap.Add(generatedArea.points.Length - 1, i % raysCount);
             }
         }
 
@@ -63,10 +53,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var p2 = generatedArea.points[i2];
                 generatedArea.polyLines.Add(new Line2 { a = p1, b = p2 });
 
-                var plIndex = generatedArea.polyLines.Length - 1;
-                int2 rIndices = new int2(-1, -1);
-                if (p2rMap.TryGetValue(i1, out var rIndex)) rIndices.x = rIndex;
-                if (p2rMap.TryGetValue(i2, out var rIndex2)) rIndices.y = rIndex2;
+                //var plIndex = generatedArea.polyLines.Length - 1;
+                //int2 rIndices = new int2(-1, -1);
+                //if (p2rMap.TryGetValue(i1, out var rIndex)) rIndices.x = rIndex;
+                //if (p2rMap.TryGetValue(i2, out var rIndex2)) rIndices.y = rIndex2;
             }
         }
 

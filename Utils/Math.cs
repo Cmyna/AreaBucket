@@ -116,5 +116,23 @@ namespace AreaBucket.Utils
             return abXac * abXad < 0;
         }
 
+
+        /// <summary>
+        /// solve ax + by = 0 where vector1 = (a, b)
+        /// y = -ax/b
+        /// </summary>
+        /// <param name="vector1"></param>
+        /// <returns></returns>
+        public static float2 Perpendicular(float2 vector1, float length = 1)
+        {
+            // assume x
+            float x = 1;
+            float y = -x * vector1.x / vector1.y;
+
+            var unitVector = new float2(x, y);
+            unitVector = unitVector / math.length(unitVector);
+            return unitVector * length;
+        }
+
     }
 }

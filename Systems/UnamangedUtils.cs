@@ -1,4 +1,5 @@
-﻿using Colossal.Mathematics;
+﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Mathematics;
 using Game.Routes;
 using System;
 using System.Collections.Generic;
@@ -69,6 +70,21 @@ namespace AreaBucket.Systems
             return true;
         }
 
+        public static void BuildPolylines(
+            ref NativeList<float2> points, 
+            ref NativeList<Line2> lines
+        )
+        {
+            lines.Clear();
+            for (int i = 0; i < points.Length; i++)
+            {
+                var i1 = i;
+                var i2 = (i + 1) % points.Length;
+                var p1 = points[i1];
+                var p2 = points[i2];
+                lines.Add(new Line2 { a = p1, b = p2 });
+            }
+        }
     }
 
 }

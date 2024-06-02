@@ -91,7 +91,7 @@ namespace AreaBucket.Systems
 
         public bool DrawFloodingCandidates { get; set; } = false;
 
-        public bool MergeRays { get; set; } = true;
+        public bool MergeGenedPolylines { get; set; } = true;
 
         public bool MergePoints { get; set; } = true;
 
@@ -112,6 +112,10 @@ namespace AreaBucket.Systems
         /// zero will cause twicking, while higher value may cause false positive intersection pass
         /// </summary>
         public float2 RayTollerance { get; set; } = new float2 { x = 0.01f, y = 0.01f };
+
+        public float LineCollinearTollerance { get; set; } = 0.1f;
+
+        // public bool UseNewDefGeneration { get; set; } = true;
 
 
         private AudioManager _audioManager;
@@ -256,7 +260,8 @@ namespace AreaBucket.Systems
             GizmoBatcher gizmosBatcher = default;
             var terrainHeightData = _terrianSystem.GetHeightData();
 
-            var debugJobActive = DrawIntersections || DrawBoundaries || DrawGeneratedRays;
+            //var debugJobActive = DrawIntersections || DrawBoundaries || DrawGeneratedRays;
+            var debugJobActive = true;
 
             if (debugJobActive)
             {
@@ -291,19 +296,6 @@ namespace AreaBucket.Systems
             dropRaysJob.debugContext = debugContext;
 
 
-            var mergeRaysJob = default(MergeRays);
-            mergeRaysJob.context = jobContext;
-            mergeRaysJob.strictBreakMergeAngleThreshold = StrictBreakMergeRayAngleThreshold * Mathf.Deg2Rad;
-            mergeRaysJob.breakMergeAngleThreshold = MergeRayAngleThreshold * Mathf.Deg2Rad;
-            mergeRaysJob.minEdgeLength = MinEdgeLength;
-
-
-            var rays2AreaJob = default(Rays2AreaDefinition);
-            rays2AreaJob.context = jobContext;
-            rays2AreaJob.prefab = m_PrefabSystem.GetEntity(_selectedPrefab);
-            rays2AreaJob.terrianHeightData = terrainHeightData;
-            rays2AreaJob.gameRaycastPoint = raycastPoint;
-            rays2AreaJob.commandBuffer = _toolOutputBarrier.CreateCommandBuffer();
 
 
             // run
@@ -365,8 +357,46 @@ namespace AreaBucket.Systems
                 generatedArea = generatedAreaData
             }, jobHandle);
 
+            var exposedList = new NativeList<Line2>(Allocator.TempJob);
+            jobHandle = Schedule(new FilterExposedPolylines
+            {
+                context = jobContext,
+                generatedAreaData = generatedAreaData,
+                exposedLines = exposedList,
+                collinearTollerance = 0.01f
+            }, jobHandle);
 
-            if (MergeRays) jobHandle = Schedule(mergeRaysJob, jobHandle);
+            if (DrawFloodingCandidates)
+            {
+                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
+                debugDrawJobHandle = Schedule(new DrawLinesJob
+                {
+                    color = Color.green,
+                    heightData = terrainHeightData,
+                    gizmoBatcher = gizmosBatcher,
+                    lines = exposedList,
+                    yOffset = 2f
+                }, debugDrawJobHandle);
+            }
+            
+            
+            if (MergeGenedPolylines)
+            {
+                /*var mergeRaysJob = default(MergeRays);
+                mergeRaysJob.context = jobContext;
+                mergeRaysJob.strictBreakMergeAngleThreshold = StrictBreakMergeRayAngleThreshold * Mathf.Deg2Rad;
+                mergeRaysJob.breakMergeAngleThreshold = MergeRayAngleThreshold * Mathf.Deg2Rad;
+                mergeRaysJob.minEdgeLength = MinEdgeLength;
+                jobHandle = Schedule(mergeRaysJob, jobHandle);*/
+
+                jobHandle = Schedule(new MergePolylines 
+                {
+                    generatedAreaData = generatedAreaData,
+                    minEdgeLength = MinEdgeLength,
+                    breakMergeAngleThreshold = MergeRayAngleThreshold * Mathf.Deg2Rad,
+                    strictBreakMergeAngleThreshold = StrictBreakMergeRayAngleThreshold * Mathf.Deg2Rad
+                }, jobHandle);
+            }
 
             if (DrawGeneratedRays)
             {
@@ -393,10 +423,44 @@ namespace AreaBucket.Systems
                 //debugDrawJobHandle = Job.WithCode(() => raylines.Dispose() ).Schedule(debugDrawJobHandle);
             }
 
+            /*if (UseNewDefGeneration)
+            {
+                var polyLines2AreaDefsJob = new Polylines2AreaDefinition
+                {
+                    context = jobContext,
+                    generatedAreaData = generatedAreaData,
+                    prefab = m_PrefabSystem.GetEntity(_selectedPrefab),
+                    terrianHeightData = terrainHeightData,
+                    commandBuffer = _toolOutputBarrier.CreateCommandBuffer()
+                };
+                jobHandle = Schedule(polyLines2AreaDefsJob, jobHandle);
+                jobHandle.Complete();
+                UpdateOtherFieldView("Generated Nodes Count", polyLines2AreaDefsJob.generateNodesCount);
+            } else
+            {
+                var rays2AreaJob = default(Rays2AreaDefinition);
+                rays2AreaJob.context = jobContext;
+                rays2AreaJob.prefab = m_PrefabSystem.GetEntity(_selectedPrefab);
+                rays2AreaJob.terrianHeightData = terrainHeightData;
+                rays2AreaJob.gameRaycastPoint = raycastPoint;
+                rays2AreaJob.commandBuffer = _toolOutputBarrier.CreateCommandBuffer();
+                jobHandle = Schedule(rays2AreaJob, jobHandle);
+                jobHandle.Complete();
+                UpdateOtherFieldView("Generated Nodes Count", rays2AreaJob.generateNodesCount);
+            }*/
+            var polyLines2AreaDefsJob = new Polylines2AreaDefinition
+            {
+                context = jobContext,
+                generatedAreaData = generatedAreaData,
+                prefab = m_PrefabSystem.GetEntity(_selectedPrefab),
+                terrianHeightData = terrainHeightData,
+                commandBuffer = _toolOutputBarrier.CreateCommandBuffer()
+            };
+            jobHandle = Schedule(polyLines2AreaDefsJob, jobHandle);
+            jobHandle.Complete();
+            UpdateOtherFieldView("Generated Nodes Count", polyLines2AreaDefsJob.generateNodesCount);
 
 
-
-            jobHandle = Schedule(rays2AreaJob, jobHandle);
 
             if (debugJobActive)
             {
@@ -412,11 +476,16 @@ namespace AreaBucket.Systems
             UpdateOtherFieldView("Boundary Curves Count", jobContext.curves.Length);
             UpdateOtherFieldView("Total Boundary Lines Count", jobContext.totalBoundaryLines.Length);
             UpdateOtherFieldView("Used Boundary Lines Count", jobContext.usedBoundaryLines.Length);
-
+            UpdateOtherFieldView("Generated Area Poly Lines Count", generatedAreaData.polyLines.Length);
+            UpdateOtherFieldView("Gened Area Points Count", generatedAreaData.points.Length);
+            UpdateOtherFieldView("Exposed Gen Area Lines", exposedList.Length);
+            
 
             // disposes
             jobContext.Dispose();
-            debugContext.Dispose();
+            debugContext.Dispose(); 
+            exposedList.Dispose();
+            generatedAreaData.Dispose();
 
             return jobHandle;
         }

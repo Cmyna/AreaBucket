@@ -54,8 +54,8 @@ namespace AreaBucket.Systems
                 new DebugUI.BoolField
                 {
                     displayName = "Merge Rays",
-                    getter = () => MergeRays,
-                    setter = (v) => MergeRays = v,
+                    getter = () => MergeGenedPolylines,
+                    setter = (v) => MergeGenedPolylines = v,
                 },
                 
                 new DebugUI.FloatField
@@ -72,6 +72,28 @@ namespace AreaBucket.Systems
                     getter = () => StrictBreakMergeRayAngleThreshold,
                     setter = (v) => StrictBreakMergeRayAngleThreshold = math.clamp(v, 0, 90),
                 },
+
+                new DebugUI.FloatField
+                {
+                    displayName = "Collinear Tollerance",
+                    incStep = 0.01f,
+                    getter = () => LineCollinearTollerance,
+                    setter = (v) => LineCollinearTollerance = math.clamp(v, 0.01f, 0.5f),
+                },
+
+                /*new DebugUI.BoolField
+                {
+                    displayName = "New Defintions Creation",
+                    getter = () => UseNewDefGeneration,
+                    setter = (v) => UseNewDefGeneration = v,
+                },*/
+
+                new DebugUI.Button
+                {
+                    displayName = "add flag",
+                    action = () => { }
+                },
+
                 CreateVisualizeDebugUI(),
                 CreateMergePointsDebugUI(),
                 new DebugUI.Container(
