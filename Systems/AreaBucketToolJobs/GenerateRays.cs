@@ -16,12 +16,15 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public SingletonData singletonData;
 
+        [ReadOnly] public bool rayBetweenFloodingRange;
+
         public static readonly float2 xzUp = new float2(0, 1);
 
-        public GenerateRays Init(CommonContext context, SingletonData singletonData)
+        public GenerateRays Init(CommonContext context, SingletonData singletonData, bool rayBetweenFloodingRange)
         {
             this.context = context;
             this.singletonData = singletonData;
+            this.rayBetweenFloodingRange = rayBetweenFloodingRange;
             return this;
         }
 
@@ -36,8 +39,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             for (var i = 0; i < context.points.Length; i++)
             {
-                var vector = context.points[i] - singletonData.playerHitPos;
+                var vector = context.points[i] - context.rayStartPoint;
                 var radian = Utils.Math.RadianInClock(xzUp, vector);
+                if (rayBetweenFloodingRange && !context.InFloodingRange(radian)) continue;
                 var ray = new Ray() { vector = vector, radian = radian };
                 raysCache.Add(ray);
             }

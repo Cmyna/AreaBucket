@@ -25,13 +25,17 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
+            // clear buffer before
+            context.ClearOcclusionBuffer();
+            context.usedBoundaryLines.Clear();
+
             var metasCache = new NativeList<LineMeta>(Allocator.Temp);
 
             for (int i = 0; i < signletonData.totalBoundaryLines.Length; i++)
             {
                 var line = signletonData.totalBoundaryLines[i];
-                var v1 = line.a - signletonData.playerHitPos;
-                var v2 = line.b - signletonData.playerHitPos;
+                var v1 = line.a - context.rayStartPoint;
+                var v2 = line.b - context.rayStartPoint;
 
                 var minDist = MinDist(line);
                 var maxDist = math.max(math.length(v1), math.length(v2));
@@ -101,10 +105,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private float MinDist(Line2 line)
         {
-            var dist = MathUtils.Distance(line, signletonData.playerHitPos, out var t);
+            var rayStartPos = context.rayStartPoint;
+            var dist = MathUtils.Distance(line, rayStartPos, out var t);
             if (t >= 0 && t <= 1) return dist;
-            var v1 = line.a - signletonData.playerHitPos;
-            var v2 = line.b - signletonData.playerHitPos;
+            var v1 = line.a - rayStartPos;
+            var v2 = line.b - rayStartPos;
 
             return math.min(math.length(v1), math.length(v2));
         }

@@ -90,7 +90,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private bool InRange(float2 point)
         {
-            var vector = point - singletonData.playerHitPos;
+            var rayStartPos = context.rayStartPoint;
+            var vector = point - rayStartPos;
             // tollerance required from Area2Lines.CollectDivPoints
             // that the length from hit pos to cutted point could really closed to range length
             // which will cause unstable filtering here

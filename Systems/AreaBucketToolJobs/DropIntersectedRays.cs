@@ -43,6 +43,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public void Execute()
         {
             var raysCache = new NativeList<Ray>(Allocator.Temp);
+            var rayStartPos = context.rayStartPoint;
 
             // drop rays has intersection with any check lines
             for (var i = 0; i < context.rays.Length; i++)
@@ -50,8 +51,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var ray = context.rays[i];
                 var rayline = new Line2()
                 {
-                    a = signletonData.playerHitPos,
-                    b = signletonData.playerHitPos + ray.vector
+                    a = rayStartPos,
+                    b = rayStartPos + ray.vector
                 };
                 bool hasIntersction = false;
                 for (var j = 0; j < context.usedBoundaryLines.Length; j++)

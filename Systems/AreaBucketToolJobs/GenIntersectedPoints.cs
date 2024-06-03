@@ -21,6 +21,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
+        public GenIntersectedPoints Init(CommonContext context)
+        {
+            this.context = context;
+            return this;
+        }
+
         public void Execute()
         {
             // TODO: just use brutal intersection check now, should be optimized for performance

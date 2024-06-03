@@ -29,7 +29,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             for (int i = 0; i < context.usedBoundaryLines.Length; i++)
             {
                 var line = context.usedBoundaryLines[i];
-                if (UnamangedUtils.CollectDivPoints(line, singletonData.playerHitPos, singletonData.fillingRange, out var p1, out var p2))
+                var rayStartPos = context.rayStartPoint;
+                if (UnamangedUtils.CollectDivPoints(line, rayStartPos, singletonData.fillingRange, out var p1, out var p2))
                 {
                     context.points.Add(p1);
 

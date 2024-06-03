@@ -81,12 +81,12 @@ namespace AreaBucket.Systems
                     setter = (v) => LineCollinearTollerance = math.clamp(v, 0.01f, 0.5f),
                 },
 
-                /*new DebugUI.BoolField
+                new DebugUI.BoolField
                 {
-                    displayName = "New Defintions Creation",
-                    getter = () => UseNewDefGeneration,
-                    setter = (v) => UseNewDefGeneration = v,
-                },*/
+                    displayName = "Ray Between Flood Range",
+                    getter = () => RayBetweenFloodRange,
+                    setter = (v) => RayBetweenFloodRange = v
+                },
 
                 new DebugUI.Button
                 {
@@ -181,7 +181,7 @@ namespace AreaBucket.Systems
                     },
                     new DebugUI.BoolField
                     {
-                        displayName = "Draw Flooding Candidate Rays",
+                        displayName = "Draw Flooding Candidate Lines",
                         getter = () => DrawFloodingCandidates,
                         setter = (v) => DrawFloodingCandidates = v,
                     },

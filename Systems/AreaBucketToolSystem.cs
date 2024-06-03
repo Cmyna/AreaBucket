@@ -115,6 +115,11 @@ namespace AreaBucket.Systems
 
         public float LineCollinearTollerance { get; set; } = 0.1f;
 
+        /// <summary>
+        /// restrict generated ray's radian should between CommonContext.floodRadRange
+        /// </summary>
+        public bool RayBetweenFloodRange { get; set; } = true;
+
 
         private AudioManager _audioManager;
 
@@ -269,6 +274,7 @@ namespace AreaBucket.Systems
             // prepare jobs data
 
             var jobContext = new CommonContext().Init(); // Area bucket jobs common context
+            jobContext.rayStartPoint = raycastPoint.m_HitPosition.xz;
 
             var debugContext = default(DebugContext).Init();
 
@@ -300,8 +306,7 @@ namespace AreaBucket.Systems
             // extra points is experimental for performance issue
             if (UseExperimentalOptions && ExtraPoints)
             {
-                var genIntersectionPointsJob = default(GenIntersectedPoints);
-                genIntersectionPointsJob.context = jobContext;
+                var genIntersectionPointsJob = default(GenIntersectedPoints).Init(jobContext);
                 jobHandle = Schedule(genIntersectionPointsJob, jobHandle);
             }
             if (MergePoints)
@@ -312,7 +317,7 @@ namespace AreaBucket.Systems
                 jobHandle = Schedule(mergePointsJob, jobHandle);
             }
 
-            var generateRaysJob = default(GenerateRays).Init(jobContext, singletonData);
+            var generateRaysJob = default(GenerateRays).Init(jobContext, singletonData, RayBetweenFloodRange);
             jobHandle = Schedule(generateRaysJob, jobHandle);
 
             if (CheckIntersection)

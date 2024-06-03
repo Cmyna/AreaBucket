@@ -85,6 +85,11 @@ namespace AreaBucket.Systems
                 lines.Add(new Line2 { a = p1, b = p2 });
             }
         }
+
+        public static bool Between(float a, float min, float max)
+        {
+            return a >= min && a <= max;
+        }
     }
 
 }
