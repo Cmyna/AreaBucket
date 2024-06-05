@@ -33,9 +33,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private void BuildPoints(float maxSectorRadian, int startIndex)
         {
             generatedArea.points.Clear();
-            var rayStartPos = context.rayStartPoint;
+            var rayStartPos = context.floodingDefinition.rayStartPoint;
             // if not flooding a circle, then not add ray start point
-            bool addHitPoint = (maxSectorRadian > Mathf.PI) && context.FloodingCirle();
+            bool addHitPoint = (maxSectorRadian > Mathf.PI) && context.floodingDefinition.FloodingCirle();
             if (addHitPoint) generatedArea.points.Add(singletonData.playerHitPos);
             var rays = context.rays;
             var raysCount = rays.Length;

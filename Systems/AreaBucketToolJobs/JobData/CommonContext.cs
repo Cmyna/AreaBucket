@@ -27,7 +27,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         /// </summary>
         public NativeArray<float> occlusionsBuffer;
 
-        public float2 rayStartPoint;
+        /*public float2 rayStartPoint;
 
         /// <summary>
         /// set the filling sector radian range, the algorithms should generate area filling polygons between range.
@@ -40,15 +40,18 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         /// <summary>
         /// where to insert new polygon points to GeneratedArea.points list
         /// </summary>
-        public int newAreaPointInsertStartIndex;
+        public int newAreaPointInsertStartIndex;*/
 
-        public CommonContext Init(Allocator allocator = Allocator.TempJob)
+        public FloodingDefinition floodingDefinition;
+
+        public CommonContext Init(FloodingDefinition floodingDefinition, Allocator allocator = Allocator.TempJob)
         {
+            this.floodingDefinition = floodingDefinition;
             points = new NativeList<float2>(allocator);
             usedBoundaryLines = new NativeList<Line2>(allocator);
             rays = new NativeList<Ray>(allocator);
             occlusionsBuffer = new NativeArray<float>(360, allocator); // 1 degree per unit
-            floodRadRange = new float2(0, Mathf.PI * 2);
+            // floodRadRange = new float2(0, Mathf.PI * 2);
             ClearOcclusionBuffer();
             return this;
         }
@@ -58,7 +61,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             for (int i = 0; i < occlusionsBuffer.Length; i++) occlusionsBuffer[i] = float.MaxValue;
         }
 
-        public bool FloodingCirle()
+        /*public bool FloodingCirle()
         {
             return floodRadRange.x == 0 && floodRadRange.y == Mathf.PI * 2;
         }
@@ -73,7 +76,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             {
                 return UnamangedUtils.Between(radian, floodRadRange.x, floodRadRange.y);
             }
-        }
+        }*/
 
         public void Dispose()
         {

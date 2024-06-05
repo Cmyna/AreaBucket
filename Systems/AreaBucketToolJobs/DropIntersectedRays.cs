@@ -43,7 +43,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public void Execute()
         {
             var raysCache = new NativeList<Ray>(Allocator.Temp);
-            var rayStartPos = context.rayStartPoint;
+            var rayStartPos = context.floodingDefinition.rayStartPoint;
 
             // drop rays has intersection with any check lines
             for (var i = 0; i < context.rays.Length; i++)

@@ -34,8 +34,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             for (int i = 0; i < signletonData.totalBoundaryLines.Length; i++)
             {
                 var line = signletonData.totalBoundaryLines[i];
-                var v1 = line.a - context.rayStartPoint;
-                var v2 = line.b - context.rayStartPoint;
+                var v1 = line.a - context.floodingDefinition.rayStartPoint;
+                var v2 = line.b - context.floodingDefinition.rayStartPoint;
 
                 var minDist = MinDist(line);
                 var maxDist = math.max(math.length(v1), math.length(v2));
@@ -105,7 +105,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private float MinDist(Line2 line)
         {
-            var rayStartPos = context.rayStartPoint;
+            var rayStartPos = context.floodingDefinition.rayStartPoint;
             var dist = MathUtils.Distance(line, rayStartPos, out var t);
             if (t >= 0 && t <= 1) return dist;
             var v1 = line.a - rayStartPos;

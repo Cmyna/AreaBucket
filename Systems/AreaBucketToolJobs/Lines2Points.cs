@@ -29,7 +29,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             for (int i = 0; i < context.usedBoundaryLines.Length; i++)
             {
                 var line = context.usedBoundaryLines[i];
-                var rayStartPos = context.rayStartPoint;
+                var rayStartPos = context.floodingDefinition.rayStartPoint;
                 if (UnamangedUtils.CollectDivPoints(line, rayStartPos, singletonData.fillingRange, out var p1, out var p2))
                 {
                     context.points.Add(p1);

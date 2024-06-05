@@ -39,9 +39,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             for (var i = 0; i < context.points.Length; i++)
             {
-                var vector = context.points[i] - context.rayStartPoint;
+                var vector = context.points[i] - context.floodingDefinition.rayStartPoint;
                 var radian = Utils.Math.RadianInClock(xzUp, vector);
-                if (rayBetweenFloodingRange && !context.InFloodingRange(radian)) continue;
+                if (rayBetweenFloodingRange && !context.floodingDefinition.InFloodingRange(radian)) continue;
                 var ray = new Ray() { vector = vector, radian = radian };
                 raysCache.Add(ray);
             }

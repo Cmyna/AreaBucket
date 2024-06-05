@@ -18,7 +18,25 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public NativeList<Line2> exposedLines;
 
+        public NativeList<FloodingDefinition> floodingDefintions;
+
         public float collinearTollerance;
+
+        public FilterExposedPolylines Init(
+            CommonContext context,
+            GeneratedArea generatedAreaData,
+            NativeList<Line2> exposedLines, 
+            NativeList<FloodingDefinition> floodingDefinitions,
+            float collinearTollerance
+        ) {
+            this.context = context;
+            this.generatedAreaData = generatedAreaData;
+            this.exposedLines = exposedLines;
+            this.floodingDefintions = floodingDefinitions;
+            this.collinearTollerance = collinearTollerance;
+            return this;
+        }
+
         public void Execute()
         {
             for (int i = 0; i < generatedAreaData.polyLines.Length; i++)
@@ -69,7 +87,21 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     if (!overlap) continue;
                     else break;
                 }
-                if (exposed) exposedLines.Add(line);
+                if (exposed)
+                {
+                    float2 xzUp = new float2(0, 1);
+                    var r1 = Utils.Math.RadianInClock(xzUp, middle - line.a);
+                    var r2 = Utils.Math.RadianInClock(xzUp, line.b - middle);
+                    var floodingDef = new FloodingDefinition
+                    {
+                        rayStartPoint = middle,
+                        floodRadRange = new float2(r1, r2),
+                        newAreaPointInsertStartIndex = i,
+                        iteraction = context.floodingDefinition.iteraction + 1
+                    };
+                    floodingDefintions.Add(floodingDef);
+                    exposedLines.Add(line);
+                }
             }
         }
 
