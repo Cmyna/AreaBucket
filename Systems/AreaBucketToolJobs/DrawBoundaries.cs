@@ -16,23 +16,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct DrawBoundaries : IJob
     {
-        public CommonContext context;
 
         public GizmoBatcher gizmoBatcher;
-
-        public TerrainHeightData heightData;
 
         public SingletonData signletonData;
 
         public DrawBoundaries Init(
-            CommonContext context, 
             GizmoBatcher batcher, 
-            TerrainHeightData heightData, 
             SingletonData signletonData
         ) {
-            this.context = context;
             this.gizmoBatcher = batcher;
-            this.heightData = heightData;
             this.signletonData = signletonData;
             return this;
         }
@@ -54,7 +47,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private float3 GetWorldPos(float2 pos)
         {
             var worldPos = new float3 { x = pos.x, y = 0, z = pos.y };
-            var height = TerrainUtils.SampleHeight(ref heightData, worldPos);
+            var height = TerrainUtils.SampleHeight(ref signletonData.terrainHeightData, worldPos);
             worldPos.y = height;
             return worldPos;
         }

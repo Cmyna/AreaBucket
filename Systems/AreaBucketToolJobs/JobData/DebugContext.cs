@@ -1,10 +1,12 @@
-﻿using Colossal.Mathematics;
+﻿using Colossal;
+using Colossal.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
+using Unity.Jobs;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 {
@@ -14,10 +16,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public NativeList<Line2> intersectedRays;
 
-        public DebugContext Init(Allocator allocator = Allocator.TempJob)
+        public GizmoBatcher gizmoBatcher;
+
+        public DebugContext Init(GizmoBatcher gizmoBatcher, Allocator allocator = Allocator.TempJob)
         {
             intersectedLines = new NativeList<Line2>(allocator);
             intersectedRays = new NativeList<Line2>(allocator);
+            this.gizmoBatcher = gizmoBatcher;
             return this;
         }
 
@@ -25,6 +30,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         {
             intersectedLines.Dispose();
             intersectedRays.Dispose();
+        }
+
+        public JobHandle Dispose(JobHandle inputDeps)
+        {
+            var jobHandle = inputDeps;
+            jobHandle = intersectedLines.Dispose(jobHandle);
+            jobHandle = intersectedRays.Dispose(jobHandle);
+            return jobHandle;
         }
     }
 }

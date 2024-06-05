@@ -14,7 +14,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 {
     public struct CollectNetLaneCurves : IJobChunk
     {
-        public CommonContext context;
+        // public CommonContext context;
 
         //[ReadOnly] public bool DropLaneOwnedByRoad;
 
@@ -37,10 +37,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         [ReadOnly] public BufferLookup<Game.Net.SubLane> luSubLane;
 
         public SingletonData signletonData;
-        public CollectNetLaneCurves InitContext(
-            CommonContext context, SingletonData signletonData
-        ) {
-            this.context = context;
+        public CollectNetLaneCurves InitContext(SingletonData signletonData)
+        {
+            // this.context = context;
             this.signletonData = signletonData;
             return this;
         }
@@ -71,7 +70,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var distance = MathUtils.Distance(bounds, signletonData.playerHitPos);
                 if (distance <= signletonData.fillingRange)
                 {
-                    signletonData.curves.Add(curve); //context.curves.Add(curve); 
+                    signletonData.curves.Add(curve);
                 }
             }
         }

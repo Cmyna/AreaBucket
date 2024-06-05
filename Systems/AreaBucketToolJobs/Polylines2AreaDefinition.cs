@@ -19,8 +19,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     public struct Polylines2AreaDefinition : IJob
     {
 
-        public CommonContext context;
-
         public GeneratedArea generatedAreaData;
 
         [ReadOnly] public Entity prefab;

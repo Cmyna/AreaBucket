@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
@@ -32,6 +33,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         {
             polyLines.Dispose();
             points.Dispose();
+        }
+
+        public JobHandle Dispose(JobHandle inputDeps)
+        {
+            var jobHandle = inputDeps;
+            jobHandle = polyLines.Dispose(jobHandle);
+            jobHandle = points.Dispose(jobHandle);
+            return jobHandle;
         }
     }
 }

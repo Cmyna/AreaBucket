@@ -4,6 +4,7 @@ using Game.Debug;
 using Game.Tools;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine.Rendering;
@@ -50,14 +51,14 @@ namespace AreaBucket.Systems
                     getter = () => CheckOcclusion,
                     setter = (v) => CheckOcclusion = v,
                 },
-                
+
                 new DebugUI.BoolField
                 {
                     displayName = "Merge Rays",
                     getter = () => MergeGenedPolylines,
                     setter = (v) => MergeGenedPolylines = v,
                 },
-                
+
                 new DebugUI.FloatField
                 {
                     displayName = "Merge Rays Angle Threshold",
@@ -88,10 +89,20 @@ namespace AreaBucket.Systems
                     setter = (v) => RayBetweenFloodRange = v
                 },
 
-                new DebugUI.Button
+                new DebugUI.IntField
                 {
-                    displayName = "add flag",
-                    action = () => { }
+                    displayName = "Max Flooding Depths",
+                    incStep = 1,
+                    getter = () => MaxFloodingDepths,
+                    setter = (v) => MaxFloodingDepths = math.clamp(v, 1, 3)
+                },
+
+                new DebugUI.IntField
+                {
+                    displayName = "Max Flooding Times",
+                    incStep = 1,
+                    getter = () => MaxFloodingTimes,
+                    setter = (v) => MaxFloodingTimes = math.clamp(v, 1, 32)
                 },
 
                 CreateVisualizeDebugUI(),
@@ -232,5 +243,12 @@ namespace AreaBucket.Systems
             }
             otherProfile[key] = value.ToString();
         }
+
+        private void ClearJobTimeProfiles()
+        {
+            var keys = jobTimeProfile.Keys.ToArray();
+            foreach (var key in keys) jobTimeProfile[key] = 0;
+        }
+        
     }
 }

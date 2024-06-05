@@ -36,13 +36,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public ComponentLookup<ObjectGeometryData> luObjectGeoData;
 
-        public CommonContext context;
+        //public CommonContext context;
 
         public SingletonData signletonData;
 
-        public CollectLotLines InitContext(CommonContext context, SingletonData signletonData)
+        public CollectLotLines InitContext(SingletonData signletonData)
         {
-            this.context = context;
+            //this.context = context;
             this.signletonData = signletonData;
             return this;
         }
@@ -135,20 +135,20 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var dist = MathUtils.Distance(bounds, hitPos);
             if (dist > filterRange) return;
 
-            context.points.Add(p1.xz);
+            /*context.points.Add(p1.xz);
             context.points.Add(p2.xz);
             context.points.Add(p3.xz);
-            context.points.Add(p4.xz);
+            context.points.Add(p4.xz);*/
 
             var l1 = new Line2(p1.xz, p2.xz);
             var l2 = new Line2(p2.xz, p3.xz);
             var l3 = new Line2(p3.xz, p4.xz);
             var l4 = new Line2(p4.xz, p1.xz);
 
-            signletonData.totalBoundaryLines.Add(l1); //context.totalBoundaryLines.Add(l1); 
-            signletonData.totalBoundaryLines.Add(l2); //context.totalBoundaryLines.Add(l2); 
-            signletonData.totalBoundaryLines.Add(l3); //context.totalBoundaryLines.Add(l3); 
-            signletonData.totalBoundaryLines.Add(l4); //context.totalBoundaryLines.Add(l4); 
+            signletonData.totalBoundaryLines.Add(l1); 
+            signletonData.totalBoundaryLines.Add(l2);
+            signletonData.totalBoundaryLines.Add(l3);
+            signletonData.totalBoundaryLines.Add(l4);
 
         }
 

@@ -10,7 +10,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 {
     public struct FloodingDefinition
     {
-        public int iteraction;
+        public int floodingDepth;
 
         public float2 rayStartPoint;
 
@@ -27,11 +27,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         /// </summary>
         public int newAreaPointInsertStartIndex;
 
-        public FloodingDefinition Init(float2 rayStartPoint, int iteraction)
+        public FloodingDefinition Init(float2 rayStartPoint, int depth)
         {
             this.rayStartPoint = rayStartPoint;
             this.floodRadRange = new float2(0, Mathf.PI * 2);
-            this.iteraction = iteraction;
+            this.floodingDepth = depth;
             return this;
         }
 

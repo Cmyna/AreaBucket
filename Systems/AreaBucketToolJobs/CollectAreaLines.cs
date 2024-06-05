@@ -20,13 +20,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public BufferTypeHandle<Triangle> bthTriangle;
 
-        public CommonContext context;
-
         public SingletonData signletonData;
 
-        public CollectAreaLines InitContext(CommonContext context, SingletonData signletonData)
+        public CollectAreaLines InitContext(SingletonData signletonData)
         {
-            this.context = context;
             this.signletonData = signletonData;
             return this;
         }
@@ -64,10 +61,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (math.distance(p1, p2) < 0.5f) return;
             var line = new Line2(p1, p2);
             if (!InRange(line)) return;
-            // CollectedChoppedPoints(line, 50f);
-            //UnamangedUtils.CollectDivPoints(line, context.hitPos, context.filterRange, ref context.points);
-            //CollectDivPoints(line, ref points);
-            //context.totalBoundaryLines.Add(line);
             signletonData.totalBoundaryLines.Add(line);
         }
 

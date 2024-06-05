@@ -30,15 +30,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public ComponentLookup<NetCompositionData> luCompositionData;
 
-        public CommonContext context;
-
         public BoundaryMask mask;
 
         public SingletonData signletonData;
 
-        public CollectNetEdges InitContext(CommonContext context, SingletonData signletonData, BoundaryMask mask)
+        public CollectNetEdges InitContext(SingletonData signletonData, BoundaryMask mask)
         {
-            this.context = context;
             this.mask = mask;
             this.signletonData = signletonData;
             return this;
@@ -63,11 +60,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var distance = MathUtils.Distance(geo.m_Bounds.xz, signletonData.playerHitPos);
                 if (distance > signletonData.fillingRange) continue;
 
-                signletonData.curves.Add(geo.m_Start.m_Left); //context.curves.Add(geo.m_Start.m_Left);
-                signletonData.curves.Add(geo.m_Start.m_Right); //context.curves.Add(geo.m_Start.m_Right); 
+                signletonData.curves.Add(geo.m_Start.m_Left);
+                signletonData.curves.Add(geo.m_Start.m_Right);
 
-                signletonData.curves.Add(geo.m_End.m_Left); //context.curves.Add(geo.m_End.m_Left);
-                signletonData.curves.Add(geo.m_End.m_Right); //context.curves.Add(geo.m_End.m_Right);
+                signletonData.curves.Add(geo.m_End.m_Left);
+                signletonData.curves.Add(geo.m_End.m_Right);
 
                 TryAddNodeGeometry(startNodeGeos[i].m_Geometry);
                 TryAddNodeGeometry(endNodeGeos[i].m_Geometry);

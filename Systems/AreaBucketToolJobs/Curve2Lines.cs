@@ -18,13 +18,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public int chopCount;
 
-        public CommonContext context;
-
         public SingletonData staticData;
 
-        public Curve2Lines Init(CommonContext context, SingletonData signletonData, int chopCount)
+        public Curve2Lines Init(SingletonData signletonData, int chopCount)
         {
-            this.context = context;
             this.chopCount = chopCount;
             this.staticData = signletonData;
             return this;
@@ -53,11 +50,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var cutted = MathUtils.Cut(curve, bounds);
                 var line = new Line2() { a = cutted.a.xz, b = cutted.d.xz };
 
-                //context.points.Add(MathUtils.Position(curve, t).xz);
-                // context.totalBoundaryLines.Add(line);
                 staticData.totalBoundaryLines.Add(line);
             }
-            //context.points.Add(curve.d.xz);
         }
     }
 }

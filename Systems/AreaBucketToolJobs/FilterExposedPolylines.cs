@@ -75,8 +75,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                     if (!Collinear(line, boundaryLine)) continue;
 
-
-
                     MathUtils.Distance(line, boundaryLine.a, out var t1);
                     MathUtils.Distance(line, boundaryLine.b, out var t2);
                     MathUtils.Distance(boundaryLine, line.a, out var t3);
@@ -90,14 +88,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 if (exposed)
                 {
                     float2 xzUp = new float2(0, 1);
-                    var r1 = Utils.Math.RadianInClock(xzUp, middle - line.a);
+                    var r1 = Utils.Math.RadianInClock(xzUp, line.a - middle);
                     var r2 = Utils.Math.RadianInClock(xzUp, line.b - middle);
                     var floodingDef = new FloodingDefinition
                     {
                         rayStartPoint = middle,
                         floodRadRange = new float2(r1, r2),
                         newAreaPointInsertStartIndex = i,
-                        iteraction = context.floodingDefinition.iteraction + 1
+                        floodingDepth = context.floodingDefinition.floodingDepth + 1
                     };
                     floodingDefintions.Add(floodingDef);
                     exposedLines.Add(line);
