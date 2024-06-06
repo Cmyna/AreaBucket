@@ -67,7 +67,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             generatedAreaData.points.Clear();
             generatedAreaData.points.AddRange(pointsCache.AsArray());
 
-            UnamangedUtils.BuildPolylines(ref generatedAreaData.points, ref generatedAreaData.polyLines);
+            UnamangedUtils.BuildPolylines(generatedAreaData.points, generatedAreaData.polyLines);
 
             pointsCache.Dispose();
             linesCache.Dispose();

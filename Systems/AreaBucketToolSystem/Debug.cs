@@ -84,6 +84,13 @@ namespace AreaBucket.Systems
 
                 new DebugUI.BoolField
                 {
+                    displayName = "Recursive Flooding",
+                    getter = () => RecursiveFlooding,
+                    setter = (v) => RecursiveFlooding = v
+                },
+
+                new DebugUI.BoolField
+                {
                     displayName = "Ray Between Flood Range",
                     getter = () => RayBetweenFloodRange,
                     setter = (v) => RayBetweenFloodRange = v
@@ -91,10 +98,10 @@ namespace AreaBucket.Systems
 
                 new DebugUI.IntField
                 {
-                    displayName = "Max Flooding Depths",
+                    displayName = "Max Recursive Flooding Depths",
                     incStep = 1,
-                    getter = () => MaxFloodingDepths,
-                    setter = (v) => MaxFloodingDepths = math.clamp(v, 1, 3)
+                    getter = () => MaxRecursiveFloodingDepth,
+                    setter = (v) => MaxRecursiveFloodingDepth = math.clamp(v, 1, 3)
                 },
 
                 new DebugUI.IntField

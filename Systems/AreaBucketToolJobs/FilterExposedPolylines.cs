@@ -22,31 +22,37 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public float collinearTollerance;
 
+        public NativeReference<int2> rfCheckRange;
+
         public FilterExposedPolylines Init(
             CommonContext context,
             GeneratedArea generatedAreaData,
             NativeList<Line2> exposedLines, 
             NativeList<FloodingDefinition> floodingDefinitions,
-            float collinearTollerance
+            float collinearTollerance,
+            NativeReference<int2> rfCheckRange
         ) {
             this.context = context;
             this.generatedAreaData = generatedAreaData;
             this.exposedLines = exposedLines;
             this.floodingDefintions = floodingDefinitions;
             this.collinearTollerance = collinearTollerance;
+            this.rfCheckRange = rfCheckRange;
             return this;
         }
 
         public void Execute()
         {
-            for (int i = 0; i < generatedAreaData.polyLines.Length; i++)
+            var newPointsIndicesRange = rfCheckRange.Value;
+            var lowerBound = math.max(newPointsIndicesRange.x - 1, 0);
+            var upperBound = math.min(newPointsIndicesRange.y + 1, generatedAreaData.polyLines.Length);
+            for (int i = lowerBound; i < upperBound; i++)
             {
                 var line = generatedAreaData.polyLines[i];
-                var middle = math.lerp(line.a, line.b, 0.5f);
                 var vector = line.b - line.a;
 
                 if (math.length(vector) < 0.5f) continue;
-
+                var middle = math.lerp(line.a, line.b, 0.5f);
                 // if both two end points reach filling max range, drop it
                 /*var fillingRange = context.filterRange - 1; // -1: prevent twinkling
                 var overFillingRange = (math.length(line.a - context.hitPos) > fillingRange) &&
@@ -73,7 +79,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         break;
                     }
 
-                    if (!Collinear(line, boundaryLine)) continue;
+                   /* if (!Collinear(line, boundaryLine)) continue;
 
                     MathUtils.Distance(line, boundaryLine.a, out var t1);
                     MathUtils.Distance(line, boundaryLine.b, out var t2);
@@ -83,16 +89,21 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     var overlap = Between(t1, 0, 1) || Between(t2, 0, 1) || Between(t3, 0, 1) || Between(t4, 0, 1);
                     exposed &= !overlap;
                     if (!overlap) continue;
-                    else break;
+                    else break;*/
                 }
                 if (exposed)
                 {
                     float2 xzUp = new float2(0, 1);
-                    var r1 = Utils.Math.RadianInClock(xzUp, line.a - middle);
-                    var r2 = Utils.Math.RadianInClock(xzUp, line.b - middle);
+                    // FIX: it is better to move "out side of" flooded polygons, it should be left hande side (counter clock wise) of line vector
+                    // well it seems should be right hand side / clockwise ...
+                    var v = Utils.Math.PerpendicularClockwise(vector, 0.1f);
+                    var startPoint = middle + v;
+
+                    var r1 = Utils.Math.RadianInClock(xzUp, line.a - startPoint);
+                    var r2 = Utils.Math.RadianInClock(xzUp, line.b - startPoint);
                     var floodingDef = new FloodingDefinition
                     {
-                        rayStartPoint = middle,
+                        rayStartPoint = startPoint,
                         floodRadRange = new float2(r1, r2),
                         newAreaPointInsertStartIndex = i,
                         floodingDepth = context.floodingDefinition.floodingDepth + 1

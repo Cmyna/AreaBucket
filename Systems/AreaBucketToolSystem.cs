@@ -120,9 +120,11 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool RayBetweenFloodRange { get; set; } = true;
 
-        public int MaxFloodingDepths { get; set;} = 3;
+        public int MaxRecursiveFloodingDepth { get; set;} = 2;
 
         public int MaxFloodingTimes { get; set; } = 16;
+
+        public bool RecursiveFlooding { get; set; } = false;
 
 
         private AudioManager _audioManager;
@@ -300,11 +302,8 @@ namespace AreaBucket.Systems
                 debugDrawJobHandle = Schedule(drawBoundariesJob, debugDrawJobHandle);
             }
 
-            if (CheckOcclusion) 
-            {
-                var filterObscuredLinesJob = new DropObscuredLines().Init(floodingContext, singletonData);
-                jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
-            }
+            var filterObscuredLinesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
+            jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
 
             jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
             // extra points is experimental for performance issue
@@ -349,17 +348,17 @@ namespace AreaBucket.Systems
                 }, debugDrawJobHandle);
             }
 
-            jobHandle = Schedule(new Rays2Polylines().Init(floodingContext, singletonData, generatedAreaData), jobHandle);
+            //jobHandle = Schedule(new Rays2Polylines().Init(floodingContext, singletonData, generatedAreaData), jobHandle);
 
             var exposedList = new NativeList<Line2>(Allocator.TempJob);
             var floodingDefinitions = new NativeList<FloodingDefinition>(Allocator.TempJob);
-            jobHandle = Schedule(new FilterExposedPolylines().Init(
+            /*jobHandle = Schedule(new FilterExposedPolylines().Init(
                 floodingContext,
                 generatedAreaData,
                 exposedList,
                 floodingDefinitions,
                 LineCollinearTollerance
-                ), jobHandle);
+                ), jobHandle);*/
 
             if (DrawFloodingCandidates)
             {
@@ -449,7 +448,12 @@ namespace AreaBucket.Systems
             return jobHandle;
         }
 
-
+        /// <summary>
+        /// Collect BoundaryLines for filling algorithms
+        /// </summary>
+        /// <param name="inputDeps"></param>
+        /// <param name="singletonData"></param>
+        /// <returns></returns>
         private JobHandle ScheduleDataCollection(JobHandle inputDeps, SingletonData singletonData)
         {
             var jobHandle = inputDeps;

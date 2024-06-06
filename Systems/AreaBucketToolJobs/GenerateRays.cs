@@ -42,6 +42,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var vector = context.points[i] - context.floodingDefinition.rayStartPoint;
                 var radian = Utils.Math.RadianInClock(xzUp, vector);
                 if (rayBetweenFloodingRange && !context.floodingDefinition.InFloodingRange(radian)) continue;
+                // drop rays that is over distance (0.1f: prevent twinking)
+                if (math.length(context.points[i] - singletonData.playerHitPos) > (singletonData.fillingRange + 0.1f)) continue;
                 var ray = new Ray() { vector = vector, radian = radian };
                 raysCache.Add(ray);
             }

@@ -14,26 +14,39 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     {
         public CommonContext context;
 
-        public SingletonData signletonData;
+        public SingletonData singletonData;
 
-        public DropObscuredLines Init(CommonContext context, SingletonData signletonData)
+        public GeneratedArea generatedAreaData;
+
+        public bool checkOcculsion;
+
+        public DropObscuredLines Init(CommonContext context, SingletonData signletonData, GeneratedArea generatedAreaData, bool checkOcculsion)
         {
             this.context = context;
-            this.signletonData = signletonData;
+            this.singletonData = signletonData;
+            this.generatedAreaData = generatedAreaData;
+            this.checkOcculsion = checkOcculsion;
             return this;
         }
 
         public void Execute()
         {
+            context.usedBoundaryLines.Clear();
             // clear buffer before
             context.ClearOcclusionBuffer();
-            context.usedBoundaryLines.Clear();
+
+            if (!checkOcculsion)
+            {
+                context.usedBoundaryLines.AddRange(singletonData.totalBoundaryLines.AsArray());
+                context.usedBoundaryLines.AddRange(generatedAreaData.polyLines.AsArray());
+                return;
+            }
 
             var metasCache = new NativeList<LineMeta>(Allocator.Temp);
 
-            for (int i = 0; i < signletonData.totalBoundaryLines.Length; i++)
+            for (int i = 0; i < singletonData.totalBoundaryLines.Length; i++)
             {
-                var line = signletonData.totalBoundaryLines[i];
+                /*var line = signletonData.totalBoundaryLines[i];
                 var v1 = line.a - context.floodingDefinition.rayStartPoint;
                 var v2 = line.b - context.floodingDefinition.rayStartPoint;
 
@@ -49,18 +62,48 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 metasCache.Add(meta);
 
                 // update occlusion buffer
-                UpdateOcclusionBuffer(meta);
+                UpdateOcclusionBuffer(meta);*/
+                HandleBoundary(singletonData.totalBoundaryLines[i], ref metasCache);
             }
 
+            // it seems that occlusion not works well on generated polylines...
+            // i guess it is because they are too closed to ray start point
+            // hense not use occlusions on these lines
+            /*for (int i = 0; i < generatedAreaData.polyLines.Length; i++)
+            {
+                var line = generatedAreaData.polyLines[i];
+                HandleBoundary(line, ref metasCache);
+            }*/
+            context.usedBoundaryLines.AddRange(generatedAreaData.polyLines.AsArray());
+
             // drop obscured lines
-            for (int i = 0; i < signletonData.totalBoundaryLines.Length; i++)
+            for (int i = 0; i < singletonData.totalBoundaryLines.Length; i++)
             {
                 if (IsObscured(metasCache[i])) continue;
-                context.usedBoundaryLines.Add(signletonData.totalBoundaryLines[i]);
+                context.usedBoundaryLines.Add(singletonData.totalBoundaryLines[i]);
             }
 
 
             metasCache.Dispose();
+        }
+
+        private void HandleBoundary(Line2 line, ref NativeList<LineMeta> metas)
+        {
+            var v1 = line.a - context.floodingDefinition.rayStartPoint;
+            var v2 = line.b - context.floodingDefinition.rayStartPoint;
+
+            var minDist = MinDist(line);
+            var maxDist = math.max(math.length(v1), math.length(v2));
+
+            var meta = new LineMeta
+            {
+                minDist = minDist,
+                maxDist = maxDist,
+                bounds = GetTraveledDegs(v1, v2, out _, out _)
+            };
+            metas.Add(meta);
+
+            UpdateOcclusionBuffer(meta);
         }
 
         private void UpdateOcclusionBuffer(LineMeta meta)

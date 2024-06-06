@@ -8,6 +8,7 @@ using Game.Tools;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 
@@ -43,8 +44,16 @@ namespace AreaBucket.Systems
 
             if (DrawBoundaries)
             {
-                var drawBoundariesJob = default(DrawBoundaries).Init(gizmosBatcher, singletonData);
-                jobHandle = Schedule(drawBoundariesJob, jobHandle);
+                /*var drawBoundariesJob = default(DrawBoundaries).Init(gizmosBatcher, singletonData);
+                jobHandle = Schedule(drawBoundariesJob, jobHandle);*/
+                jobHandle = Schedule(new DrawLinesJob
+                {
+                    color = new Color(100, 100, 0),
+                    heightData = singletonData.terrainHeightData,
+                    gizmoBatcher = debugContext.gizmoBatcher,
+                    lines = singletonData.totalBoundaryLines,
+                    yOffset = -0.5f
+                }, jobHandle);
             }
 
             var floodingDefsList = new NativeList<FloodingDefinition>(Allocator.TempJob);
@@ -122,10 +131,19 @@ namespace AreaBucket.Systems
 
             var floodingContext = new CommonContext().Init(floodingDefinition); // Area bucket jobs common context
 
-            if (CheckOcclusion)
+            var filterObscuredLinesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
+            jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
+
+            if (DrawBoundaries)
             {
-                var filterObscuredLinesJob = new DropObscuredLines().Init(floodingContext, singletonData);
-                jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
+                jobHandle = Schedule(new DrawLinesJob
+                {
+                    color = Color.red,
+                    heightData = singletonData.terrainHeightData,
+                    gizmoBatcher = debugContext.gizmoBatcher,
+                    lines = floodingContext.usedBoundaryLines,
+                    yOffset = -0.25f
+                }, jobHandle);
             }
 
             jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
@@ -196,22 +214,102 @@ namespace AreaBucket.Systems
                 }, jobHandle);
             }
 
-            if (floodingDefinition.floodingDepth < 2)
+            //var rfMaxSectorRadian = new NativeReference<float>(Allocator.TempJob);
+            //var rfMaxSectorIndex = new NativeReference<int>(Allocator.TempJob);
+            //var newPoints = new NativeList<float2>(Allocator.TempJob);
+            var newPointsIndicesRange = new NativeReference<int2>(Allocator.TempJob);
+            if (RecursiveFlooding || floodingContext.floodingDefinition.floodingDepth == 1)
             {
-                jobHandle = Schedule(new Rays2Polylines().Init(floodingContext, singletonData, generatedAreaData), jobHandle);
+
+
+                // build points
+                /*jobHandle = Job.WithCode(() => {
+                    var rays = floodingContext.rays;
+                    var rayStartPoint = floodingContext.floodingDefinition.rayStartPoint;
+                    UnamangedUtils.FindLargestSector(rays, out var maxSectorRad, out var maxSectorIndex);
+                    rfMaxSectorRadian.Value = maxSectorRad;
+                    rfMaxSectorIndex.Value = maxSectorIndex;
+                    bool addHitPoint = (maxSectorRad > Mathf.PI) && floodingContext.floodingDefinition.FloodingCirle();
+                    if (addHitPoint) newPoints.Add(rayStartPoint);
+
+                    var raysCount = rays.Length;
+                    for (int i = maxSectorIndex; i < maxSectorIndex + raysCount; i++)
+                    {
+                        var ray = rays[i % raysCount];
+                        var p = rayStartPoint + ray.vector;
+                        newPoints.Add(p);
+                    }
+                }).Schedule(jobHandle);
+
+                // insert points
+                jobHandle = Job.WithCode(() => {
+                    var cache = new NativeList<float2>(Allocator.Temp);
+                    var insertIndex = floodingContext.floodingDefinition.newAreaPointInsertStartIndex;
+                    var cache2 = new NativeList<float2>(Allocator.Temp);
+
+                    if (insertIndex < generatedAreaData.points.Length)
+                    {
+                        for (int i = 0; i < insertIndex + 1; i++) cache2.Add(generatedAreaData.points[i]);
+                    }
+                    cache2.AddRange(newPoints.AsArray());
+                    for (int i = insertIndex + 1; i < generatedAreaData.points.Length; i++) cache2.Add(generatedAreaData.points[i]);
+
+                    generatedAreaData.points.Clear();
+                    generatedAreaData.points.AddRange(cache2.AsArray());
+
+                    cache.Dispose();
+                    cache2.Dispose();
+                }).Schedule(jobHandle);
+
+                // update other flooding defs
+                jobHandle = Job.WithCode(() => {
+                    for (int i = 0; i < floodingDefinitions.Length; i++)
+                    {
+                        var otherDef = floodingDefinitions[i];
+                        if (otherDef.newAreaPointInsertStartIndex >= floodingContext.floodingDefinition.newAreaPointInsertStartIndex)
+                        {
+                            otherDef.newAreaPointInsertStartIndex += newPoints.Length;
+                            floodingDefinitions[i] = otherDef;
+                        }
+                    }
+                }).Schedule(jobHandle);
+
+
+                // build polylines
+                jobHandle = Job.WithCode(() => {
+                    UnamangedUtils.BuildPolylines(generatedAreaData.points, generatedAreaData.polyLines);
+                }).Schedule(jobHandle);*/
+
+                var r2plJob = new Rays2Polylines().Init(
+                    floodingContext, 
+                    singletonData, 
+                    generatedAreaData, 
+                    floodingDefinitions, 
+                    newPointsIndicesRange
+                    );
+                jobHandle = Schedule(r2plJob, jobHandle);
+
+                
             }
+            //jobHandle = rfMaxSectorRadian.Dispose(jobHandle);
+            //jobHandle = rfMaxSectorIndex.Dispose(jobHandle);
+            //jobHandle = newPoints.Dispose(jobHandle);
+
+
 
             var exposedList = new NativeList<Line2>(Allocator.TempJob);
-            if (floodingDefinition.floodingDepth < MaxFloodingDepths)
+            if (floodingDefinition.floodingDepth < MaxRecursiveFloodingDepth)
             {
                 jobHandle = Schedule(new FilterExposedPolylines().Init(
                     floodingContext,
                     generatedAreaData,
                     exposedList,
                     floodingDefinitions,
-                    LineCollinearTollerance
+                    LineCollinearTollerance,
+                    newPointsIndicesRange
                     ), jobHandle);
             }
+            jobHandle = newPointsIndicesRange.Dispose(jobHandle);
 
             if (DrawFloodingCandidates)
             {

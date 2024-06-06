@@ -134,5 +134,19 @@ namespace AreaBucket.Utils
             return unitVector * length;
         }
 
+
+        public static float2 PerpendicularCounterClockwise(float2 vector1, float length = 1)
+        {
+            float2 newVector = new float2(-vector1.y, vector1.x);
+            var unitVector = newVector / math.length(newVector);
+            return unitVector * length;
+        }
+
+        public static float2 PerpendicularClockwise(float2 vector1, float length = 1)
+        {
+            float2 newVector = new float2(vector1.y, -vector1.x);
+            var unitVector = newVector / math.length(newVector);
+            return unitVector * length;
+        }
     }
 }

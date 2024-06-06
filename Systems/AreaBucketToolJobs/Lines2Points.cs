@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using Unity.Burst;
 using Unity.Jobs;
+using Unity.Mathematics;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
@@ -29,13 +30,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             for (int i = 0; i < context.usedBoundaryLines.Length; i++)
             {
                 var line = context.usedBoundaryLines[i];
-                var rayStartPos = context.floodingDefinition.rayStartPoint;
-                if (UnamangedUtils.CollectDivPoints(line, rayStartPos, singletonData.fillingRange, out var p1, out var p2))
-                {
-                    context.points.Add(p1);
-
-                    context.points.Add(p2);
-                }
+                //var hitPos = context.floodingDefinition.rayStartPoint;
+                var hitPos = singletonData.playerHitPos; // collect points under filling circle range distance from player hit pos
+                UnamangedUtils.CollectDivPoints(line, hitPos, singletonData.fillingRange, out var p1, out var p2);
+                context.points.Add(p1);
+                context.points.Add(p2);
             }
         }
     }

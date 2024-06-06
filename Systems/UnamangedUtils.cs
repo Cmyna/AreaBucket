@@ -1,12 +1,4 @@
-﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
-using Colossal.Mathematics;
-using Game.Routes;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Colossal.Mathematics;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
@@ -71,8 +63,8 @@ namespace AreaBucket.Systems
         }
 
         public static void BuildPolylines(
-            ref NativeList<float2> points, 
-            ref NativeList<Line2> lines
+            NativeList<float2> points, 
+            NativeList<Line2> lines
         )
         {
             lines.Clear();
@@ -89,6 +81,37 @@ namespace AreaBucket.Systems
         public static bool Between(float a, float min, float max)
         {
             return a >= min && a <= max;
+        }
+
+        public static void FindLargestSector(NativeList<AreaBucketToolJobs.Ray> sortedRays, out float maxSectorRadian, out int maxSectorIndex)
+        {
+            //var sortedRays = context.rays;
+            maxSectorRadian = 0;
+            maxSectorIndex = -1;
+            for (var i = 0; i < sortedRays.Length; i++)
+            {
+                float a = sortedRays[i].radian;
+                float b;
+                float rayDiff;
+                if (i == sortedRays.Length - 1)
+                {
+                    b = sortedRays[0].radian;
+                    rayDiff = b + Mathf.PI * 2 - a;
+                }
+                else
+                {
+                    b = sortedRays[i + 1].radian;
+                    rayDiff = b - a;
+                }
+                if (rayDiff > maxSectorRadian)
+                {
+                    maxSectorRadian = rayDiff;
+                    maxSectorIndex = i + 1;
+                }
+            }
+
+            if (maxSectorIndex == sortedRays.Length) maxSectorIndex = 0;
+
         }
     }
 
