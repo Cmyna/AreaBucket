@@ -13,7 +13,7 @@
 		<!--The file should contain 2 lines:-->
 		<!--Your.PDX@Account.login-->
 		<!--Your-PDX-Account-Pa$$word-->
-		<PDXAccountDataPath>$(USERPROFILE)\Desktop\pdx_account.txt</PDXAccountDataPath>
+		<PDXAccountDataPath>$(USERPROFILE)\pdx_account.txt</PDXAccountDataPath>
 		
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
@@ -26,12 +26,15 @@
 	<ItemGroup>
 		<Reference Include="Colossal.AssetPipeline">
 		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.AssetPipeline.dll</HintPath>
+		  <Private>False</Private>
 		</Reference>
 		<Reference Include="Colossal.Mathematics">
 		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll</HintPath>
+		  <Private>False</Private>
 		</Reference>
 		<Reference Include="Colossal.Mono.Cecil">
 		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mono.Cecil.dll</HintPath>
+		  <Private>False</Private>
 		</Reference>
 		<Reference Include="Game">
 			<Private>false</Private>
@@ -54,8 +57,13 @@
 		<Reference Include="Colossal.Localization">
 			<Private>false</Private>
 		</Reference>
+		<Reference Include="Unity.RenderPipelines.Core.Runtime">
+		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
 		<Reference Include="UnityEngine.AudioModule">
 		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+		  <Private>False</Private>
 		</Reference>
 		<Reference Include="UnityEngine.CoreModule">
 			<Private>false</Private>
@@ -97,6 +105,10 @@
 
   <ItemGroup>
     <_Icons Include="$(ProjectDir)/Icons/*.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Systems\AreaBucketToolJobs\JobData\RayEndPoint.cs" />
   </ItemGroup>
 
   <Target Name="CopyIcons" AfterTargets="AfterBuild">
