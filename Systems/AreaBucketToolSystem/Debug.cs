@@ -152,9 +152,6 @@ namespace AreaBucket.Systems
             panel.children.Add(list);
         }
 
-        
-
-
         private DebugUI.Container CreateMergePointsDebugUI()
         {
             return new DebugUI.Container("Merge Points", new ObservableList<DebugUI.Widget>
@@ -191,6 +188,13 @@ namespace AreaBucket.Systems
                         getter = () => DrawGeneratedRays,
                         setter = (v) => DrawGeneratedRays = v,
                     },
+                    new DebugUI.IntField
+                    {
+                        displayName = "Drawed Rays Depth",
+                        incStep = 1,
+                        getter = () => DrawRaysDepth,
+                        setter = (v) => DrawRaysDepth = math.clamp(v, 0, MaxRecursiveFloodingDepth + 1),
+                    },
                     new DebugUI.BoolField
                     {
                         displayName = "Draw Intersections",
@@ -205,27 +209,6 @@ namespace AreaBucket.Systems
                     },
                 }
             );
-        }
-
-
-        private void RefreshOtherProfilesDebugUI()
-        {
-            List<DebugUI.Widget> list = new List<DebugUI.Widget>();
-            foreach (var entry in otherProfile)
-            {
-                var key = entry.Key;
-                list.Add(new DebugUI.Value 
-                {
-                    displayName = entry.Key,
-                    getter = () =>
-                    {
-                        if (!otherProfile.ContainsKey(key)) return "null";
-                        else return otherProfile[key];
-                    }
-                });
-            }
-            otherProfileContainer.children.Clear();
-            otherProfileContainer.children.Add(list);
         }
 
 

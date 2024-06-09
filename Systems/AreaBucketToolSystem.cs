@@ -89,6 +89,8 @@ namespace AreaBucket.Systems
 
         public bool DrawGeneratedRays { get; set; } = false;
 
+        public int DrawRaysDepth { get; set; } = 0;
+
         public bool DrawFloodingCandidates { get; set; } = false;
 
         public bool MergeGenedPolylines { get; set; } = true;
@@ -125,6 +127,8 @@ namespace AreaBucket.Systems
         public int MaxFloodingTimes { get; set; } = 16;
 
         public bool RecursiveFlooding { get; set; } = false;
+
+        
 
 
         private AudioManager _audioManager;
@@ -261,191 +265,6 @@ namespace AreaBucket.Systems
         {
             base.InitializeRaycast();
             m_ToolRaycastSystem.typeMask = TypeMask.Terrain;
-        }
-
-        private JobHandle ApplyBucket(JobHandle inputDeps, ControlPoint raycastPoint)
-        {
-            var jobHandle = inputDeps;
-            var debugDrawJobHandle = jobHandle;
-
-            GizmoBatcher gizmosBatcher = default;
-            var terrainHeightData = _terrianSystem.GetHeightData();
-
-            //var debugJobActive = DrawIntersections || DrawBoundaries || DrawGeneratedRays;
-            var debugJobActive = true;
-
-            if (debugJobActive)
-            {
-                gizmosBatcher = _gizmosSystem.GetGizmosBatcher(out var gizmosSysDeps);
-                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, gizmosSysDeps);
-            }
-            // prepare jobs data
-
-            var floodingDef = new FloodingDefinition().Init(raycastPoint.m_HitPosition.xz, 1);
-            var floodingContext = new CommonContext().Init(floodingDef); // Area bucket jobs common context
-            // jobContext.rayStartPoint = raycastPoint.m_HitPosition.xz;
-
-            var debugContext = default(DebugContext).Init(gizmosBatcher);
-
-            var generatedAreaData = new GeneratedArea().Init();
-
-            var singletonData = new SingletonData().Init(raycastPoint.m_HitPosition.xz, FillRange, terrainHeightData);
-
-
-            // run
-            jobHandle = ScheduleDataCollection(jobHandle, singletonData);
-
-            if (DrawBoundaries)
-            {
-                var drawBoundariesJob = default(DrawBoundaries).Init(gizmosBatcher, singletonData);
-                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
-                debugDrawJobHandle = Schedule(drawBoundariesJob, debugDrawJobHandle);
-            }
-
-            var filterObscuredLinesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
-            jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
-
-            jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
-            // extra points is experimental for performance issue
-            if (UseExperimentalOptions && ExtraPoints)
-            {
-                var genIntersectionPointsJob = default(GenIntersectedPoints).Init(floodingContext);
-                jobHandle = Schedule(genIntersectionPointsJob, jobHandle);
-            }
-            if (MergePoints)
-            {
-                // only drop points totally overlayed. higher range causes accidently intersection dropping
-                // (points are merged and moved, which cause rays generated from those points becomes intersected)
-                var mergePointsJob = default(MergePoints).Init(floodingContext, singletonData, MergePointDist);
-                jobHandle = Schedule(mergePointsJob, jobHandle);
-            }
-
-            var generateRaysJob = default(GenerateRays).Init(floodingContext, singletonData, RayBetweenFloodRange);
-            jobHandle = Schedule(generateRaysJob, jobHandle);
-
-            if (CheckIntersection)
-            {
-                var dropRaysJob = default(DropIntersectedRays).Init(floodingContext, debugContext, RayTollerance, singletonData);
-                jobHandle = Schedule(dropRaysJob, jobHandle);
-            }
-            if (DrawIntersections)
-            {
-                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
-
-                debugDrawJobHandle = Schedule(new DrawLinesJob
-                {
-                    lines = debugContext.intersectedLines,
-                    gizmoBatcher = gizmosBatcher,
-                    heightData = terrainHeightData,
-                    color = Color.blue
-                }, debugDrawJobHandle);
-                debugDrawJobHandle = Schedule(new DrawLinesJob
-                {
-                    lines = debugContext.intersectedRays,
-                    gizmoBatcher = gizmosBatcher,
-                    heightData = terrainHeightData,
-                    color = Color.magenta
-                }, debugDrawJobHandle);
-            }
-
-            //jobHandle = Schedule(new Rays2Polylines().Init(floodingContext, singletonData, generatedAreaData), jobHandle);
-
-            var exposedList = new NativeList<Line2>(Allocator.TempJob);
-            var floodingDefinitions = new NativeList<FloodingDefinition>(Allocator.TempJob);
-            /*jobHandle = Schedule(new FilterExposedPolylines().Init(
-                floodingContext,
-                generatedAreaData,
-                exposedList,
-                floodingDefinitions,
-                LineCollinearTollerance
-                ), jobHandle);*/
-
-            if (DrawFloodingCandidates)
-            {
-                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
-                debugDrawJobHandle = Schedule(new DrawLinesJob
-                {
-                    color = Color.green,
-                    heightData = terrainHeightData,
-                    gizmoBatcher = gizmosBatcher,
-                    lines = exposedList,
-                    yOffset = 2f
-                }, debugDrawJobHandle);
-            }
-            
-            
-            if (MergeGenedPolylines)
-            {
-                jobHandle = Schedule(new MergePolylines 
-                {
-                    generatedAreaData = generatedAreaData,
-                    minEdgeLength = MinEdgeLength,
-                    breakMergeAngleThreshold = MergeRayAngleThreshold * Mathf.Deg2Rad,
-                    strictBreakMergeAngleThreshold = StrictBreakMergeRayAngleThreshold * Mathf.Deg2Rad
-                }, jobHandle);
-            }
-
-            if (DrawGeneratedRays)
-            {
-                debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
-                var raylines = new NativeList<Line2>(Allocator.TempJob);
-                debugDrawJobHandle = Job.WithCode(() =>
-                {
-                    for (int i = 0; i < floodingContext.rays.Length; i++)
-                    {
-                        var v = floodingContext.rays[i].vector;
-                        var line = new Line2 { a = singletonData.playerHitPos, b = singletonData.playerHitPos + v };
-                        raylines.Add(line);
-                    }
-                }).Schedule(debugDrawJobHandle);
-                debugDrawJobHandle = Schedule(new DrawLinesJob 
-                { 
-                    lines = raylines,
-                    gizmoBatcher = gizmosBatcher,
-                    heightData = terrainHeightData,
-                    color = new Color(0.3f, 0.5f, 0.7f, 1)
-                }, debugDrawJobHandle);
-                debugDrawJobHandle.Complete();
-                jobHandle = raylines.Dispose(jobHandle);
-            }
-
-            var polyLines2AreaDefsJob = new Polylines2AreaDefinition
-            {
-                generatedAreaData = generatedAreaData,
-                prefab = m_PrefabSystem.GetEntity(_selectedPrefab),
-                terrianHeightData = terrainHeightData,
-                commandBuffer = _toolOutputBarrier.CreateCommandBuffer()
-            };
-            jobHandle = Schedule(polyLines2AreaDefsJob, jobHandle);
-            jobHandle.Complete();
-            UpdateOtherFieldView("Generated Nodes Count", polyLines2AreaDefsJob.generateNodesCount);
-
-
-            if (debugJobActive)
-            {
-                _gizmosSystem.AddGizmosBatcherWriter(debugDrawJobHandle);
-                debugDrawJobHandle.Complete();
-            }
-
-            jobHandle.Complete();
-
-            UpdateOtherFieldView("Rays Count", floodingContext.rays.Length);
-            UpdateOtherFieldView("Boundary Curves Count", singletonData.curves.Length);
-            UpdateOtherFieldView("Total Boundary Lines Count", singletonData.totalBoundaryLines.Length);
-            UpdateOtherFieldView("Used Boundary Lines Count", floodingContext.usedBoundaryLines.Length);
-            UpdateOtherFieldView("Generated Area Poly Lines Count", generatedAreaData.polyLines.Length);
-            UpdateOtherFieldView("Gened Area Points Count", generatedAreaData.points.Length);
-            UpdateOtherFieldView("Exposed Gened Area Lines", exposedList.Length);
-
-            // disposes
-            jobHandle = floodingContext.Dispose(jobHandle);
-            jobHandle = debugContext.Dispose(jobHandle);
-            jobHandle = exposedList.Dispose(jobHandle);
-            jobHandle = generatedAreaData.Dispose(jobHandle);
-            jobHandle = singletonData.Dispose(jobHandle);
-            jobHandle = floodingDefinitions.Dispose(jobHandle);
-
-            return jobHandle;
         }
 
         /// <summary>

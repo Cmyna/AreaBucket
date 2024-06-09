@@ -83,6 +83,15 @@ namespace AreaBucket.Systems
             return a >= min && a <= max;
         }
 
+        public static Bounds2 GetBounds(Line2 line)
+        {
+            return new Bounds2()
+            {
+                min = math.min(line.a, line.b),
+                max = math.max(line.a, line.b)
+            };
+        }
+
         public static void FindLargestSector(NativeList<AreaBucketToolJobs.Ray> sortedRays, out float maxSectorRadian, out int maxSectorIndex)
         {
             //var sortedRays = context.rays;

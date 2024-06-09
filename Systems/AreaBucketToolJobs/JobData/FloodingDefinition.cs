@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Colossal.Mathematics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public float2 rayStartPoint;
 
+        public Line2 floodingSourceLine;
+
         /// <summary>
         /// set the filling sector radian range, the algorithms should generate area filling polygons between range.
         /// two float are signed radian (between 0-2PI), radian range from floodRadRange.x to floodRadRange.y
@@ -27,11 +30,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         /// </summary>
         public int newAreaPointInsertStartIndex;
 
-        public FloodingDefinition Init(float2 rayStartPoint, int depth)
+        public FloodingDefinition Init(float2 rayStartPoint, int depth, int newAreaPointInsertStartIndex = -1)
         {
             this.rayStartPoint = rayStartPoint;
             this.floodRadRange = new float2(0, Mathf.PI * 2);
             this.floodingDepth = depth;
+            this.newAreaPointInsertStartIndex = newAreaPointInsertStartIndex;
             return this;
         }
 

@@ -171,7 +171,7 @@ namespace AreaBucket.Systems
                 jobHandle = Schedule(dropRaysJob, jobHandle);
             }
 
-            if (DrawGeneratedRays)
+            if (DrawGeneratedRays && (DrawRaysDepth == 0 || DrawRaysDepth == floodingDefinition.floodingDepth))
             {
                 //debugDrawJobHandle = JobHandle.CombineDependencies(debugDrawJobHandle, jobHandle);
                 var raylines = new NativeList<Line2>(Allocator.TempJob);
@@ -214,72 +214,9 @@ namespace AreaBucket.Systems
                 }, jobHandle);
             }
 
-            //var rfMaxSectorRadian = new NativeReference<float>(Allocator.TempJob);
-            //var rfMaxSectorIndex = new NativeReference<int>(Allocator.TempJob);
-            //var newPoints = new NativeList<float2>(Allocator.TempJob);
             var newPointsIndicesRange = new NativeReference<int2>(Allocator.TempJob);
             if (RecursiveFlooding || floodingContext.floodingDefinition.floodingDepth == 1)
             {
-
-
-                // build points
-                /*jobHandle = Job.WithCode(() => {
-                    var rays = floodingContext.rays;
-                    var rayStartPoint = floodingContext.floodingDefinition.rayStartPoint;
-                    UnamangedUtils.FindLargestSector(rays, out var maxSectorRad, out var maxSectorIndex);
-                    rfMaxSectorRadian.Value = maxSectorRad;
-                    rfMaxSectorIndex.Value = maxSectorIndex;
-                    bool addHitPoint = (maxSectorRad > Mathf.PI) && floodingContext.floodingDefinition.FloodingCirle();
-                    if (addHitPoint) newPoints.Add(rayStartPoint);
-
-                    var raysCount = rays.Length;
-                    for (int i = maxSectorIndex; i < maxSectorIndex + raysCount; i++)
-                    {
-                        var ray = rays[i % raysCount];
-                        var p = rayStartPoint + ray.vector;
-                        newPoints.Add(p);
-                    }
-                }).Schedule(jobHandle);
-
-                // insert points
-                jobHandle = Job.WithCode(() => {
-                    var cache = new NativeList<float2>(Allocator.Temp);
-                    var insertIndex = floodingContext.floodingDefinition.newAreaPointInsertStartIndex;
-                    var cache2 = new NativeList<float2>(Allocator.Temp);
-
-                    if (insertIndex < generatedAreaData.points.Length)
-                    {
-                        for (int i = 0; i < insertIndex + 1; i++) cache2.Add(generatedAreaData.points[i]);
-                    }
-                    cache2.AddRange(newPoints.AsArray());
-                    for (int i = insertIndex + 1; i < generatedAreaData.points.Length; i++) cache2.Add(generatedAreaData.points[i]);
-
-                    generatedAreaData.points.Clear();
-                    generatedAreaData.points.AddRange(cache2.AsArray());
-
-                    cache.Dispose();
-                    cache2.Dispose();
-                }).Schedule(jobHandle);
-
-                // update other flooding defs
-                jobHandle = Job.WithCode(() => {
-                    for (int i = 0; i < floodingDefinitions.Length; i++)
-                    {
-                        var otherDef = floodingDefinitions[i];
-                        if (otherDef.newAreaPointInsertStartIndex >= floodingContext.floodingDefinition.newAreaPointInsertStartIndex)
-                        {
-                            otherDef.newAreaPointInsertStartIndex += newPoints.Length;
-                            floodingDefinitions[i] = otherDef;
-                        }
-                    }
-                }).Schedule(jobHandle);
-
-
-                // build polylines
-                jobHandle = Job.WithCode(() => {
-                    UnamangedUtils.BuildPolylines(generatedAreaData.points, generatedAreaData.polyLines);
-                }).Schedule(jobHandle);*/
-
                 var r2plJob = new Rays2Polylines().Init(
                     floodingContext, 
                     singletonData, 
@@ -288,19 +225,13 @@ namespace AreaBucket.Systems
                     newPointsIndicesRange
                     );
                 jobHandle = Schedule(r2plJob, jobHandle);
-
-                
             }
-            //jobHandle = rfMaxSectorRadian.Dispose(jobHandle);
-            //jobHandle = rfMaxSectorIndex.Dispose(jobHandle);
-            //jobHandle = newPoints.Dispose(jobHandle);
-
 
 
             var exposedList = new NativeList<Line2>(Allocator.TempJob);
             if (floodingDefinition.floodingDepth < MaxRecursiveFloodingDepth)
             {
-                jobHandle = Schedule(new FilterExposedPolylines().Init(
+                jobHandle = Schedule(new CollectFloodingDefinitions().Init(
                     floodingContext,
                     generatedAreaData,
                     exposedList,
@@ -309,6 +240,39 @@ namespace AreaBucket.Systems
                     newPointsIndicesRange
                     ), jobHandle);
             }
+
+            // filter flooding definitions
+            jobHandle = Job.WithCode(() =>
+            {
+                var usableFloodingDefs = new NativeList<FloodingDefinition>(Allocator.Temp);
+                for (int i = 0; i < floodingDefinitions.Length; i++)
+                {
+                    var floodingDef = floodingDefinitions[i];
+                    var line = floodingDef.floodingSourceLine;
+                    var vector = line.b - line.a;
+                    var middle = math.lerp(line.a, line.b, 0.5f);
+
+                    var exposed = true;
+                    for (int j = 0; j < generatedAreaData.polyLines.Length; j++)
+                    {
+                        // if satisfy this condition, means it is flooding candidate source line
+                        if (j == floodingDef.newAreaPointInsertStartIndex) continue;
+
+                        var boundaryLine = generatedAreaData.polyLines[j];
+                        if (FoundIntersection(line, vector, middle, boundaryLine))
+                        {
+                            exposed = false;
+                            break;
+                        }
+                    }
+                    if (exposed) usableFloodingDefs.Add(floodingDef);
+                }
+
+                floodingDefinitions.Clear();
+                floodingDefinitions.AddRange(usableFloodingDefs.AsArray());
+                usableFloodingDefs.Dispose();
+            }).Schedule(jobHandle);
+
             jobHandle = newPointsIndicesRange.Dispose(jobHandle);
 
             if (DrawFloodingCandidates)
@@ -329,5 +293,23 @@ namespace AreaBucket.Systems
 
             return jobHandle;
         }
+
+        private static bool FoundIntersection(Line2 line, float2 vector, float2 middle, Line2 boundaryLine)
+        {
+            if (!MathUtils.Intersect(UnamangedUtils.GetBounds(boundaryLine), UnamangedUtils.GetBounds(line))) return false;
+            var pVector = Utils.Math.Perpendicular(vector, 0.5f);
+            var p1 = middle + pVector;
+            var p2 = middle - pVector;
+
+            var line2 = new Line2(p1, p2);
+
+            // check if line2 intersect with boundaryLine
+            MathUtils.Intersect(line2, boundaryLine, out var t);
+            return UnamangedUtils.Between(t.x, 0, 1) && UnamangedUtils.Between(t.y, 0, 1);
+        }
+
+
     }
+
+
 }
