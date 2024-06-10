@@ -227,16 +227,15 @@ namespace AreaBucket.Systems
                 jobHandle = Schedule(r2plJob, jobHandle);
             }
 
-
+            // collect new flooding definitions
             var exposedList = new NativeList<Line2>(Allocator.TempJob);
-            if (floodingDefinition.floodingDepth < MaxRecursiveFloodingDepth)
+            if (UseExperimentalOptions && floodingDefinition.floodingDepth < RecursiveFloodingDepth)
             {
                 jobHandle = Schedule(new CollectFloodingDefinitions().Init(
                     floodingContext,
                     generatedAreaData,
                     exposedList,
                     floodingDefinitions,
-                    LineCollinearTollerance,
                     newPointsIndicesRange
                     ), jobHandle);
             }

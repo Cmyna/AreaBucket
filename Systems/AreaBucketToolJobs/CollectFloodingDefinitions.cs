@@ -1,16 +1,13 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using Colossal.Mathematics;
-using Game.Net;
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Entities.UniversalDelegates;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
-
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
+    [BurstCompile]
     public struct CollectFloodingDefinitions : IJob
     {
         public CommonContext context;
@@ -21,8 +18,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public NativeList<FloodingDefinition> floodingDefintions;
 
-        public float collinearTollerance;
-
         public NativeReference<int2> rfCheckRange;
 
         public CollectFloodingDefinitions Init(
@@ -30,48 +25,18 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             GeneratedArea generatedAreaData,
             NativeList<Line2> exposedLines, 
             NativeList<FloodingDefinition> floodingDefinitions,
-            float collinearTollerance,
             NativeReference<int2> rfCheckRange
         ) {
             this.context = context;
             this.generatedAreaData = generatedAreaData;
             this.exposedLines = exposedLines;
             this.floodingDefintions = floodingDefinitions;
-            this.collinearTollerance = collinearTollerance;
             this.rfCheckRange = rfCheckRange;
             return this;
         }
 
         public void Execute()
         {
-            
-            //var usableFloodingDefs = new NativeList<FloodingDefinition>(Allocator.Temp);
-
-            // because the generated poly line may reach another flooding candidate line,
-            // which is hard to be excluded in DropInteresectedRays job
-            // hense we should check those def here
-            /*for (int i = 0; i < floodingDefintions.Length; i++)
-            {
-                var floodingDef = floodingDefintions[i];
-                var line = floodingDef.floodingSourceLine;
-                var vector = line.b - line.a;
-                var middle = math.lerp(line.a, line.b, 0.5f);
-
-                var exposed = true;
-                for (int j = 0; j < generatedAreaData.polyLines.Length; j++)
-                {
-                    // if satisfy this condition, means it is flooding candidate source line
-                    if (j == floodingDef.newAreaPointInsertStartIndex) continue;
-
-                    var boundaryLine = generatedAreaData.polyLines[j];
-                    if (FoundIntersection(line, vector, middle, boundaryLine))
-                    {
-                        exposed = false;
-                        break;
-                    }
-                }
-                if (exposed) usableFloodingDefs.Add(floodingDef);
-            }*/
 
             var newPointsIndicesRange = rfCheckRange.Value;
             var lowerBound = math.max(newPointsIndicesRange.x - 1, 0);
@@ -87,12 +52,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 exposedLines.Add(line);
             }
 
-            
-
-            //floodingDefintions.Clear();
-            //floodingDefintions.AddRange(usableFloodingDefs.AsArray());
-
-            //usableFloodingDefs.Dispose();
         }
 
 
@@ -105,21 +64,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             {
                 var boundaryLine = boundaryLines[j];
                 if (FoundIntersection(line, vector, middle, boundaryLine)) return true;
-
-                /*if (!MathUtils.Intersect(GetBounds(boundaryLine), GetBounds(line))) continue;
-
-                var pVector = Utils.Math.Perpendicular(vector, 0.5f);
-                var p1 = middle + pVector;
-                var p2 = middle - pVector;
-
-                var line2 = new Line2(p1, p2);
-
-                // check if line2 intersect with boundaryLine
-                MathUtils.Intersect(line2, boundaryLine, out var t);
-                if (Between(t.x, 0, 1) && Between(t.y, 0, 1))
-                {
-                    return false;
-                }*/
             }
             return false;
         }
@@ -134,7 +78,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             // check if line2 intersect with boundaryLine
             MathUtils.Intersect(line2, boundaryLine, out var t);
-            return Between(t.x, 0, 1) && Between(t.y, 0, 1);
+            return UnamangedUtils.Between(t.x, 0, 1) && UnamangedUtils.Between(t.y, 0, 1);
         }
 
 
@@ -159,33 +103,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 floodingDepth = context.floodingDefinition.floodingDepth + 1
             };
             return floodingDef;
-        }
-
-
-        private bool Between(float a, float from, float to)
-        {
-            return a >= from && a <= to;
-        }
-
-
-        private bool Collinear(Line2 line1, Line2 line2)
-        {
-            var a = line1.a;
-            var b = line1.b;
-            var c = line2.a;
-            var d = line2.b;
-
-            var ab = b - a;
-            var ac = c - a;
-            var ad = d - a;
-
-            // cross products
-            var c1 = ab.x * ac.y - ab.y * ac.x;
-            var c2 = ab.x * ad.y - ab.y * ad.x;
-
-            // check (ab, ac) collinear, and (ab,ad) collinear (with tollerance)
-            return (math.abs(c1) < collinearTollerance) && (math.abs(c2) < collinearTollerance);
-
         }
     }
 }

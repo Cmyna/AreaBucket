@@ -115,14 +115,16 @@ namespace AreaBucket.Systems
         /// </summary>
         public float2 RayTollerance { get; set; } = new float2 { x = 0.01f, y = 0.01f };
 
-        public float LineCollinearTollerance { get; set; } = 0.1f;
 
         /// <summary>
         /// restrict generated ray's radian should between CommonContext.floodRadRange
         /// </summary>
         public bool RayBetweenFloodRange { get; set; } = true;
 
-        public int MaxRecursiveFloodingDepth { get; set;} = 2;
+        /// <summary>
+        /// restrict the algorithm flooding depth in one loop
+        /// </summary>
+        public int RecursiveFloodingDepth { get; set;} = 1;
 
         public int MaxFloodingTimes { get; set; } = 16;
 

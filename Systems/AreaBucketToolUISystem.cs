@@ -54,7 +54,11 @@ namespace AreaBucket.Systems
             AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "UseExperimentalOptions", () => _bucketToolSystem.UseExperimentalOptions));
             Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.ExtraPoints));
 
-            
+            Add2WayBinding<int>(
+                nameof(AreaBucketToolSystem.RecursiveFloodingDepth),
+                () => _bucketToolSystem.RecursiveFloodingDepth,
+                (v) => _bucketToolSystem.RecursiveFloodingDepth = math.clamp(v, 1, 3)
+            );
         }
 
 

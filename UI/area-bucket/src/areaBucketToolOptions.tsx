@@ -24,6 +24,7 @@ const simple2WayBindings = {
     boundaryMask: simple2WayBinding<number>("BoundaryMask"),
     
     extraPoints: simple2WayBinding<boolean>("ExtraPoints"),
+    floodingDepth: simple2WayBinding<number>("RecursiveFloodingDepth")
 }
 
 
@@ -84,41 +85,6 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
 
         if (!activeBindings.active.value) return result // shows tool options iff it is active
 
-        // if (activeBindings.showDebug.value) {
-        //     result.props.children?.push(<>
-        //         <Radio title="Log For Debug"
-        //             src={couiStandard + "HeadCode.svg"}
-        //             binding={activeBindings.log4Debug}
-        //             {...ctx}
-        //         />
-        //         <Radio title="Check Intersection"
-        //             src={couiStandard + "HeadCode.svg"}
-        //             binding={activeBindings.checkIntersection}
-        //             {...ctx}
-        //         />
-        //         <Radio title="Complete Jobs Immediate"
-        //             src={couiStandard + "HeadCode.svg"}
-        //             binding={activeBindings.jobImmediate}
-        //             {...ctx}
-        //         />
-        //         <Radio title="Profile Job Time"
-        //             src={couiStandard + "HeadCode.svg"}
-        //             binding={activeBindings.watchJobTime}
-        //             {...ctx}
-        //         />
-        //         <Radio title="filter occlusion"
-        //             src={couiStandard + "HeadCode.svg"}
-        //             binding={activeBindings.checkOcclusion}
-        //             {...ctx}
-        //         />
-        //         <Radio title="Drop Owned Lane"
-        //             src={couiStandard + "HeadCode.svg"}
-        //             binding={activeBindings.dropOwnedLane}
-        //             {...ctx}
-        //         />
-        //     </> )
-        // }
-
         if (useExpOptions) result.props.children?.push(
         <Radio title={translateTool("DetectCrossing")}
             src={couiStandard + "Jackhammer.svg"}
@@ -130,21 +96,36 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
 
         // tool control filling range
         const fillRange = activeBindings.fillRange.value
-        result.props.children?.push(<UpDown 
-            title={translateTool("FillRange")}
-            textValue= {fillRange + "m"}
-            trigger={(n: number) => {
-                var scaling = 10
-                if (fillRange >= 50) scaling = 20
-                if (fillRange >= 150) scaling = 40
-                activeBindings.fillRange.trigger(fillRange + n * scaling)
-            }}
-            tooltip={translateToolDesc("FillRange")}
-            {...ctx}
-        />)
+        result.props.children?.push(<>
+            <UpDown 
+                title={translateTool("FillRange")}
+                textValue= {fillRange + "m"}
+                trigger={(n: number) => {
+                    var scaling = 10
+                    if (fillRange >= 50) scaling = 20
+                    if (fillRange >= 150) scaling = 40
+                    activeBindings.fillRange.trigger(fillRange + n * scaling)
+                }}
+                tooltip={translateToolDesc("FillRange")}
+                {...ctx}
+            />
+            {
+                useExpOptions && 
+                <UpDown 
+                title={translateTool("FloodingDepth")}
+                textValue= {activeBindings.floodingDepth.value}
+                trigger={(n: number) => {
+                    activeBindings.floodingDepth.trigger(n + activeBindings.floodingDepth.value)
+                }}
+                tooltip={translateToolDesc("FloodingDepth")}
+                {...ctx}
+                />
+            }
+        </>)
+
 
         // tool control boundary mask
-        const boundaryMask = activeBindings.boundaryMask.value
+        // const boundaryMask = activeBindings.boundaryMask.value
         result.props.children?.push(<Section title={translateTool("BoundaryMask")}>
             <MaskCheckBox 
                 src={"Media/Tools/Net Tool/SimpleCurve.svg"}

@@ -29,8 +29,11 @@ namespace AreaBucket
                 { ToolOptionKey("DetectCrossing"), "Detect Boundaries Crossing" },
                 { ToolOptionDescKey("DetectCrossing"), "Detect boundaries crossing and fix some filling gaps (performance issue)" },
 
-                { ToolOptionKey("FillRange"), "Fill Range" },
-                { ToolOptionDescKey("FillRange"), "Set Tool Filling Range" },
+                { ToolOptionKey("FloodingDepth"), "Flooding Depth" },
+                { ToolOptionDescKey("FloodingDepth"), "Set Tool Flooding Depth" },
+
+                { ToolOptionKey("FloodingRange"), "Flooding Range" },
+                { ToolOptionDescKey("FloodingRange"), "Set Tool Filling Range" },
 
                 { ToolOptionKey("BoundaryMask"), "Used Boundaries" },
                 { ToolOptionKey("MaskNet"), "Road & Net" },

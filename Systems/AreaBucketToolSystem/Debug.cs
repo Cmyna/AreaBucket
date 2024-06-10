@@ -74,14 +74,6 @@ namespace AreaBucket.Systems
                     setter = (v) => StrictBreakMergeRayAngleThreshold = math.clamp(v, 0, 90),
                 },
 
-                new DebugUI.FloatField
-                {
-                    displayName = "Collinear Tollerance",
-                    incStep = 0.01f,
-                    getter = () => LineCollinearTollerance,
-                    setter = (v) => LineCollinearTollerance = math.clamp(v, 0.01f, 0.5f),
-                },
-
                 new DebugUI.BoolField
                 {
                     displayName = "Recursive Flooding",
@@ -100,8 +92,8 @@ namespace AreaBucket.Systems
                 {
                     displayName = "Max Recursive Flooding Depths",
                     incStep = 1,
-                    getter = () => MaxRecursiveFloodingDepth,
-                    setter = (v) => MaxRecursiveFloodingDepth = math.clamp(v, 1, 3)
+                    getter = () => RecursiveFloodingDepth,
+                    setter = (v) => RecursiveFloodingDepth = math.clamp(v, 1, 3)
                 },
 
                 new DebugUI.IntField
@@ -193,7 +185,7 @@ namespace AreaBucket.Systems
                         displayName = "Drawed Rays Depth",
                         incStep = 1,
                         getter = () => DrawRaysDepth,
-                        setter = (v) => DrawRaysDepth = math.clamp(v, 0, MaxRecursiveFloodingDepth + 1),
+                        setter = (v) => DrawRaysDepth = math.clamp(v, 0, RecursiveFloodingDepth + 1),
                     },
                     new DebugUI.BoolField
                     {

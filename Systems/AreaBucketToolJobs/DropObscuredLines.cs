@@ -20,10 +20,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public bool checkOcculsion;
 
-        public DropObscuredLines Init(CommonContext context, SingletonData signletonData, GeneratedArea generatedAreaData, bool checkOcculsion)
+        public DropObscuredLines Init(CommonContext context, SingletonData singletonData, GeneratedArea generatedAreaData, bool checkOcculsion)
         {
             this.context = context;
-            this.singletonData = signletonData;
+            this.singletonData = singletonData;
             this.generatedAreaData = generatedAreaData;
             this.checkOcculsion = checkOcculsion;
             return this;
@@ -46,34 +46,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             for (int i = 0; i < singletonData.totalBoundaryLines.Length; i++)
             {
-                /*var line = signletonData.totalBoundaryLines[i];
-                var v1 = line.a - context.floodingDefinition.rayStartPoint;
-                var v2 = line.b - context.floodingDefinition.rayStartPoint;
-
-                var minDist = MinDist(line);
-                var maxDist = math.max(math.length(v1), math.length(v2));
-
-                var meta = new LineMeta
-                {
-                    minDist = minDist,
-                    maxDist = maxDist,
-                    bounds = GetTraveledDegs(v1, v2, out _, out _)
-                };
-                metasCache.Add(meta);
-
-                // update occlusion buffer
-                UpdateOcclusionBuffer(meta);*/
                 HandleBoundary(singletonData.totalBoundaryLines[i], ref metasCache);
             }
 
-            // it seems that occlusion not works well on generated polylines...
-            // i guess it is because they are too closed to ray start point
-            // hense not use occlusions on these lines
-            /*for (int i = 0; i < generatedAreaData.polyLines.Length; i++)
-            {
-                var line = generatedAreaData.polyLines[i];
-                HandleBoundary(line, ref metasCache);
-            }*/
             context.usedBoundaryLines.AddRange(generatedAreaData.polyLines.AsArray());
 
             // drop obscured lines
@@ -87,6 +62,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             metasCache.Dispose();
         }
 
+        /// <summary>
+        /// colllect some related info for each boundary lines
+        /// </summary>
+        /// <param name="line"></param>
+        /// <param name="metas"></param>
         private void HandleBoundary(Line2 line, ref NativeList<LineMeta> metas)
         {
             var v1 = line.a - context.floodingDefinition.rayStartPoint;
