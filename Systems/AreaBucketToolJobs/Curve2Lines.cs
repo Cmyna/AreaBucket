@@ -38,10 +38,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private void Chop(Bezier4x3 curve, int chopCount)
         {
             float tStep = 1f / chopCount;
-            var estimatedDist = math.length(curve.a.xz - curve.d.xz);
-            /*if (estimatedDist < 2) chopCount = 1; // if length is too short, reduce chop count
-            else if (estimatedDist < 4) chopCount = 2;
-            else if (estimatedDist < 8) chopCount = 4;*/
             for (var i = 0; i < chopCount; i++)
             {
                 var t = i * tStep;

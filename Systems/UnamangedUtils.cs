@@ -122,6 +122,7 @@ namespace AreaBucket.Systems
             if (maxSectorIndex == sortedRays.Length) maxSectorIndex = 0;
 
         }
+
     }
 
 }

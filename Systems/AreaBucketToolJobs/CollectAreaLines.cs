@@ -40,7 +40,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var buffer = nodesAccessor[i];
                 var triangleBuffer = triangleAccessor[i];
                 // if no triangle, means it is an invalid area shape,
-                // this kinds of entities is generated from area entity that players insert and drag new point on one edge to another edge
+                // this kinds of entities is generated from area entity that players insert/drag point on one edge to another edge
                 // the area entity just "invisible" because no more triangle, but still there
                 if (triangleBuffer.Length == 0) continue;
                 HandleBuffer(buffer);

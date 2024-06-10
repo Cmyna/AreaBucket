@@ -1,17 +1,12 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using Colossal;
 using Game.Simulation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Burst;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace AreaBucket.Systems.AreaBucketToolJobs
+namespace AreaBucket.Systems.DebugHelperJobs
 {
     [BurstCompile]
     public struct DrawBoundaries : IJob

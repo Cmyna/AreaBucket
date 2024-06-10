@@ -14,22 +14,23 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public GeneratedArea generatedAreaData;
 
-        public NativeList<Line2> exposedLines;
 
         public NativeList<FloodingDefinition> floodingDefintions;
 
+        /// <summary>
+        /// rf: abbr for NativeReference type
+        /// it declares the index range of collecting exposed flooding candidates
+        /// </summary>
         public NativeReference<int2> rfCheckRange;
 
         public CollectFloodingDefinitions Init(
             CommonContext context,
             GeneratedArea generatedAreaData,
-            NativeList<Line2> exposedLines, 
             NativeList<FloodingDefinition> floodingDefinitions,
             NativeReference<int2> rfCheckRange
         ) {
             this.context = context;
             this.generatedAreaData = generatedAreaData;
-            this.exposedLines = exposedLines;
             this.floodingDefintions = floodingDefinitions;
             this.rfCheckRange = rfCheckRange;
             return this;
@@ -49,7 +50,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 if (math.length(vector) < 0.5f) continue;
                 if (FoundIntersection(line, context.usedBoundaryLines)) continue;
                 floodingDefintions.Add(NewFloodingDef(line, i));
-                exposedLines.Add(line);
             }
 
         }

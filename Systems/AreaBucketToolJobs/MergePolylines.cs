@@ -9,7 +9,11 @@ using Unity.Mathematics;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
-
+    /// <summary>
+    /// TODO: refactor the merging algorithm (idea is use a convolution like merging)
+    /// 
+    /// TODO: sharp angle reduction when merging (still by convolution)
+    /// </summary>
     public struct MergePolylines : IJob
     {
         public GeneratedArea generatedAreaData;
@@ -61,7 +65,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var p1 = generatedAreaData.points[i];
                 var p2 = generatedAreaData.points[(i + 1) % count];
                 var v = p2 - p1;
-                if (math.length(v) <= 0.05f) continue;
+                if (math.length(v) <= 0.05f) continue; // 0.05f: it is a magic number prevent tiny vector affects other calcuations
                 var angle = Angle(checkVector, v);
                 walkThroughDist += math.length(v);
 
@@ -85,7 +89,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var v2 = pointsCache[0] - pointsCache.ElementAt(pointsCache.Length - 1);
                 canMerge = Angle(v1, v2) <= breakMergeAngleThreshold;
             }
-
             if (canMerge) pointsCache.RemoveAt(0);
 
             generatedAreaData.points.Clear();

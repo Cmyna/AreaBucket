@@ -228,19 +228,18 @@ namespace AreaBucket.Systems
             }
 
             // collect new flooding definitions
-            var exposedList = new NativeList<Line2>(Allocator.TempJob);
+            
             if (UseExperimentalOptions && floodingDefinition.floodingDepth < RecursiveFloodingDepth)
             {
                 jobHandle = Schedule(new CollectFloodingDefinitions().Init(
                     floodingContext,
                     generatedAreaData,
-                    exposedList,
                     floodingDefinitions,
                     newPointsIndicesRange
                     ), jobHandle);
             }
 
-            // filter flooding definitions
+            // filter flooding definitions (that has been obscured by new geneated polylines)
             jobHandle = Job.WithCode(() =>
             {
                 var usableFloodingDefs = new NativeList<FloodingDefinition>(Allocator.Temp);
@@ -249,7 +248,7 @@ namespace AreaBucket.Systems
                     var floodingDef = floodingDefinitions[i];
                     var line = floodingDef.floodingSourceLine;
                     var vector = line.b - line.a;
-                    var middle = math.lerp(line.a, line.b, 0.5f);
+                    var middle = math.lerp(line.a, line.b, 0.5f); // choose middle point of exposed line
 
                     var exposed = true;
                     for (int j = 0; j < generatedAreaData.polyLines.Length; j++)
@@ -276,7 +275,10 @@ namespace AreaBucket.Systems
 
             if (DrawFloodingCandidates)
             {
-                jobHandle = JobHandle.CombineDependencies(jobHandle, jobHandle);
+                var exposedList = new NativeList<Line2>(Allocator.TempJob);
+                jobHandle = Job.WithCode(() => {
+                    for (int i = 0; i < floodingDefinitions.Length; i++) exposedList.Add(floodingDefinitions[i].floodingSourceLine);
+                }).Schedule(jobHandle);
                 jobHandle = Schedule(new DrawLinesJob
                 {
                     color = Color.green,
@@ -285,9 +287,10 @@ namespace AreaBucket.Systems
                     lines = exposedList,
                     yOffset = 2f
                 }, jobHandle);
+                jobHandle = exposedList.Dispose(jobHandle);
             }
 
-            jobHandle = exposedList.Dispose(jobHandle);
+           
             jobHandle = floodingContext.Dispose(jobHandle);
 
             return jobHandle;

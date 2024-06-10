@@ -20,6 +20,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 namespace AreaBucket.Systems
@@ -59,8 +60,10 @@ namespace AreaBucket.Systems
         /// </summary>
         public float MaxFillingRange { get; set; } = 250f;
 
-
-        public float MinEdgeLength { get; set; } = 2f;
+        /// <summary>
+        /// to control the minimum generated polyline edges length
+        /// </summary>
+        public float MinEdgeLength { get; set; } = 0.5f;
 
         /// <summary>
         /// the boundary for area filling tool
@@ -73,7 +76,7 @@ namespace AreaBucket.Systems
         public bool UseExperimentalOptions { get; set; } = false;
 
         /// <summary>
-        /// performance optimization setting
+        /// performance optimization setting, use occlsion buffer to filter exposed boundaries from ray start point
         /// </summary>
         public bool CheckOcclusion { get; set; } = true;
 
@@ -111,9 +114,10 @@ namespace AreaBucket.Systems
 
         /// <summary>
         /// ray intersection tollerance distance seems can be slightly higher than 0 (here choose 1cm as default)
-        /// zero will cause twicking, while higher value may cause false positive intersection pass
+        /// zero will cause twicking, while higher value may cause false positive intersection pass.
+        /// it is two magic numbers too
         /// </summary>
-        public float2 RayTollerance { get; set; } = new float2 { x = 0.01f, y = 0.01f };
+        public float2 RayTollerance { get; set; } = new float2 { x = 0.01f, y = 0.02f };
 
 
         /// <summary>
@@ -126,9 +130,15 @@ namespace AreaBucket.Systems
         /// </summary>
         public int RecursiveFloodingDepth { get; set;} = 1;
 
+        /// <summary>
+        /// restrict the flooding max times
+        /// </summary>
         public int MaxFloodingTimes { get; set; } = 16;
 
-        public bool RecursiveFlooding { get; set; } = false;
+        /// <summary>
+        /// enable/disable recursive flooding
+        /// </summary>
+        public bool RecursiveFlooding { get; set; } = true;
 
         
 
@@ -174,6 +184,7 @@ namespace AreaBucket.Systems
 
             _applyAction = InputManager.instance.FindAction("Tool", "Apply");
             _secondaryApplyAction = InputManager.instance.FindAction("Tool", "Secondary Apply");
+
 
             timer = new System.Diagnostics.Stopwatch();
 
@@ -337,21 +348,6 @@ namespace AreaBucket.Systems
                 $"{curve.c.x} {curve.c.z}\n" +
                 $"{curve.d.x} {curve.d.z}\n"
             );
-        }
-
-        private void LogRay(AreaBucketToolJobs.Ray ray)
-        {
-            Mod.Logger.Info($"ray: (ray {ray.radian}) {ray.vector.x} {ray.vector.y}");
-        }
-
-        private void LogAreaPrefab(AreaPrefab prefab)
-        {
-            var components = new HashSet<ComponentType>();
-            prefab.GetArchetypeComponents(components);
-            foreach (var comp in components)
-            {
-                Mod.Logger.Info($"componentType: {comp.GetManagedType().Name}");
-            }
         }
 
 

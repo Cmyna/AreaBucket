@@ -71,7 +71,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var transform = transforms[i];
 
                 if (hasBuilding) HandleBuildingData(prefabEntity, transform);
-                if (hasBuildingExt) HandleBuildingExtData(prefabEntity, transform);
+                //if (hasBuildingExt) HandleBuildingExtData(prefabEntity, transform);
             }
 
         }
@@ -84,11 +84,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (IsSquareLot(objectGeoData)) CollectSquareLotData(lotSize, transform.m_Position, transform.m_Rotation);
         }
 
-        private void HandleBuildingExtData(Entity prefabEntity, Transform transform)
-        {
-            // TODO
-
-        }
 
         public void InitHandles(ref SystemState state)
         {

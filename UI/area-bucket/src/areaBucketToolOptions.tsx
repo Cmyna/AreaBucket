@@ -250,7 +250,7 @@ const UpDown = (props: any) => {
             disabled={false}
             focusKey={FocusDisabled}
         />
-        <Tooltip tooltip="filling range">
+        <Tooltip tooltip={props.tooltip}>
             <div className={mouseToolTheme.numberField}>{props.textValue}</div>
         </Tooltip>
         <ToolButton 
