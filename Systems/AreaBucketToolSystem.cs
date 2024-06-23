@@ -108,16 +108,18 @@ namespace AreaBucket.Systems
         /// </summary>
         public float MergePointDist { get; set; } = 0.01f;
 
-        public float MergeRayAngleThreshold { get; set; } = 0.5f;
+        public float MergePolylinesAngleThreshold { get; set; } = 0.5f;
 
-        public float StrictBreakMergeRayAngleThreshold { get; set; } = 30f;
+        public bool MergePointsUnderDist { get; set; } = true;
+
+        public bool MergePointsUnderAngleThreshold { get; set; } = true;
 
         /// <summary>
         /// ray intersection tollerance distance seems can be slightly higher than 0 (here choose 1cm as default)
         /// zero will cause twicking, while higher value may cause false positive intersection pass.
         /// it is two magic numbers too
         /// </summary>
-        public float2 RayTollerance { get; set; } = new float2 { x = 0.01f, y = 0.02f };
+        public float2 RayTollerance { get; set; } = new float2 { x = 0.01f, y = 0.1f };
 
 
         /// <summary>
@@ -139,8 +141,6 @@ namespace AreaBucket.Systems
         /// enable/disable recursive flooding
         /// </summary>
         public bool RecursiveFlooding { get; set; } = true;
-
-        
 
 
         private AudioManager _audioManager;

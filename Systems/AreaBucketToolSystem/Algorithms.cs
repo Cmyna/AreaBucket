@@ -83,8 +83,9 @@ namespace AreaBucket.Systems
                 {
                     generatedAreaData = generatedAreaData,
                     minEdgeLength = MinEdgeLength,
-                    breakMergeAngleThreshold = MergeRayAngleThreshold * Mathf.Deg2Rad,
-                    strictBreakMergeAngleThreshold = StrictBreakMergeRayAngleThreshold * Mathf.Deg2Rad
+                    breakMergeAngleThreshold = MergePolylinesAngleThreshold * Mathf.Deg2Rad,
+                    mergeUnderDistances = MergePointsUnderDist,
+                    mergeUnderAngleThreshold = MergePointsUnderAngleThreshold,
                 }, jobHandle);
             }
 

@@ -52,27 +52,7 @@ namespace AreaBucket.Systems
                     setter = (v) => CheckOcclusion = v,
                 },
 
-                new DebugUI.BoolField
-                {
-                    displayName = "Merge Rays",
-                    getter = () => MergeGenedPolylines,
-                    setter = (v) => MergeGenedPolylines = v,
-                },
 
-                new DebugUI.FloatField
-                {
-                    displayName = "Merge Rays Angle Threshold",
-                    incStep = 0.5f,
-                    getter = () => MergeRayAngleThreshold,
-                    setter = (v) => MergeRayAngleThreshold = math.clamp(v, 0, 5),
-                },
-                new DebugUI.FloatField
-                {
-                    displayName = "Merge Rays Angle Threshold Strict",
-                    incStep = 5f,
-                    getter = () => StrictBreakMergeRayAngleThreshold,
-                    setter = (v) => StrictBreakMergeRayAngleThreshold = math.clamp(v, 0, 90),
-                },
 
                 new DebugUI.BoolField
                 {
@@ -148,7 +128,7 @@ namespace AreaBucket.Systems
         {
             return new DebugUI.Container("Merge Points", new ObservableList<DebugUI.Widget>
             {
-                new DebugUI.BoolField { displayName = "enable", getter = () => MergePoints, setter = (v) => MergePoints = v },
+                new DebugUI.BoolField { displayName = "Merge Point Before Generate Rays", getter = () => MergePoints, setter = (v) => MergePoints = v },
                 new DebugUI.BoolField
                 {
                     displayName = "Merge Points Excatly Overlayed",
@@ -158,6 +138,35 @@ namespace AreaBucket.Systems
                         if (v) MergePointDist = 0.01f;
                         else MergePointDist = 0.5f;
                     },
+                },
+
+                new DebugUI.BoolField
+                {
+                    displayName = nameof(MergePointsUnderDist),
+                    getter = () => MergePointsUnderDist,
+                    setter = (v) => MergePointsUnderDist = v,
+                },
+
+                new DebugUI.BoolField
+                {
+                    displayName = nameof(MergePointsUnderAngleThreshold),
+                    getter = () => MergePointsUnderAngleThreshold,
+                    setter = (v) => MergePointsUnderAngleThreshold = v,
+                },
+
+                new DebugUI.BoolField
+                {
+                    displayName = "Merge Rays",
+                    getter = () => MergeGenedPolylines,
+                    setter = (v) => MergeGenedPolylines = v,
+                },
+
+                new DebugUI.FloatField
+                {
+                    displayName = "Merge Polylines Angle Threshold",
+                    incStep = 5f,
+                    getter = () => MergePolylinesAngleThreshold,
+                    setter = (v) => MergePolylinesAngleThreshold = math.clamp(v, 0, 90),
                 },
             });
         }
