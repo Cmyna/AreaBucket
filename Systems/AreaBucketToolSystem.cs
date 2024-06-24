@@ -108,7 +108,10 @@ namespace AreaBucket.Systems
         /// </summary>
         public float MergePointDist { get; set; } = 0.01f;
 
-        public float MergePolylinesAngleThreshold { get; set; } = 0.5f;
+        /// <summary>
+        /// 5 degrees threshold
+        /// </summary>
+        public float MergePolylinesAngleThreshold { get; set; } = 5f;
 
         public bool MergePointsUnderDist { get; set; } = true;
 
