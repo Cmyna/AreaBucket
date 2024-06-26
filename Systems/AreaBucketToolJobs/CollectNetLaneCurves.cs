@@ -36,11 +36,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public BufferLookup<Game.Net.SubLane> luSubLane;
 
-        public SingletonData signletonData;
-        public CollectNetLaneCurves InitContext(SingletonData signletonData)
+        public SingletonData singletonData;
+        public CollectNetLaneCurves InitContext(SingletonData singletonData)
         {
             // this.context = context;
-            this.signletonData = signletonData;
+            this.singletonData = singletonData;
             return this;
         }
 
@@ -57,9 +57,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 var prefabEntity = prefabRefs[i].m_Prefab;
 
                 if (!luNetLaneGeoData.HasComponent(prefabEntity)) continue; // should have LaneGeometryData
-                //if (hasOwner && IsSubLane(owners[i])) continue; // drop net lane that is sub lane
-                //if (hasOwner && DropLaneOwnedByRoad && OwnedByRoad(owners[i])) continue;
-                //else if (hasOwner && DropLaneOwnedByBuilding && OwnedByBuilding(owners[i])) continue;
 
                 // only collect net lanes created by dev tools / mods (assets from Find it/EDT etc.)
                 // the charactor is net lane entities owned by an entity with EditorContianer component
@@ -67,16 +64,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                 var curve = curves[i].m_Bezier;
                 var bounds = MathUtils.Bounds(curve).xz;
-                var distance = MathUtils.Distance(bounds, signletonData.playerHitPos);
-                if (distance <= signletonData.fillingRange)
+                var distance = MathUtils.Distance(bounds, singletonData.playerHitPos);
+                if (distance <= singletonData.fillingRange)
                 {
-                    signletonData.curves.Add(curve);
+                    singletonData.curves.Add(curve);
                 }
             }
         }
 
         /// <summary>
-        /// for net lanes drawed by dev tool/ EDT tools, its owner is entity from EditorContainer
+        /// for net lanes drawed by dev tool/ EDT tools, its owner is entity with component EditorContainer
         /// </summary>
         /// <param name="owner"></param>
         /// <returns></returns>

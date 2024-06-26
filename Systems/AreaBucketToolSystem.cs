@@ -145,6 +145,8 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool RecursiveFlooding { get; set; } = true;
 
+        public bool UseNewNetLaneCollect = true;
+
 
         private AudioManager _audioManager;
 
@@ -164,7 +166,7 @@ namespace AreaBucket.Systems
 
         private GizmosSystem _gizmosSystem;
 
-
+        private Game.Net.SearchSystem _netSearchSystem;
 
         private int frameCount = 0;
 
@@ -182,6 +184,7 @@ namespace AreaBucket.Systems
             _terrianSystem = World.GetOrCreateSystemManaged<TerrainSystem>();
             _toolOutputBarrier = World.GetOrCreateSystemManaged<ToolOutputBarrier>();
             _gizmosSystem = World.GetOrCreateSystemManaged<GizmosSystem>();
+            _netSearchSystem = World.GetOrCreateSystemManaged<Game.Net.SearchSystem>();
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
@@ -275,8 +278,6 @@ namespace AreaBucket.Systems
             return true;
         }
 
-
-
         public override void InitializeRaycast()
         {
             base.InitializeRaycast();
@@ -325,16 +326,32 @@ namespace AreaBucket.Systems
             }
             if (BoundaryMask.Match(BoundaryMask.NetLane))
             {
-                var collectNetLanesJob = default(CollectNetLaneCurves).InitContext(singletonData);
-                collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
-                collectNetLanesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
-                collectNetLanesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
-                collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
-                collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
-                collectNetLanesJob.luRoad = SystemAPI.GetComponentLookup<Road>();
-                collectNetLanesJob.luBuilding = SystemAPI.GetComponentLookup<Building>();
-                collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
-                jobHandle = Schedule(collectNetLanesJob, netLaneQuery, jobHandle);
+                if (!UseNewNetLaneCollect)
+                {
+                    var collectNetLanesJob = default(CollectNetLaneCurves).InitContext(singletonData);
+                    collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
+                    collectNetLanesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
+                    collectNetLanesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
+                    collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
+                    collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
+                    collectNetLanesJob.luRoad = SystemAPI.GetComponentLookup<Road>();
+                    collectNetLanesJob.luBuilding = SystemAPI.GetComponentLookup<Building>();
+                    collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
+                    jobHandle = Schedule(collectNetLanesJob, netLaneQuery, jobHandle);
+                }
+                else
+                {
+                    var searchTree = _netSearchSystem.GetLaneSearchTree(true, out var searchDeps);
+                    jobHandle = JobHandle.CombineDependencies(jobHandle, searchDeps);
+                    var collectNetLanesJob = default(CollectNetLaneCurves2).Init(singletonData, searchTree);
+                    collectNetLanesJob.luCurve = SystemAPI.GetComponentLookup<Curve>();
+                    collectNetLanesJob.luPrefabRef = SystemAPI.GetComponentLookup<PrefabRef>();
+                    collectNetLanesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
+                    collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
+                    collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
+                    jobHandle = Schedule(collectNetLanesJob, jobHandle);
+                }
+
             }
 
             var curve2LinesJob = default(Curve2Lines).Init(singletonData, 8);
