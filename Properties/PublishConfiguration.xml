@@ -42,7 +42,7 @@ You can active Anarchy in tool options panel to hide the warning.
 	<Tag Value="Code Mod" />
 	<ForumLink Value="" />
 	<ModVersion Value="0.3.1" />
-	<GameVersion Value="1.*" />
+	<GameVersion Value="1.1.*" />
 
   <Dependency Id="74417" /> <!--Dependency Unified Icon Library -->
 
