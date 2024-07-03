@@ -17,7 +17,7 @@ namespace AreaBucket
 
         public static ILog Logger = LogManager.GetLogger($"{nameof(AreaBucket)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
 
-        private Setting modSetting;
+        internal static Setting modSetting;
 
         // Mod assembly path cache.
         private string s_assemblyPath = null;
@@ -62,6 +62,8 @@ namespace AreaBucket
 
             //updateSystem.UpdateAt<BlockAreaToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<AreaBucketToolSystem>(SystemUpdatePhase.ToolUpdate);
+            // updateSystem.UpdateAt<AreaReplacementToolSystem>(SystemUpdatePhase.ToolUpdate);
+            // updateSystem.UpdateAt<SimpleAreaHandleSystem>(SystemUpdatePhase.ModificationEnd);
 
             updateSystem.UpdateAt<AreaBucketToolUISystem>(SystemUpdatePhase.UIUpdate);
             // updateSystem.UpdateAt<NetDebugSystemCopy>(SystemUpdatePhase.DebugGizmos);
@@ -70,6 +72,7 @@ namespace AreaBucket
 
             modSetting = new Setting(this, areaBucketToolSystem);
             modSetting.RegisterInOptionsUI();
+            // modSetting.RegisterKeyBindings();
             GameManager.instance.localizationManager.AddSource("en-US", new BasicLocale(modSetting));
 
             AssetDatabase.global.LoadSettings(nameof(AreaBucket), modSetting, new Setting(this, areaBucketToolSystem));

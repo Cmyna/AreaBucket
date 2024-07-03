@@ -39,6 +39,12 @@ namespace AreaBucket.Systems
             var panel = DebugManager.instance.GetPanel("Area Bucket Tool", createIfNull: true, groupIndex: 0, overrideIfExist: true);
             List<DebugUI.Widget> list = new List<DebugUI.Widget>
             {
+                new DebugUI.Value
+                {
+                    displayName = "IsApplyActionEnabled",
+                    getter = () => _applyAction != null && _applyAction.enabled,
+                },
+
                 new DebugUI.BoolField
                 {
                     displayName = "Check Intersection",

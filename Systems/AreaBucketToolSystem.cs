@@ -162,8 +162,6 @@ namespace AreaBucket.Systems
 
         private ProxyAction _applyAction;
 
-        private ProxyAction _secondaryApplyAction;
-
         private GizmosSystem _gizmosSystem;
 
         private Game.Net.SearchSystem _netSearchSystem;
@@ -188,11 +186,11 @@ namespace AreaBucket.Systems
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
-            _applyAction = InputManager.instance.FindAction("Tool", "Apply");
-            _secondaryApplyAction = InputManager.instance.FindAction("Tool", "Secondary Apply");
+            _applyAction = InputManager.instance.FindAction(InputManager.kToolMap, "Apply");
 
 
             timer = new System.Diagnostics.Stopwatch();
+            
 
             OnInitEntityQueries();
             CreateDebugPanel();
@@ -203,7 +201,7 @@ namespace AreaBucket.Systems
             base.OnStartRunning();
 
             _applyAction.shouldBeEnabled = true;
-            _secondaryApplyAction.shouldBeEnabled = true;
+            //_secondaryApplyAction.shouldBeEnabled = true;
 
             applyMode = ApplyMode.Clear;
         }
@@ -215,6 +213,11 @@ namespace AreaBucket.Systems
             if (frameCount >= 10) frameCount = 0;
             // if not active, do nothing
             if (_selectedPrefab == null || !ToolEnabled || !Active) return inputDeps;
+            // if (!TryGetApplyAction()) return inputDeps;
+            if (_applyAction != null) // temporary use reflection to set it enabled
+            {
+                _applyAction.GetType().GetProperty(nameof(ProxyAction.enabled)).SetValue(_applyAction, true);
+            }
 
             applyMode = ApplyMode.Clear;
             if (!GetRaycastResult(out var raycastPoint))
@@ -222,7 +225,7 @@ namespace AreaBucket.Systems
                 return inputDeps;
             }
 
-            if (_applyAction.WasPressedThisFrame())
+            if (_applyAction.WasReleasedThisFrame())
             {
                 _audioManager.PlayUISound(_soundQuery.GetSingleton<ToolUXSoundSettingsData>().m_PlacePropSound);
                 applyMode = ApplyMode.Apply;
@@ -241,8 +244,9 @@ namespace AreaBucket.Systems
         {
             base.OnStopRunning();
 
-            _applyAction.shouldBeEnabled = false;
-            _secondaryApplyAction.shouldBeEnabled = false;
+            //_applyAction.shouldBeEnabled = false;
+            //_secondaryApplyAction.shouldBeEnabled = false;
+            if (_applyAction != null) _applyAction.shouldBeEnabled = false;
         }
 
         protected override void OnDestroy()
@@ -422,6 +426,18 @@ namespace AreaBucket.Systems
                 $"\tcheck intersection: {CheckIntersection}\n" +
                 $"\tprofile job time: {WatchJobTime}\n";
             logger.Info(msg);
+        }
+
+
+        private bool TryGetApplyAction()
+        {
+            if (_applyAction != null) return true;
+            if (_applyAction == null && Mod.modSetting != null)
+            {
+                _applyAction = Mod.modSetting.GetAction(Setting.kAreaBucketToolApply);
+                _applyAction.shouldBeEnabled = true;
+            }
+            return _applyAction != null;
         }
 
         
