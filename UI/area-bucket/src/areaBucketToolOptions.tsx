@@ -150,7 +150,7 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
             />
 
             {
-                useExpOptions && 
+                //useExpOptions && 
                 (<>
                     <MaskCheckBox 
                         src={couiStandard + "Network.svg"}

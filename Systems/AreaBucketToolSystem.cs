@@ -225,7 +225,7 @@ namespace AreaBucket.Systems
                 return inputDeps;
             }
 
-            if (_applyAction.WasReleasedThisFrame())
+            if (_applyAction.WasPressedThisFrame())
             {
                 _audioManager.PlayUISound(_soundQuery.GetSingleton<ToolUXSoundSettingsData>().m_PlacePropSound);
                 applyMode = ApplyMode.Apply;
@@ -307,7 +307,8 @@ namespace AreaBucket.Systems
                 collectNetEdgesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
                 collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
                 // subnet mask is experimental (for performance issue)
-                if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
+                if (collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
+                // if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
                 jobHandle = Schedule(collectNetEdgesJob, netEntityQuery, jobHandle);
             }
             if (BoundaryMask.Match(BoundaryMask.Area))
@@ -431,13 +432,14 @@ namespace AreaBucket.Systems
 
         private bool TryGetApplyAction()
         {
-            if (_applyAction != null) return true;
+            throw new System.NotImplementedException();
+            /*if (_applyAction != null) return true;
             if (_applyAction == null && Mod.modSetting != null)
             {
                 _applyAction = Mod.modSetting.GetAction(Setting.kAreaBucketToolApply);
                 _applyAction.shouldBeEnabled = true;
             }
-            return _applyAction != null;
+            return _applyAction != null;*/
         }
 
         

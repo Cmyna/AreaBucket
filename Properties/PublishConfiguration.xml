@@ -31,7 +31,6 @@ The mod now is on beta progress, known issues below:
 * "Invalid Shape" notification sometime happens, but in most cases the filling areas can still be plopped.
 You can active Anarchy in tool options panel to hide the warning.
 * Sometime surface placing may failed because of some extremely sharp corner being filled
-(enable experimental options and active boundaries crossing in tool option can alleviate the problem)
   </LongDescription>
 	<Thumbnail Value="Properties/Thumbnail.png" />
   <Screenshot Value="Properties/Images/img5.jpg" />
@@ -42,18 +41,15 @@ You can active Anarchy in tool options panel to hide the warning.
   <Screenshot Value="Properties/Images/settings.jpg" />
 	<Tag Value="Code Mod" />
 	<ForumLink Value="" />
-	<ModVersion Value="0.3.0" />
+	<ModVersion Value="0.3.1" />
 	<GameVersion Value="1.*" />
 
   <Dependency Id="74417" /> <!--Dependency Unified Icon Library -->
 
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
   <ChangeLog>
-features:
-* new options for filling tool: Flooding. 
-Increase the flooding depth and the tool will try to bypass the block and fills the place as much as possible. 
-Enable Experimental options to use the new feature
-* The algorithms is highly improved, much more stable and accurate too detect boundaries and fill spaces without leaving gaps
+* fix issue (after game patch 1.1.16f1) mouse place area action not work when using the tool 
+* net lane and sub net boundary masks are out of experimental 
   </ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/Cmyna/AreaBucket" />

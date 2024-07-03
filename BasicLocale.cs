@@ -39,8 +39,8 @@ namespace AreaBucket
                 { ToolOptionKey("MaskNet"), "Road & Net" },
                 { ToolOptionKey("MaskLot"), "Building Lot" },
                 { ToolOptionKey("MaskArea"), "Surface & Area" },
-                { ToolOptionKey("MaskNetLane"), "Net Lane (performance issue)" },
-                { ToolOptionKey("MaskSubNet"), "Sub Net (performance issue)" },
+                { ToolOptionKey("MaskNetLane"), "Net Lane" },
+                { ToolOptionKey("MaskSubNet"), "Sub Net" },
                 
 
                 { modSetting.GetOptionTabLocaleID(Setting.ksMain), "Area Bucket" },
