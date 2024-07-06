@@ -15,6 +15,10 @@ namespace AreaBucket
     {
         public const string ToolId = "Area Bucket";
 
+        public const string kModAreaToolApply = "AreaToolModApplyAction";
+
+        public const string kModToolUsage = "AreaBucketModToolUsage";
+
         public static ILog Logger = LogManager.GetLogger($"{nameof(AreaBucket)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
 
         internal static Setting modSetting;
@@ -60,27 +64,25 @@ namespace AreaBucket
                 Logger.Info($"Current mod asset at {asset.path}");
             }
 
-            //updateSystem.UpdateAt<BlockAreaToolSystem>(SystemUpdatePhase.ToolUpdate);
-            updateSystem.UpdateAt<AreaBucketToolSystem>(SystemUpdatePhase.ToolUpdate);
-            // updateSystem.UpdateAt<AreaReplacementToolSystem>(SystemUpdatePhase.ToolUpdate);
-            // updateSystem.UpdateAt<SimpleAreaHandleSystem>(SystemUpdatePhase.ModificationEnd);
-
-            updateSystem.UpdateAt<AreaBucketToolUISystem>(SystemUpdatePhase.UIUpdate);
-            // updateSystem.UpdateAt<NetDebugSystemCopy>(SystemUpdatePhase.DebugGizmos);
-
-            var areaBucketToolSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<AreaBucketToolSystem>();
-
-            modSetting = new Setting(this, areaBucketToolSystem);
+            modSetting = new Setting(this);
             modSetting.RegisterInOptionsUI();
-            // modSetting.RegisterKeyBindings();
+            modSetting.RegisterKeyBindings();
             GameManager.instance.localizationManager.AddSource("en-US", new BasicLocale(modSetting));
 
-            AssetDatabase.global.LoadSettings(nameof(AreaBucket), modSetting, new Setting(this, areaBucketToolSystem));
+            AssetDatabase.global.LoadSettings(nameof(AreaBucket), modSetting, new Setting(this));
 
             // UIManager.defaultUISystem.AddHostLocation("areabucket", AssemblyPath + "/Icons/");
 
             modSetting.Apply(); // apply once
-            areaBucketToolSystem.LogToolState(Logger, "Initial Area Bucket Tool States: ");
+
+
+            //updateSystem.UpdateAt<BlockAreaToolSystem>(SystemUpdatePhase.ToolUpdate);
+            updateSystem.UpdateAt<AreaBucketToolSystem>(SystemUpdatePhase.ToolUpdate);
+            // updateSystem.UpdateAt<AreaReplacementToolSystem>(SystemUpdatePhase.ToolUpdate);
+            // updateSystem.UpdateAt<SimpleAreaHandleSystem>(SystemUpdatePhase.ModificationEnd);
+            updateSystem.UpdateAt<AreaBucketToolUISystem>(SystemUpdatePhase.UIUpdate);
+            // updateSystem.UpdateAt<NetDebugSystemCopy>(SystemUpdatePhase.DebugGizmos);
+
         }
 
         public void OnDispose()

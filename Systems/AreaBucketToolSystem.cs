@@ -1,6 +1,7 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
+using AreaBucket.Utils;
 using Colossal;
 using Colossal.Logging;
 using Colossal.Mathematics;
@@ -15,6 +16,7 @@ using Game.Simulation;
 using Game.Tools;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -69,8 +71,6 @@ namespace AreaBucket.Systems
         /// the boundary for area filling tool
         /// </summary>
         public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot;
-
-
 
 
         public bool UseExperimentalOptions { get; set; } = false;
@@ -186,14 +186,16 @@ namespace AreaBucket.Systems
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
-            _applyAction = InputManager.instance.FindAction(InputManager.kToolMap, "Apply");
-
+            _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
+            BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             timer = new System.Diagnostics.Stopwatch();
             
 
             OnInitEntityQueries();
             CreateDebugPanel();
+
+            LogToolState(Mod.Logger, "Initial Area Bucket Tool States: ");
         }
 
         protected override void OnStartRunning()
@@ -244,7 +246,7 @@ namespace AreaBucket.Systems
         {
             base.OnStopRunning();
 
-            //_applyAction.shouldBeEnabled = false;
+            _applyAction.shouldBeEnabled = false;
             //_secondaryApplyAction.shouldBeEnabled = false;
             if (_applyAction != null) _applyAction.shouldBeEnabled = false;
         }
@@ -427,19 +429,6 @@ namespace AreaBucket.Systems
                 $"\tcheck intersection: {CheckIntersection}\n" +
                 $"\tprofile job time: {WatchJobTime}\n";
             logger.Info(msg);
-        }
-
-
-        private bool TryGetApplyAction()
-        {
-            throw new System.NotImplementedException();
-            /*if (_applyAction != null) return true;
-            if (_applyAction == null && Mod.modSetting != null)
-            {
-                _applyAction = Mod.modSetting.GetAction(Setting.kAreaBucketToolApply);
-                _applyAction.shouldBeEnabled = true;
-            }
-            return _applyAction != null;*/
         }
 
         

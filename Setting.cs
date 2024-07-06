@@ -1,24 +1,29 @@
 ﻿using AreaBucket.Systems;
 using Colossal.IO.AssetDatabase;
+using Game.Input;
 using Game.Modding;
 using Game.Settings;
 using Game.UI;
+using Unity.Entities;
 
 namespace AreaBucket
 {
     [FileLocation(nameof(AreaBucket))]
     [SettingsUIGroupOrder(kgMain)]
     [SettingsUIShowGroupName(kgMain)]
+    [SettingsUIMouseAction(Mod.kModAreaToolApply, Mod.kModToolUsage)]
     public class Setting : ModSetting
     {
         public const string ksMain = "Main";
         public const string kgMain = "Main";
 
+
         private AreaBucketToolSystem _bucketToolSystem;
 
-        public Setting(IMod mod, AreaBucketToolSystem bucketToolSystem) : base(mod)
+
+
+        public Setting(IMod mod) : base(mod)
         {
-            _bucketToolSystem = bucketToolSystem;
         }
 
 
@@ -37,11 +42,20 @@ namespace AreaBucket
 
 
         [SettingsUIHidden]
+        [SettingsUIMouseBinding(Mod.kModAreaToolApply)]
+        public ProxyBinding AreaBucketToolApply { get; set; }
+
+
+        [SettingsUIHidden]
         public bool Contra { get; set; } = false;
 
         public override void Apply()
         {
             base.Apply();
+            if (_bucketToolSystem == null)
+            {
+                _bucketToolSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<AreaBucketToolSystem>();
+            }
             _bucketToolSystem.MinEdgeLength = MinGeneratedLineLength;
             _bucketToolSystem.UseExperimentalOptions = UseExperientalOption;
             _bucketToolSystem.MaxFillingRange = MaxFillingRange;

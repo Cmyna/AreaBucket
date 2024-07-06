@@ -31,6 +31,10 @@ The mod now is on beta progress, known issues below:
 * "Invalid Shape" notification sometime happens, but in most cases the filling areas can still be plopped.
 You can active Anarchy in tool options panel to hide the warning.
 * Sometime surface placing may failed because of some extremely sharp corner being filled
+
+### Acknowledgement
+* Thanks to Krzychu and Macsergey's sharing and suggestion for game key-bindings. Thanks to Yenyang's sharing and helps in many places
+
   </LongDescription>
 	<Thumbnail Value="Properties/Thumbnail.png" />
   <Screenshot Value="Properties/Images/img5.jpg" />
