@@ -10,3 +10,5 @@ UI/**/node_modules/**/*
 
 ## visual studio
 .vs
+AreaBucket.csproj.user
+*.user
