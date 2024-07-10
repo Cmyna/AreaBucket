@@ -46,9 +46,6 @@ namespace AreaBucket
         public ProxyBinding AreaBucketToolApply { get; set; }
 
 
-        [SettingsUIHidden]
-        public bool Contra { get; set; } = false;
-
         public override void Apply()
         {
             base.Apply();
@@ -65,7 +62,6 @@ namespace AreaBucket
         {
             MinGeneratedLineLength = 1f;
             UseExperientalOption = false;
-            Contra = true;
         }
 
 
