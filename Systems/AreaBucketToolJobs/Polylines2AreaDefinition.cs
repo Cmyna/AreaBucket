@@ -1,4 +1,6 @@
-﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+﻿using AreaBucket.Components;
+using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using AreaBucket.Utils;
 using Game.Areas;
 using Game.Common;
 using Game.Simulation;
@@ -19,48 +21,40 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     public struct Polylines2AreaDefinition : IJob
     {
 
-        public GeneratedArea generatedAreaData;
+        public NativeList<float2> points;
 
         [ReadOnly] public Entity prefab;
 
-        [ReadOnly] public TerrainHeightData terrianHeightData;
+        public EntityCommandBuffer ecb;
 
-        public EntityCommandBuffer commandBuffer;
+        public bool previewSurface;
 
-        public int generateNodesCount;
+        public bool apply;
         public void Execute()
         {
-            if (generatedAreaData.points.Length <= 0) return;
+            if (points.Length <= 0) return;
 
-            var defEntity = commandBuffer.CreateEntity();
-            var definition = default(CreationDefinition);
-            definition.m_Prefab = prefab;
+            var defEntity = ecb.CreateEntity();
 
-            var nodeBuffer = commandBuffer.AddBuffer<Node>(defEntity);
-            nodeBuffer.ResizeUninitialized(generatedAreaData.points.Length + 1);
 
-            // append nodes
-            int cursor = 0;
-            for (int i = 0; i < generatedAreaData.points.Length; i++)
+            AreaDefinitionCreation.AsDynmaicBufferNodes(ecb, defEntity, points, true);
+
+            if (previewSurface)
             {
-                var point2D = generatedAreaData.points[i];
-                var point3D = new float3()
+                var previewDefinition = new SurfacePreviewDefinition
                 {
-                    x = point2D.x,
-                    y = 0,
-                    z = point2D.y
+                    prefab = prefab,
+                    applyPreview = apply,
                 };
-                point3D.y = TerrainUtils.SampleHeight(ref terrianHeightData, point3D);
-                nodeBuffer[cursor] = new Node(point3D, float.MinValue);
-                cursor++;
+                ecb.AddComponent(defEntity, previewDefinition);
+                ecb.AddComponent(defEntity, default(Updated));
+            }
+            else
+            {
+                AreaDefinitionCreation.WithCreationDefinition(ecb, defEntity, prefab);
             }
 
-            nodeBuffer[cursor] = nodeBuffer[0]; // last point is the first point
-
-            generateNodesCount = cursor + 1;
-
-            commandBuffer.AddComponent(defEntity, definition);
-            commandBuffer.AddComponent(defEntity, default(Updated));
+            
         }
     }
 }

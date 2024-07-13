@@ -47,6 +47,13 @@ namespace AreaBucket.Systems
 
                 new DebugUI.BoolField
                 {
+                    displayName = nameof(PreviewSurface),
+                    getter = () => PreviewSurface,
+                    setter = (v) => PreviewSurface = v,
+                },
+
+                new DebugUI.BoolField
+                {
                     displayName = "Check Intersection",
                     getter = () => CheckIntersection,
                     setter = (v) => CheckIntersection = v,

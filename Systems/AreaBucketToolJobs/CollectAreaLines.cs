@@ -1,4 +1,5 @@
-﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+﻿using AreaBucket.Components;
+using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using Colossal.Mathematics;
 using Game.Areas;
 using Unity.Burst;
@@ -16,7 +17,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public BufferTypeHandle<Node> bthNode;
 
-        [ReadOnly] public ComponentTypeHandle<Area> thArea;
+        [ReadOnly] public ComponentTypeHandle<Area> cthArea;
 
         [ReadOnly] public BufferTypeHandle<Triangle> bthTriangle;
 
@@ -33,7 +34,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (!chunk.Has(ref bthTriangle)) return;
             var triangleAccessor = chunk.GetBufferAccessor(ref bthTriangle);
             var nodesAccessor = chunk.GetBufferAccessor(ref bthNode);
-            var areas = chunk.GetNativeArray(ref thArea);
+            var areas = chunk.GetNativeArray(ref cthArea);
             for (var i = 0; i < nodesAccessor.Length; i++)
             {
                 if ((areas[i].m_Flags & AreaFlags.Complete) == 0) continue;

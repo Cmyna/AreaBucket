@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems;
+using AreaBucket.Systems.SurfacePreviewSystem;
 using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using Colossal.UI;
@@ -76,8 +77,9 @@ namespace AreaBucket
             modSetting.Apply(); // apply once
 
 
-            //updateSystem.UpdateAt<BlockAreaToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<AreaBucketToolSystem>(SystemUpdatePhase.ToolUpdate);
+            // updateSystem.UpdateAt<SimpleSqareAreaToolSystem>(SystemUpdatePhase.ToolUpdate);
+            updateSystem.UpdateAt<SurfacePreviewSystem>(SystemUpdatePhase.Modification1);
             // updateSystem.UpdateAt<AreaReplacementToolSystem>(SystemUpdatePhase.ToolUpdate);
             // updateSystem.UpdateAt<SimpleAreaHandleSystem>(SystemUpdatePhase.ModificationEnd);
             updateSystem.UpdateAt<AreaBucketToolUISystem>(SystemUpdatePhase.UIUpdate);

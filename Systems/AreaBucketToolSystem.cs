@@ -1,4 +1,5 @@
-﻿using AreaBucket.Systems.AreaBucketToolJobs;
+﻿using AreaBucket.Components;
+using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
 using AreaBucket.Utils;
@@ -145,7 +146,9 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool RecursiveFlooding { get; set; } = true;
 
-        public bool UseNewNetLaneCollect = true;
+        public bool UseNewNetLaneCollect { get; set; } = true;
+
+        public bool PreviewSurface { get; set; } = false;
 
 
         private AudioManager _audioManager;
@@ -230,6 +233,10 @@ namespace AreaBucket.Systems
             if (_applyAction.WasPressedThisFrame())
             {
                 _audioManager.PlayUISound(_soundQuery.GetSingleton<ToolUXSoundSettingsData>().m_PlacePropSound);
+            }
+
+            if (_applyAction.WasPressedThisFrame() && !PreviewSurface)
+            {
                 applyMode = ApplyMode.Apply;
                 return inputDeps;
             }
@@ -318,7 +325,7 @@ namespace AreaBucket.Systems
                 var collectAreaLinesJob = default(CollectAreaLines).InitContext(singletonData);
                 collectAreaLinesJob.bthNode = SystemAPI.GetBufferTypeHandle<Game.Areas.Node>();
                 collectAreaLinesJob.bthTriangle = SystemAPI.GetBufferTypeHandle<Triangle>();
-                collectAreaLinesJob.thArea = SystemAPI.GetComponentTypeHandle<Area>();
+                collectAreaLinesJob.cthArea = SystemAPI.GetComponentTypeHandle<Area>();
                 jobHandle = Schedule(collectAreaLinesJob, areaEntityQuery, jobHandle);
             }
             if (BoundaryMask.Match(BoundaryMask.Lot))

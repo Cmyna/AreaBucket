@@ -1,4 +1,5 @@
-﻿using Colossal.Reflection;
+﻿using AreaBucket.Components;
+using Colossal.Reflection;
 using Game.Areas;
 using Game.Buildings;
 using Game.Common;
@@ -66,6 +67,7 @@ namespace AreaBucket.Systems
                     ComponentType.ReadOnly<MapTile>(),
                     ComponentType.ReadOnly<CreationDefinition>(),
                     ComponentType.ReadOnly<District>(),
+                    ComponentType.ReadOnly<SurfacePreviewMarker>()
                 }).ToArray()
             });
 

@@ -92,10 +92,11 @@ namespace AreaBucket.Systems
 
             var polyLines2AreaDefsJob = new Polylines2AreaDefinition
             {
-                generatedAreaData = generatedAreaData,
+                points = generatedAreaData.points,
                 prefab = m_PrefabSystem.GetEntity(_selectedPrefab),
-                terrianHeightData = terrainHeightData,
-                commandBuffer = _toolOutputBarrier.CreateCommandBuffer()
+                previewSurface = PreviewSurface,
+                apply = _applyAction.WasPressedThisFrame(),
+                ecb = _toolOutputBarrier.CreateCommandBuffer()
             };
             jobHandle = Schedule(polyLines2AreaDefsJob, jobHandle);
 
