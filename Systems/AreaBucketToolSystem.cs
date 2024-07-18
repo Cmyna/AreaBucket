@@ -25,6 +25,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using static Colossal.AssetPipeline.Diagnostic.Report;
 
 namespace AreaBucket.Systems
 {
@@ -213,12 +214,18 @@ namespace AreaBucket.Systems
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            requireAreas = AreaTypeMask.None; // reset requireAreas state
 
             frameCount++;
             if (frameCount >= 10) frameCount = 0;
             // if not active, do nothing
             if (_selectedPrefab == null || !ToolEnabled || !Active) return inputDeps;
-            // if (!TryGetApplyAction()) return inputDeps;
+
+            // update requireAreas mask based on selected prefab
+            AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
+            requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
+
+
             if (_applyAction != null) // temporary use reflection to set it enabled
             {
                 _applyAction.GetType().GetProperty(nameof(ProxyAction.enabled)).SetValue(_applyAction, true);
