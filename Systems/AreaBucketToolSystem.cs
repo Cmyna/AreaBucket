@@ -62,12 +62,12 @@ namespace AreaBucket.Systems
         /// <summary>
         /// bucket tool max filling range
         /// </summary>
-        public float MaxFillingRange => Mod.modSetting.MaxFillingRange;
+        public float MaxFillingRange => Mod.modSetting?.MaxFillingRange ?? 250f;
 
         /// <summary>
         /// to control the minimum generated polyline edges length
         /// </summary>
-        public float MinEdgeLength => Mod.modSetting.MinGeneratedLineLength;
+        public float MinEdgeLength => Mod.modSetting?.MinGeneratedLineLength ?? 1f;
 
         /// <summary>
         /// the boundary for area filling tool
@@ -75,7 +75,7 @@ namespace AreaBucket.Systems
         public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot;
 
 
-        public bool UseExperimentalOptions => Mod.modSetting.UseExperientalOption;
+        public bool UseExperimentalOptions => Mod.modSetting?.UseExperientalOption ?? false;
 
         /// <summary>
         /// performance optimization setting, use occlsion buffer to filter exposed boundaries from ray start point
@@ -223,7 +223,7 @@ namespace AreaBucket.Systems
 
             // update requireAreas mask based on selected prefab
             AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
-            requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
+            if (Mod.modSetting?.DrawAreaOverlay == true) requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
 
 
             if (_applyAction != null) // temporary use reflection to set it enabled

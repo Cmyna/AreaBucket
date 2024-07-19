@@ -32,6 +32,9 @@ namespace AreaBucket
         public bool UseExperientalOption { get; set; } = false;
 
         [SettingsUISection(ksMain, kgMain)]
+        public bool DrawAreaOverlay { get; set; } = true;
+
+        [SettingsUIHidden]
         public bool AlterVanillaGeometrySystem { get; set; } = false;
 
         [SettingsUIHidden]
