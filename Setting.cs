@@ -18,9 +18,6 @@ namespace AreaBucket
         public const string kgMain = "Main";
 
 
-        private AreaBucketToolSystem _bucketToolSystem;
-
-
 
         public Setting(IMod mod) : base(mod)
         {
@@ -34,6 +31,9 @@ namespace AreaBucket
         [SettingsUISection(ksMain, kgMain)]
         public bool UseExperientalOption { get; set; } = false;
 
+        [SettingsUISection(ksMain, kgMain)]
+        public bool AlterVanillaGeometrySystem { get; set; } = false;
+
         [SettingsUIHidden]
         public bool ShowDebugOption { get; set; } = false;
 
@@ -45,18 +45,6 @@ namespace AreaBucket
         [SettingsUIMouseBinding(Mod.kModAreaToolApply)]
         public ProxyBinding AreaBucketToolApply { get; set; }
 
-
-        public override void Apply()
-        {
-            base.Apply();
-            if (_bucketToolSystem == null)
-            {
-                _bucketToolSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<AreaBucketToolSystem>();
-            }
-            _bucketToolSystem.MinEdgeLength = MinGeneratedLineLength;
-            _bucketToolSystem.UseExperimentalOptions = UseExperientalOption;
-            _bucketToolSystem.MaxFillingRange = MaxFillingRange;
-        }
 
         public override void SetDefaults()
         {

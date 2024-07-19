@@ -62,12 +62,12 @@ namespace AreaBucket.Systems
         /// <summary>
         /// bucket tool max filling range
         /// </summary>
-        public float MaxFillingRange { get; set; } = 250f;
+        public float MaxFillingRange => Mod.modSetting.MaxFillingRange;
 
         /// <summary>
         /// to control the minimum generated polyline edges length
         /// </summary>
-        public float MinEdgeLength { get; set; } = 0.5f;
+        public float MinEdgeLength => Mod.modSetting.MinGeneratedLineLength;
 
         /// <summary>
         /// the boundary for area filling tool
@@ -75,7 +75,7 @@ namespace AreaBucket.Systems
         public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot;
 
 
-        public bool UseExperimentalOptions { get; set; } = false;
+        public bool UseExperimentalOptions => Mod.modSetting.UseExperientalOption;
 
         /// <summary>
         /// performance optimization setting, use occlsion buffer to filter exposed boundaries from ray start point
