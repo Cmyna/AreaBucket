@@ -9,6 +9,7 @@ using Game.SceneFlow;
 using System.IO;
 using System.Reflection;
 using Unity.Entities;
+using UnityEngine.Rendering;
 
 namespace AreaBucket
 {
@@ -23,6 +24,8 @@ namespace AreaBucket
         public static ILog Logger = LogManager.GetLogger($"{nameof(AreaBucket)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
 
         internal static Setting modSetting;
+
+        internal static DebugUI.Panel AreaBucketDebugUI;
 
         // Mod assembly path cache.
         private string s_assemblyPath = null;
@@ -60,6 +63,8 @@ namespace AreaBucket
         {
             Logger.Info(nameof(OnLoad));
 
+            AreaBucketDebugUI = DebugManager.instance.GetPanel("Area Bucket Tool 2", createIfNull: true, groupIndex: 0, overrideIfExist: true);
+
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {
                 Logger.Info($"Current mod asset at {asset.path}");
@@ -78,12 +83,9 @@ namespace AreaBucket
 
 
             updateSystem.UpdateAt<AreaBucketToolSystem>(SystemUpdatePhase.ToolUpdate);
-            // updateSystem.UpdateAt<SimpleSqareAreaToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<SurfacePreviewSystem>(SystemUpdatePhase.Modification1);
             // updateSystem.UpdateAt<AreaReplacementToolSystem>(SystemUpdatePhase.ToolUpdate);
-            // updateSystem.UpdateAt<SimpleAreaHandleSystem>(SystemUpdatePhase.ModificationEnd);
             updateSystem.UpdateAt<AreaBucketToolUISystem>(SystemUpdatePhase.UIUpdate);
-            // updateSystem.UpdateAt<NetDebugSystemCopy>(SystemUpdatePhase.DebugGizmos);
 
         }
 
