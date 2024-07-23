@@ -148,5 +148,12 @@ namespace AreaBucket.Utils
             var unitVector = newVector / math.length(newVector);
             return unitVector * length;
         }
+
+        public static bool Collinear(Line2 line1, float2 c)
+        {
+            var ab = line1.ab;
+            var ac = c - line1.a;
+            return ab.y * ac.x == ac.y * ab.x;
+        }
     }
 }
