@@ -3,30 +3,19 @@ using AreaBucket.Utils;
 using Game;
 using Game.Areas;
 using Game.Common;
-using Game.Debug;
 using Game.Prefabs;
-using Game.Rendering;
 using Game.Simulation;
 using Game.Tools;
-using System.Collections.Generic;
-using System.Security.Cryptography;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
-using Unity.Jobs.LowLevel.Unsafe;
 using UnityEngine.Rendering;
 
 namespace AreaBucket.Systems.SurfacePreviewSystem
 {
     public partial class SurfacePreviewSystem : GameSystemBase
     {
-        private struct PreviewedEntity
-        {
-            public Entity m_Entity;
-            public SurfacePreviewMarker m_Marker;
-        }
-
 
         private struct GeneratePreviewedSurfaceJob : IJobChunk
         {
@@ -54,7 +43,8 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
                 for (int i = 0; i < entities.Length; i++)
                 {
-                    CreateInSceneEntity(entities[i], surfacePreviewDefinitions[i], false);
+                    var createdEntity = CreateInSceneEntity(entities[i], surfacePreviewDefinitions[i], false);
+                    // create a dummy area entity that only shows highlighted borders
                     if (!surfacePreviewDefinitions[i].applyPreview)
                     {
                         CreateInSceneEntity(entities[i], surfacePreviewDefinitions[i], true);
@@ -65,7 +55,7 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
                 }
             }
 
-            public void CreateInSceneEntity(Entity surfacePreivewDefEntity, SurfacePreviewDefinition surfacePreviewDefinition, bool isOutlineDummy)
+            public Entity CreateInSceneEntity(Entity surfacePreivewDefEntity, SurfacePreviewDefinition surfacePreviewDefinition, bool isOutlineDummy)
             {
                 var defNodesBuffer = bluNodes[surfacePreivewDefEntity];
 
@@ -83,12 +73,14 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
                 CreateSurfaceUtils.AdjustPosition(nodeBuffer, ref terrainHeightData, ref waterSurfaceData, onWaterSurface);
                 ecb.AddComponent(newAreaEntity, new Area(areaFlag));
 
+                // if not apply preview, then add a marker represent that the entity is been previewed
                 if (!surfacePreviewDefinition.applyPreview)
                 {
                     ecb.AddComponent(newAreaEntity, new SurfacePreviewMarker { key = surfacePreviewDefinition.key });
                     // ecb.AddComponent(newAreaEntity, new Temp { m_Flags = TempFlags.Select });
                 }
                 if (isOutlineDummy) ecb.AddComponent(newAreaEntity, new Temp { m_Flags = TempFlags.Select });
+                return newAreaEntity;
             }
         }
 
@@ -105,7 +97,7 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
         private int lastDefsCount { get; set; } = -1;
 
-        private HashSet<int> m_trackedEntities;
+        private DebugUI.Container _debugUIContainer;
 
         protected override void OnCreate()
         {
@@ -127,8 +119,6 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
             _terrainSystem = World.GetOrCreateSystemManaged<TerrainSystem>();
             _waterSystem = World.GetOrCreateSystemManaged<WaterSystem>();
 
-            m_trackedEntities = new HashSet<int>();
-
             CreateDebugUI();
         }
 
@@ -136,10 +126,6 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
         protected override void OnUpdate()
         {
             var jobHandle = base.Dependency;
-
-            /*var bluNodes = SystemAPI.GetBufferLookup<Node>(isReadOnly: false);
-            var cluAreaData = SystemAPI.GetComponentLookup<AreaData>();
-            var cluAreaGeometryData = SystemAPI.GetComponentLookup<AreaGeometryData>();*/
 
             var ecb = _modificationBarrier.CreateCommandBuffer();
 
@@ -150,13 +136,12 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
             
             if (!waterSystemLoaded) return;
 
+            GetComponentTypeHandle<Area>();
+
             WaterSurfaceData waterSurfaceData = _waterSystem.GetSurfaceData(out var deps);
             JobHandle.CombineDependencies(jobHandle, deps);
 
-
-            //var entites = _previewDefintionQuery.ToEntityArray(Allocator.Temp);
-            //var previewDefs = _previewDefintionQuery.ToComponentDataArray<SurfacePreviewDefinition>(Allocator.Temp);
-            //lastDefsCount = entites.Length;
+            var a = CheckedStateRef;
 
             var genPreviewedSurfaceJob = default(GeneratePreviewedSurfaceJob);
 
@@ -173,49 +158,11 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
             jobHandle = genPreviewedSurfaceJob.Schedule(_previewDefintionQuery, jobHandle);
 
 
-            /*jobHandle = Job.WithCode(() => 
-            {
-                for (int i = 0; i < entites.Length; i++)
-                {
-                    var previewDefEntity = entites[i];
-                    var previewDef = previewDefs[i];
-                    var defNodesBuffer = bluNodes[previewDefEntity];
-
-                    AreaFlags areaFlag = AreaFlags.Complete;
-
-                    var onWaterSurface = false;
-                    if (cluAreaGeometryData.TryGetComponent(previewDef.prefab, out var areaGeometryData))
-                    {
-                        onWaterSurface = (areaGeometryData.m_Flags & GeometryFlags.OnWaterSurface) != 0;
-                    }
-
-                    // add new entity
-                    var prefabData = cluAreaData[previewDef.prefab];
-                    var newAreaEntity = ecb.CreateEntity(prefabData.m_Archetype);
-                    ecb.SetComponent(newAreaEntity, new PrefabRef(previewDef.prefab));
-                    var nodeBuffer = ecb.AddBuffer<Node>(newAreaEntity);
-                    CreateSurfaceUtils.Drawing2Scene(defNodesBuffer, nodeBuffer);
-                    CreateSurfaceUtils.AdjustPosition(nodeBuffer, ref terrainHeightData, ref waterSurfaceData, false);
-                    ecb.AddComponent(newAreaEntity, new Area(areaFlag));
-
-                    if (!previewDef.applyPreview)
-                    {
-                        ecb.AddComponent(newAreaEntity, new SurfacePreviewMarker { key = previewDef.key });
-                        // ecb.AddComponent(newAreaEntity, new Temp { m_Flags = TempFlags.Select });
-                    }
-
-
-                    // mark old preview definition entity as Deleted
-                    ecb.AddComponent(previewDefEntity, default(Deleted));
-                }
-            }).Schedule(jobHandle);*/
-
             _terrainSystem.AddCPUHeightReader(jobHandle);
             _waterSystem.AddSurfaceReader(jobHandle);
             _modificationBarrier.AddJobHandleForProducer(jobHandle);
 
-            //entites.Dispose(jobHandle);
-            //previewDefs.Dispose(jobHandle);
+            base.Dependency = jobHandle;
         }
 
 
@@ -230,22 +177,6 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
             oldEntites.Dispose();
         }
 
-
-        private void CollectTrackedEntites(Dictionary<SurfacePreviewMarker, Entity> result)
-        {
-            var entities = _previewEntitiesQuery.ToEntityArray(Allocator.Temp);
-            var markers = _previewEntitiesQuery.ToComponentDataArray<SurfacePreviewMarker>(Allocator.Temp);
-
-            for (int i = 0; i < entities.Length; i++)
-            {
-                result[markers[i]] = entities[i];
-            }
-
-            entities.Dispose();
-            markers.Dispose();
-        }
-
-
         protected override void OnDestroy()
         {
             base.OnDestroy();
@@ -254,14 +185,15 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
         private void CreateDebugUI()
         {
-            var panel = DebugManager.instance.GetPanel("Surface Preview System", createIfNull: true, groupIndex: 0, overrideIfExist: true);
-            List<DebugUI.Widget> list = new List<DebugUI.Widget>
-            {
-                new DebugUI.BoolField { displayName = nameof(Enabled), getter = () => Enabled, setter = (v) => Enabled = v },
-                new DebugUI.Value { displayName = nameof(lastDefsCount), getter = () => lastDefsCount },
-            };
-            panel.children.Clear();
-            panel.children.Add(list);
+            _debugUIContainer = new DebugUI.Container(
+                "Surface Preview System",
+                new ObservableList<DebugUI.Widget>
+                {
+                    new DebugUI.BoolField { displayName = nameof(Enabled), getter = () => Enabled, setter = (v) => Enabled = v },
+                    new DebugUI.Value { displayName = nameof(lastDefsCount), getter = () => lastDefsCount },
+                }
+                );
+            Mod.AreaBucketDebugUI.children.Add(_debugUIContainer);
         }
 
         
