@@ -38,7 +38,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (!checkOcculsion)
             {
                 context.usedBoundaryLines.AddRange(singletonData.totalBoundaryLines.AsArray());
-                context.usedBoundaryLines.AddRange(generatedAreaData.polyLines.AsArray());
+
+                
+                AddGeneratedPolylinesAsBoundary();
+                //context.usedBoundaryLines.AddRange(generatedAreaData.polyLines.AsArray());
                 return;
             }
 
@@ -49,7 +52,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 HandleBoundary(singletonData.totalBoundaryLines[i], ref metasCache);
             }
 
-            context.usedBoundaryLines.AddRange(generatedAreaData.polyLines.AsArray());
+            AddGeneratedPolylinesAsBoundary();
+            // context.usedBoundaryLines.AddRange(generatedAreaData.polyLines.AsArray());
 
             // drop obscured lines
             for (int i = 0; i < singletonData.totalBoundaryLines.Length; i++)
@@ -60,6 +64,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
 
             metasCache.Dispose();
+        }
+
+        private void AddGeneratedPolylinesAsBoundary()
+        {
+            // prevent adding the flooding candidate line 
+            var splitter = context.floodingDefinition.newAreaPointInsertStartIndex;
+            for (int i = 0; i < splitter; i++) context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
+            for (int i = splitter + 1; i < generatedAreaData.polyLines.Length; i++) context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
         }
 
         /// <summary>
@@ -138,6 +150,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         }
 
     }
+
+
+    
 
     public struct LineMeta
     {

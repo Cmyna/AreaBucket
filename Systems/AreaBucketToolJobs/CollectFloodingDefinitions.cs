@@ -92,7 +92,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             // one way is move flooding inside and disable flooding candidate line's intersection checking
             // FIX: it is better to move "out side of" flooded polygons, it should be left hande side (counter clock wise) of line vector
             // well it seems should be right hand side / clockwise ...
-            var v = Utils.Math.PerpendicularClockwise(vector, 0.1f);
+            // var v = Utils.Math.PerpendicularClockwise(vector, 0.1f);
+            var v = Utils.Math.PerpendicularCounterClockwise(vector, 2f);
             var startPoint = middle + v;
 
             var r1 = Utils.Math.RadianInClock(xzUp, line.a - startPoint);
