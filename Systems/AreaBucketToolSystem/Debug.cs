@@ -73,7 +73,12 @@ namespace AreaBucket.Systems
                     setter = (v) => UseNewNetLaneCollect = v
                 },
 
-
+                new DebugUI.BoolField
+                {
+                    displayName = nameof(OcclusionUseOldWay),
+                    getter = () => OcclusionUseOldWay,
+                    setter = (v) => OcclusionUseOldWay = v
+                },
 
                 new DebugUI.BoolField
                 {

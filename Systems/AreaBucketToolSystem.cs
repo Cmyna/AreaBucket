@@ -151,6 +151,7 @@ namespace AreaBucket.Systems
 
         public bool PreviewSurface { get; set; } = false;
 
+        public bool OcclusionUseOldWay = false;
 
         private AudioManager _audioManager;
 
@@ -173,6 +174,8 @@ namespace AreaBucket.Systems
         private int frameCount = 0;
 
         private System.Diagnostics.Stopwatch timer;
+
+        private int usedBoundariesCount = 0;
 
         protected override void OnCreate()
         {
@@ -375,7 +378,7 @@ namespace AreaBucket.Systems
 
             }
 
-            var curve2LinesJob = default(Curve2Lines).Init(singletonData, 8);
+            var curve2LinesJob = default(Curve2Lines).Init(singletonData);
             jobHandle = Schedule(curve2LinesJob, jobHandle);
 
             return jobHandle;

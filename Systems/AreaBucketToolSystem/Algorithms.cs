@@ -19,6 +19,7 @@ namespace AreaBucket.Systems
 
         public JobHandle StartAlgorithm(JobHandle inputDeps, ControlPoint raycastPoint)
         {
+            
             var jobHandle = inputDeps;
 
             GizmoBatcher gizmosBatcher = default;
@@ -108,7 +109,8 @@ namespace AreaBucket.Systems
             UpdateOtherFieldView("Flooding Times", floodingCount);
             UpdateOtherFieldView("Boundary Curves Count", singletonData.curves.Length);
             UpdateOtherFieldView("Total Boundary Lines Count", singletonData.totalBoundaryLines.Length);
-            //UpdateOtherFieldView("Used Boundary Lines Count", floodingContext.usedBoundaryLines.Length);
+            UpdateOtherFieldView("Used Boundary Lines Count", usedBoundariesCount);
+            usedBoundariesCount = 0;
             UpdateOtherFieldView("Generated Area Poly Lines Count", generatedAreaData.polyLines.Length);
             UpdateOtherFieldView("Gened Area Points Count", generatedAreaData.points.Length);
             //UpdateOtherFieldView("Exposed Gened Area Lines", exposedList.Length);
@@ -133,8 +135,35 @@ namespace AreaBucket.Systems
 
             var floodingContext = new CommonContext().Init(floodingDefinition); // Area bucket jobs common context
 
-            var filterObscuredLinesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
-            jobHandle = Schedule(filterObscuredLinesJob, jobHandle);
+
+
+            var projectedBoundaries = new NativeList<PolarSegment>(Allocator.TempJob);
+            var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
+            collectBoudariesJob.useOldWay = OcclusionUseOldWay;
+            jobHandle = Schedule(collectBoudariesJob, jobHandle);
+
+            if (CheckOcclusion && !OcclusionUseOldWay)
+            {
+                var projectionJob = new PolarProjectionJob
+                {
+                    polarCenter = floodingContext.floodingDefinition.rayStartPoint,
+                    boudaries = floodingContext.usedBoundaryLines,
+                    projectedBoundaries = projectedBoundaries,
+                };
+                jobHandle = Schedule(projectionJob, jobHandle);
+                var checkOcclusionJob = new CheckOcclusionJob
+                {
+                    usedBoundaries = floodingContext.usedBoundaryLines,
+                    projectedBoundaries = projectedBoundaries,
+                    occlusionBuffer = floodingContext.occlusionsBuffer,
+                };
+                jobHandle = Schedule(checkOcclusionJob, jobHandle);
+            }
+
+            jobHandle = projectedBoundaries.Dispose(jobHandle);
+            jobHandle.Complete();
+            usedBoundariesCount += floodingContext.usedBoundaryLines.Length;
+
 
             if (DrawBoundaries)
             {
