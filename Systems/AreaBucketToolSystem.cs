@@ -314,16 +314,16 @@ namespace AreaBucket.Systems
                 var netSearchTree = _netSearchSystem.GetNetSearchTree(readOnly: true, out var netSearchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, netSearchDeps);
                 var collectNetEdgesJob = default(CollectNetEdges).InitContext(singletonData, BoundaryMask, netSearchTree);
-                collectNetEdgesJob.thEdgeGeo = SystemAPI.GetComponentTypeHandle<EdgeGeometry>();
-                collectNetEdgesJob.thStartNodeGeometry = SystemAPI.GetComponentTypeHandle<StartNodeGeometry>();
-                collectNetEdgesJob.thEndNodeGeometry = SystemAPI.GetComponentTypeHandle<EndNodeGeometry>();
-                collectNetEdgesJob.thComposition = SystemAPI.GetComponentTypeHandle<Composition>();
-                collectNetEdgesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
+                collectNetEdgesJob.luEdgeGeo = SystemAPI.GetComponentLookup<EdgeGeometry>();
+                collectNetEdgesJob.luStartNodeGeometry = SystemAPI.GetComponentLookup<StartNodeGeometry>();
+                collectNetEdgesJob.luEndNodeGeometry = SystemAPI.GetComponentLookup<EndNodeGeometry>();
+                collectNetEdgesJob.luComposition = SystemAPI.GetComponentLookup<Composition>();
+                collectNetEdgesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
                 collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
                 // subnet mask is experimental (for performance issue)
                 if (collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
                 // if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
-                jobHandle = Schedule(collectNetEdgesJob, netEntityQuery, jobHandle);
+                jobHandle = Schedule(collectNetEdgesJob, jobHandle);
             }
             if (BoundaryMask.Match(BoundaryMask.Area))
             {
