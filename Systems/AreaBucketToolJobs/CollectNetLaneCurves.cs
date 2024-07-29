@@ -5,7 +5,6 @@ using Colossal.Mathematics;
 using Game.Common;
 using Game.Net;
 using Game.Prefabs;
-using System;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -15,7 +14,7 @@ using Unity.Jobs;
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
     [BurstCompile]
-    public struct CollectNetLaneCurves2 : IJob
+    public struct CollectNetLaneCurves : IJob
     {
         public NativeQuadTree<Entity, QuadTreeBoundsXZ> searchTree;
 
@@ -31,7 +30,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public ComponentLookup<Game.Tools.EditorContainer> luEditorContainer;
 
-        public CollectNetLaneCurves2 Init(SingletonData singletonData, NativeQuadTree<Entity, QuadTreeBoundsXZ> searchTree)
+        public CollectNetLaneCurves Init(SingletonData singletonData, NativeQuadTree<Entity, QuadTreeBoundsXZ> searchTree)
         {
             this.singletonData = singletonData;
             this.searchTree = searchTree;

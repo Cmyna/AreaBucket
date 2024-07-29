@@ -347,7 +347,7 @@ namespace AreaBucket.Systems
             {
                 var searchTree = _netSearchSystem.GetLaneSearchTree(true, out var searchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, searchDeps);
-                var collectNetLanesJob = default(CollectNetLaneCurves2).Init(singletonData, searchTree);
+                var collectNetLanesJob = default(CollectNetLaneCurves).Init(singletonData, searchTree);
                 collectNetLanesJob.luCurve = SystemAPI.GetComponentLookup<Curve>();
                 collectNetLanesJob.luPrefabRef = SystemAPI.GetComponentLookup<PrefabRef>();
                 collectNetLanesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
