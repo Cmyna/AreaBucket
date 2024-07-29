@@ -40,7 +40,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public void Execute()
         {
             var candidateEntites = new NativeList<Entity>(Allocator.Temp);
-            var iterator = default(In2DHitRangeEntitesIterator);
+            var iterator = new In2DHitRangeEntitesIterator<Entity>();
             iterator.entites = candidateEntites;
             iterator.hitPos = singletonData.playerHitPos;
             iterator.range = singletonData.fillingRange;
