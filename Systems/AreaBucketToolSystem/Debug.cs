@@ -65,14 +65,6 @@ namespace AreaBucket.Systems
                     setter = (v) => CheckOcclusion = v,
                 },
 
-                // TEMP: for comparing old & new net lane collecting
-                new DebugUI.BoolField
-                {
-                    displayName = nameof(UseNewNetLaneCollect),
-                    getter = () => UseNewNetLaneCollect,
-                    setter = (v) => UseNewNetLaneCollect = v
-                },
-
                 new DebugUI.BoolField
                 {
                     displayName = nameof(OcclusionUseOldWay),

@@ -45,8 +45,6 @@ namespace AreaBucket.Systems
 
             if (DrawBoundaries)
             {
-                /*var drawBoundariesJob = default(DrawBoundaries).Init(gizmosBatcher, singletonData);
-                jobHandle = Schedule(drawBoundariesJob, jobHandle);*/
                 jobHandle = Schedule(new DrawLinesJob
                 {
                     color = new Color(100, 100, 0),

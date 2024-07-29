@@ -2,11 +2,9 @@
 using Colossal.Mathematics;
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Entities.UniversalDelegates;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using static Game.Prefabs.CharacterGroup;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
@@ -68,9 +66,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private void AddGeneratedPolylinesAsBoundary()
         {
             // prevent adding the flooding candidate line 
-            var splitter = context.floodingDefinition.newAreaPointInsertStartIndex;
-            for (int i = 0; i < splitter; i++) context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
-            for (int i = splitter + 1; i < generatedAreaData.polyLines.Length; i++) context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
+            for (int i = 0; i < generatedAreaData.polyLines.Length; i++)
+            {
+                if (i == context.floodingDefinition.newAreaPointInsertStartIndex) continue;
+                context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
+            }
         }
 
         /// <summary>

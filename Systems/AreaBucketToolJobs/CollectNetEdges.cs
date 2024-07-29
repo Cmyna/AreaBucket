@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Common;
 using Game.Net;
@@ -30,14 +31,21 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly] public ComponentLookup<NetCompositionData> luCompositionData;
 
+        public NativeQuadTree<Entity, QuadTreeBoundsXZ> netSearchTree;
+
         public BoundaryMask mask;
 
         public SingletonData signletonData;
 
-        public CollectNetEdges InitContext(SingletonData signletonData, BoundaryMask mask)
+        public CollectNetEdges InitContext(
+            SingletonData signletonData, 
+            BoundaryMask mask, 
+            NativeQuadTree<Entity, QuadTreeBoundsXZ> netSearchTree
+            )
         {
             this.mask = mask;
             this.signletonData = signletonData;
+            this.netSearchTree = netSearchTree;
             return this;
         }
 
