@@ -28,7 +28,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             for (var i = 0; i < staticData.curves.Length; i++)
             {
-                Chop(staticData.curves[i], 0, 1);
+                Chop(staticData.curves[i], 0, 2);
             }
         }
 
