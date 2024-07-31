@@ -56,7 +56,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             var candidateEntites = new NativeList<Entity>(Allocator.Temp);
             var iterator = new In2DHitRangeEntitesIterator<Entity>();
-            iterator.entites = candidateEntites;
+            iterator.items = candidateEntites;
             iterator.hitPos = signletonData.playerHitPos;
             iterator.range = signletonData.fillingRange;
             netSearchTree.Iterate(ref iterator);
@@ -87,33 +87,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 TryAddNodeGeometry(startNodeGeo.m_Geometry);
                 TryAddNodeGeometry(endNodeGeo.m_Geometry);
             }
-
-            // check mask has subnet filter or not
-            //var isSubnet = chunk.Has(ref thOwner);
-            //var useSubNetAsBounds = (mask & BoundaryMask.SubNet) != 0;
-            //if (isSubnet && !useSubNetAsBounds) return;
-
-            /*var geos = chunk.GetNativeArray(ref thEdgeGeo);
-            var startNodeGeos = chunk.GetNativeArray(ref thStartNodeGeometry);
-            var endNodeGeos = chunk.GetNativeArray(ref thEndNodeGeometry);
-            var compositions = chunk.GetNativeArray(ref thComposition);
-            for (var i = 0; i < geos.Length; i++)
-            {
-                if (!IsBounds(luCompositionData[compositions[i].m_Edge])) continue;
-                var geo = geos[i];
-                
-                var distance = MathUtils.Distance(geo.m_Bounds.xz, signletonData.playerHitPos);
-                if (distance > signletonData.fillingRange) continue;
-
-                signletonData.curves.Add(geo.m_Start.m_Left);
-                signletonData.curves.Add(geo.m_Start.m_Right);
-
-                signletonData.curves.Add(geo.m_End.m_Left);
-                signletonData.curves.Add(geo.m_End.m_Right);
-
-                TryAddNodeGeometry(startNodeGeos[i].m_Geometry);
-                TryAddNodeGeometry(endNodeGeos[i].m_Geometry);
-            }*/
         }
 
         /// <summary>

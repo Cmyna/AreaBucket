@@ -41,14 +41,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             var candidateEntites = new NativeList<Entity>(Allocator.Temp);
             var iterator = new In2DHitRangeEntitesIterator<Entity>();
-            iterator.entites = candidateEntites;
+            iterator.items = candidateEntites;
             iterator.hitPos = singletonData.playerHitPos;
             iterator.range = singletonData.fillingRange;
             searchTree.Iterate(ref iterator);
 
-            for (int i = 0; i < iterator.entites.Length; i++)
+            for (int i = 0; i < iterator.items.Length; i++)
             {
-                var netLaneEntity = iterator.entites[i];
+                var netLaneEntity = iterator.items[i];
 
                 // should have curve
                 if (!luCurve.TryGetComponent(netLaneEntity, out var curveComp)) continue;

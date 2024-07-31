@@ -164,6 +164,8 @@ namespace AreaBucket.Systems
 
         private Game.Net.SearchSystem _netSearchSystem;
 
+        private Game.Areas.SearchSystem _areaSearchSystem;
+
         private int frameCount = 0;
 
         private System.Diagnostics.Stopwatch timer;
@@ -183,6 +185,7 @@ namespace AreaBucket.Systems
             _toolOutputBarrier = World.GetOrCreateSystemManaged<ToolOutputBarrier>();
             _gizmosSystem = World.GetOrCreateSystemManaged<GizmosSystem>();
             _netSearchSystem = World.GetOrCreateSystemManaged<Game.Net.SearchSystem>();
+            _areaSearchSystem = World.GetOrCreateSystemManaged<Game.Areas.SearchSystem>();
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
@@ -327,11 +330,16 @@ namespace AreaBucket.Systems
             }
             if (BoundaryMask.Match(BoundaryMask.Area))
             {
-                var collectAreaLinesJob = default(CollectAreaLines).InitContext(singletonData);
-                collectAreaLinesJob.bthNode = SystemAPI.GetBufferTypeHandle<Game.Areas.Node>();
-                collectAreaLinesJob.bthTriangle = SystemAPI.GetBufferTypeHandle<Triangle>();
-                collectAreaLinesJob.cthArea = SystemAPI.GetComponentTypeHandle<Area>();
-                jobHandle = Schedule(collectAreaLinesJob, areaEntityQuery, jobHandle);
+                var areaSearchTree = _areaSearchSystem.GetSearchTree(readOnly: true, out var areaSearchDeps);
+                jobHandle = JobHandle.CombineDependencies(jobHandle, areaSearchDeps);
+                var collectAreaLinesJob = default(CollectAreaLines).InitContext(singletonData, areaSearchTree);
+                collectAreaLinesJob.bluNode = SystemAPI.GetBufferLookup<Game.Areas.Node>();
+                collectAreaLinesJob.bluTriangle = SystemAPI.GetBufferLookup<Triangle>();
+                collectAreaLinesJob.cluArea = SystemAPI.GetComponentLookup<Area>();
+                collectAreaLinesJob.cluDistrict = SystemAPI.GetComponentLookup<District>();
+                collectAreaLinesJob.cluMapTile = SystemAPI.GetComponentLookup<MapTile>();
+                collectAreaLinesJob.cluSurfacePreviewMarker = SystemAPI.GetComponentLookup<SurfacePreviewMarker>();
+                jobHandle = Schedule(collectAreaLinesJob, jobHandle);
             }
             if (BoundaryMask.Match(BoundaryMask.Lot))
             {

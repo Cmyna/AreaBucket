@@ -20,7 +20,7 @@ namespace AreaBucket.Utils
 
         public float range;
 
-        public NativeList<TItem> entites;
+        public NativeList<TItem> items;
 
 
         public bool Intersect(QuadTreeBoundsXZ bounds)
@@ -29,12 +29,12 @@ namespace AreaBucket.Utils
             return distance <= range;
         }
 
-        public void Iterate(QuadTreeBoundsXZ bounds, TItem entity)
+        public void Iterate(QuadTreeBoundsXZ bounds, TItem item)
         {
             var distance = MathUtils.Distance(bounds.m_Bounds.xz, hitPos);
             if (distance <= range)
             {
-                entites.Add(entity);
+                items.Add(item);
             }
         }
     }
