@@ -52,7 +52,7 @@ namespace AreaBucket.Systems
 
             // experimental options binding
             AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "UseExperimentalOptions", () => _bucketToolSystem.UseExperimentalOptions));
-            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.ExtraPoints));
+            Add2WayBinding<bool>(_bucketToolSystem, nameof(AreaBucketToolSystem.CheckBoundariesCrossing));
 
             Add2WayBinding<int>(
                 nameof(AreaBucketToolSystem.RecursiveFloodingDepth),

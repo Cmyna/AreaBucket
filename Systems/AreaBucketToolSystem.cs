@@ -81,7 +81,7 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool CheckOcclusion { get; set; } = true;
 
-        public bool ExtraPoints { get; set; } = false;
+        public bool CheckBoundariesCrossing { get; set; } = true;
 
         public bool CheckIntersection { get; set; } = true;
 
@@ -468,7 +468,7 @@ namespace AreaBucket.Systems
                 $"\tmin edge length: {MinEdgeLength}\n" +
                 $"\tuse experimental: {UseExperimentalOptions}\n" +
                 $"\tcheck occlusions: {CheckOcclusion}\n" +
-                $"\textra points: {ExtraPoints}\n" +
+                $"\textra points: {CheckBoundariesCrossing}\n" +
                 $"\tcheck intersection: {CheckIntersection}\n" +
                 $"\tprofile job time: {WatchJobTime}\n";
             logger.Info(msg);

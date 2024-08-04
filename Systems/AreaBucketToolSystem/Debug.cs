@@ -67,6 +67,13 @@ namespace AreaBucket.Systems
 
                 new DebugUI.BoolField
                 {
+                    displayName = "Check Boundaries Crossing",
+                    getter = () => CheckBoundariesCrossing,
+                    setter = (v) => CheckBoundariesCrossing = v,
+                },
+
+                new DebugUI.BoolField
+                {
                     displayName = nameof(OcclusionUseOldWay),
                     getter = () => OcclusionUseOldWay,
                     setter = (v) => OcclusionUseOldWay = v

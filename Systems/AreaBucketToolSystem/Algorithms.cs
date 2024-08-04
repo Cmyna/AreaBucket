@@ -176,7 +176,7 @@ namespace AreaBucket.Systems
 
             jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
 
-            if (UseExperimentalOptions && ExtraPoints)
+            if (CheckBoundariesCrossing)
             {
                 var genIntersectionPointsJob = default(GenIntersectedPoints).Init(floodingContext);
                 jobHandle = Schedule(genIntersectionPointsJob, jobHandle);
