@@ -71,7 +71,7 @@ namespace AreaBucket.Systems
         /// <summary>
         /// the boundary for area filling tool
         /// </summary>
-        public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot;
+        public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot | BoundaryMask.NetLane;
 
 
         public bool UseExperimentalOptions => Mod.modSetting?.UseExperientalOption ?? false;
