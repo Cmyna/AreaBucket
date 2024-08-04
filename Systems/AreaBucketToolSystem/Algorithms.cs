@@ -3,7 +3,6 @@ using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
 using Colossal;
 using Colossal.Mathematics;
-using Game.Simulation;
 using Game.Tools;
 using Unity.Collections;
 using Unity.Entities;
@@ -167,7 +166,7 @@ namespace AreaBucket.Systems
             {
                 jobHandle = Schedule(new DrawLinesJob
                 {
-                    color = Color.red,
+                    color = UnityEngine.Color.red,
                     heightData = singletonData.terrainHeightData,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     lines = floodingContext.usedBoundaryLines,
@@ -219,7 +218,7 @@ namespace AreaBucket.Systems
                     lines = raylines,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     heightData = singletonData.terrainHeightData,
-                    color = new Color(0.3f, 0.5f, 0.7f, 1)
+                    color = new UnityEngine.Color(0.3f, 0.5f, 0.7f, 1)
                 }, jobHandle);
                 jobHandle.Complete();
                 jobHandle = raylines.Dispose(jobHandle);
@@ -232,14 +231,14 @@ namespace AreaBucket.Systems
                     lines = debugContext.intersectedLines,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     heightData = singletonData.terrainHeightData,
-                    color = Color.blue
+                    color = UnityEngine.Color.blue
                 }, jobHandle);
                 jobHandle = Schedule(new DrawLinesJob
                 {
                     lines = debugContext.intersectedRays,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     heightData = singletonData.terrainHeightData,
-                    color = Color.magenta
+                    color = UnityEngine.Color.magenta
                 }, jobHandle);
             }
 
@@ -310,7 +309,7 @@ namespace AreaBucket.Systems
                 }).Schedule(jobHandle);
                 jobHandle = Schedule(new DrawLinesJob
                 {
-                    color = Color.green,
+                    color = UnityEngine.Color.green,
                     heightData = singletonData.terrainHeightData,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     lines = exposedList,

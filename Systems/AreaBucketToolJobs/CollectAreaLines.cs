@@ -80,25 +80,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        /*public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
-        {
-            if (!chunk.Has(ref bluTriangle)) return;
-            var triangleAccessor = chunk.GetBufferAccessor(ref bluTriangle);
-            var nodesAccessor = chunk.GetBufferAccessor(ref bluNode);
-            var areas = chunk.GetNativeArray(ref cluArea);
-            for (var i = 0; i < nodesAccessor.Length; i++)
-            {
-                if ((areas[i].m_Flags & AreaFlags.Complete) == 0) continue;
-                var buffer = nodesAccessor[i];
-                var triangleBuffer = triangleAccessor[i];
-                // if no triangle, means it is an invalid area shape,
-                // this kinds of entities is generated from area entity that players insert/drag point on one edge to another edge
-                // the area entity just "invisible" because no more triangle, but still there
-                if (triangleBuffer.Length == 0) continue;
-                HandleBuffer(buffer);
-            }
-        }*/
-
         private void HandleBuffer(DynamicBuffer<Node> buffer)
         {
             for (var i = 0; i < buffer.Length - 1; i++)

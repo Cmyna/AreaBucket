@@ -119,6 +119,10 @@
     <Compile Remove="Systems\AreaBucketToolJobs\JobData\RayEndPoint.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Utils\Job\Profiling\" />
+  </ItemGroup>
+
   <Target Name="CopyIcons" AfterTargets="AfterBuild">
     <Copy SourceFiles="@(_Icons)" DestinationFolder="$(DeployDir)/Icons" />
   </Target>

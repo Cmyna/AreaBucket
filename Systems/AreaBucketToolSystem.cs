@@ -4,6 +4,7 @@ using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
 using AreaBucket.Utils;
 using Colossal;
+using Colossal.Collections;
 using Colossal.Logging;
 using Colossal.Mathematics;
 using Game.Areas;
@@ -16,10 +17,13 @@ using Game.Prefabs;
 using Game.Simulation;
 using Game.Tools;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine.InputSystem;
 
 namespace AreaBucket.Systems
@@ -130,7 +134,7 @@ namespace AreaBucket.Systems
         /// <summary>
         /// restrict the algorithm flooding depth in one loop
         /// </summary>
-        public int RecursiveFloodingDepth { get; set;} = 1;
+        public int RecursiveFloodingDepth { get; set; } = 1;
 
         /// <summary>
         /// restrict the flooding max times
@@ -193,7 +197,7 @@ namespace AreaBucket.Systems
             BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             timer = new System.Diagnostics.Stopwatch();
-            
+
 
             OnInitEntityQueries();
             CreateDebugPanel();
@@ -248,7 +252,16 @@ namespace AreaBucket.Systems
             }
 
             ClearJobTimeProfiles();
+            Stopwatch stopwatch = null;
+            if (WatchJobTime) stopwatch = Stopwatch.StartNew();
             var newHandle = StartAlgorithm(inputDeps, raycastPoint);
+            if (WatchJobTime && stopwatch != null)
+            {
+                newHandle.Complete();
+                if (!jobTimeProfile.ContainsKey("totalTimeCost")) AppendJobTimeProfileView("totalTimeCost");
+                jobTimeProfile["totalTimeCost"] = stopwatch.ElapsedMilliseconds;
+            }
+
             //var newHandle = ApplyBucket(inputDeps, raycastPoint);
 
             return newHandle;
@@ -280,7 +293,7 @@ namespace AreaBucket.Systems
         {
             ToolEnabled = CanEnable(prefab);
             if (ToolEnabled) _selectedPrefab = prefab as AreaPrefab;
-            return ToolEnabled && Active; 
+            return ToolEnabled && Active;
         }
 
         /// <summary>
@@ -292,7 +305,7 @@ namespace AreaBucket.Systems
         {
             if (!(prefab is AreaPrefab)) return false; // if selected prefab is not area prefab, it will not be enabled
             // if prefab is District or Lot prefab, not enabled
-            if (prefab is DistrictPrefab) return false; 
+            if (prefab is DistrictPrefab) return false;
             if (prefab is LotPrefab) return false;
             return true;
         }
@@ -311,6 +324,7 @@ namespace AreaBucket.Systems
         /// <returns></returns>
         private JobHandle ScheduleDataCollection(JobHandle inputDeps, SingletonData singletonData)
         {
+            var profileJobTime = WatchJobTime;
             var jobHandle = inputDeps;
             if (BoundaryMask.Match(BoundaryMask.Net))
             {
@@ -343,13 +357,39 @@ namespace AreaBucket.Systems
             }
             if (BoundaryMask.Match(BoundaryMask.Lot))
             {
-                var collectLotLines = default(CollectLotLines).InitContext(singletonData);
+                Stopwatch collectLotLineStopwatch = null;
+                if (profileJobTime) collectLotLineStopwatch = Stopwatch.StartNew();
+                var lotLineQueue = new NativeQueue<Line2>(Allocator.TempJob);
+                var collectLotLines = default(CollectLotLines).InitContext(singletonData, lotLineQueue);
                 collectLotLines.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
                 collectLotLines.thTransform = SystemAPI.GetComponentTypeHandle<Game.Objects.Transform>();
                 collectLotLines.thBuilding = SystemAPI.GetComponentTypeHandle<Building>();
                 collectLotLines.luBuildingData = SystemAPI.GetComponentLookup<BuildingData>();
                 collectLotLines.luObjectGeoData = SystemAPI.GetComponentLookup<ObjectGeometryData>();
-                jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
+                var collectLotLinesDeps = jobHandle;
+                jobHandle = collectLotLines.ScheduleParallel(lotEntityQuery, collectLotLinesDeps);
+                // jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
+                var collectLotLinesDeps2 = jobHandle;
+                jobHandle = Job.WithCode(() => {
+                    while (!lotLineQueue.IsEmpty())
+                    {
+                        singletonData.totalBoundaryLines.Add(lotLineQueue.Dequeue());
+                    }
+                }).WithBurst().Schedule(collectLotLinesDeps2);
+                lotLineQueue.Dispose(jobHandle);
+
+                if (profileJobTime)
+                {
+                    var profile = jobTimeProfile;
+                    if (!profile.ContainsKey(nameof(CollectLotLines)))
+                    {
+                        profile[nameof(CollectLotLines)] = 0;
+                        AppendJobTimeProfileView(nameof(CollectLotLines));
+                    }
+                    jobHandle.Complete();
+                    profile[nameof(CollectLotLines)] += collectLotLineStopwatch.ElapsedMilliseconds;
+                }
+
             }
             if (BoundaryMask.Match(BoundaryMask.NetLane))
             {
@@ -434,7 +474,7 @@ namespace AreaBucket.Systems
             logger.Info(msg);
         }
 
-        
+
     }
 
     public enum BoundaryMask
@@ -454,5 +494,4 @@ namespace AreaBucket.Systems
             return (mask & targetMask) != 0;
         }
     }
-
 }
