@@ -23,7 +23,7 @@ const simple2WayBindings = {
     fillRange: simple2WayBinding<number>("FillRange"),
     boundaryMask: simple2WayBinding<number>("BoundaryMask"),
     
-    extraPoints: simple2WayBinding<boolean>("ExtraPoints"),
+    //extraPoints: simple2WayBinding<boolean>("ExtraPoints"),
     floodingDepth: simple2WayBinding<number>("RecursiveFloodingDepth")
 }
 
