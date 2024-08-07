@@ -25,6 +25,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Profiling;
 using UnityEngine.InputSystem;
+using UnityEngine.Profiling;
 
 namespace AreaBucket.Systems
 {
@@ -258,8 +259,7 @@ namespace AreaBucket.Systems
             if (WatchJobTime && stopwatch != null)
             {
                 newHandle.Complete();
-                if (!jobTimeProfile.ContainsKey("totalTimeCost")) AppendJobTimeProfileView("totalTimeCost");
-                jobTimeProfile["totalTimeCost"] = stopwatch.ElapsedMilliseconds;
+                AddJobTime("totalTimeCost", (float)stopwatch.Elapsed.TotalMilliseconds);
             }
 
             //var newHandle = ApplyBucket(inputDeps, raycastPoint);
@@ -380,14 +380,8 @@ namespace AreaBucket.Systems
 
                 if (profileJobTime)
                 {
-                    var profile = jobTimeProfile;
-                    if (!profile.ContainsKey(nameof(CollectLotLines)))
-                    {
-                        profile[nameof(CollectLotLines)] = 0;
-                        AppendJobTimeProfileView(nameof(CollectLotLines));
-                    }
                     jobHandle.Complete();
-                    profile[nameof(CollectLotLines)] += collectLotLineStopwatch.ElapsedMilliseconds;
+                    AddJobTime(nameof(CollectLotLines), collectLotLineStopwatch.ElapsedMilliseconds);
                 }
 
             }
@@ -434,25 +428,16 @@ namespace AreaBucket.Systems
 
         private JobHandle Schedule(Func<JobHandle> scheduleFunc, string name)
         {
-            var missingDebugField = !jobTimeProfile.ContainsKey(name);
-            if (missingDebugField)
-            {
-                AppendJobTimeProfileView(name);
-                jobTimeProfile[name] = 0;
-            }
-
-
+            Stopwatch stopwatch = null;
             if (WatchJobTime)
             {
-                timer.Reset();
-                timer.Start();
+                stopwatch = Stopwatch.StartNew();
             }
             var jobHandle = scheduleFunc();
             if (WatchJobTime)
             {
                 jobHandle.Complete();
-                timer.Stop();
-                jobTimeProfile[name] += timer.ElapsedMilliseconds;
+                AddJobTime(name, (float)stopwatch.Elapsed.TotalMilliseconds);
             }
             return jobHandle;
         }

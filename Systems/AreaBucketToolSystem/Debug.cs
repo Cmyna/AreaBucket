@@ -238,6 +238,17 @@ namespace AreaBucket.Systems
         }
 
 
+        private void AddJobTime(string jobName, float time)
+        {
+            if (!jobTimeProfile.ContainsKey(jobName))
+            {
+                AppendJobTimeProfileView(jobName);
+                jobTimeProfile[jobName] = 0;
+            }
+            jobTimeProfile[jobName] += time;
+        }
+
+
         private void AppendJobTimeProfileView(string jobName)
         {
             jobTimeProfileContainer.children.Add(new DebugUI.Value

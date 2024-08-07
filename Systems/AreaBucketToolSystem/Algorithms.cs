@@ -4,6 +4,7 @@ using AreaBucket.Systems.DebugHelperJobs;
 using Colossal;
 using Colossal.Mathematics;
 using Game.Tools;
+using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -21,6 +22,8 @@ namespace AreaBucket.Systems
             
             var jobHandle = inputDeps;
 
+            Stopwatch prepareStopwatch = null;
+            if (WatchJobTime) prepareStopwatch = Stopwatch.StartNew();
             GizmoBatcher gizmosBatcher = default;
             var terrainHeightData = _terrianSystem.GetHeightData();
 
@@ -52,6 +55,12 @@ namespace AreaBucket.Systems
                     lines = singletonData.totalBoundaryLines,
                     yOffset = -0.5f
                 }, jobHandle);
+            }
+
+            if (WatchJobTime)
+            {
+                jobHandle.Complete();
+                AddJobTime("preparing", prepareStopwatch.ElapsedMilliseconds);
             }
 
             var floodingDefsList = new NativeList<FloodingDefinition>(Allocator.TempJob);
@@ -131,8 +140,6 @@ namespace AreaBucket.Systems
             var jobHandle = inputDeps;
 
             var floodingContext = new CommonContext().Init(floodingDefinition); // Area bucket jobs common context
-
-
 
             var projectedBoundaries = new NativeList<PolarSegment>(Allocator.TempJob);
             var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
@@ -268,36 +275,42 @@ namespace AreaBucket.Systems
             }
 
             // filter flooding definitions (that has been obscured by new geneated polylines)
-            jobHandle = Job.WithCode(() =>
-            {
-                var usableFloodingDefs = new NativeList<FloodingDefinition>(Allocator.Temp);
-                for (int i = 0; i < floodingDefinitions.Length; i++)
-                {
-                    var floodingDef = floodingDefinitions[i];
-                    var line = floodingDef.floodingSourceLine;
-                    var vector = line.b - line.a;
-                    var middle = math.lerp(line.a, line.b, 0.5f); // choose middle point of exposed line
-
-                    var exposed = true;
-                    for (int j = 0; j < generatedAreaData.polyLines.Length; j++)
+            var filterFloodingDefsDeps = jobHandle;
+            jobHandle = Schedule(
+                () => {
+                    return Job.WithCode(() =>
                     {
-                        // if satisfy this condition, means it is flooding candidate source line
-                        if (j == floodingDef.newAreaPointInsertStartIndex) continue;
-
-                        var boundaryLine = generatedAreaData.polyLines[j];
-                        if (FoundIntersection(line, vector, middle, boundaryLine))
+                        var usableFloodingDefs = new NativeList<FloodingDefinition>(Allocator.Temp);
+                        for (int i = 0; i < floodingDefinitions.Length; i++)
                         {
-                            exposed = false;
-                            break;
-                        }
-                    }
-                    if (exposed) usableFloodingDefs.Add(floodingDef);
-                }
+                            var floodingDef = floodingDefinitions[i];
+                            var line = floodingDef.floodingSourceLine;
+                            var vector = line.b - line.a;
+                            var middle = math.lerp(line.a, line.b, 0.5f); // choose middle point of exposed line
 
-                floodingDefinitions.Clear();
-                floodingDefinitions.AddRange(usableFloodingDefs.AsArray());
-                usableFloodingDefs.Dispose();
-            }).Schedule(jobHandle);
+                            var exposed = true;
+                            for (int j = 0; j < generatedAreaData.polyLines.Length; j++)
+                            {
+                                // if satisfy this condition, means it is flooding candidate source line
+                                if (j == floodingDef.newAreaPointInsertStartIndex) continue;
+
+                                var boundaryLine = generatedAreaData.polyLines[j];
+                                if (FoundIntersection(line, vector, middle, boundaryLine))
+                                {
+                                    exposed = false;
+                                    break;
+                                }
+                            }
+                            if (exposed) usableFloodingDefs.Add(floodingDef);
+                        }
+
+                        floodingDefinitions.Clear();
+                        floodingDefinitions.AddRange(usableFloodingDefs.AsArray());
+                        usableFloodingDefs.Dispose();
+                    }).Schedule(filterFloodingDefsDeps);
+                },
+                "filterFloodingDefs"
+            );
 
             jobHandle = newPointsIndicesRange.Dispose(jobHandle);
 
