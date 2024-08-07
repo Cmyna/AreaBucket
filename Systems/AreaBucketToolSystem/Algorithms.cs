@@ -146,7 +146,8 @@ namespace AreaBucket.Systems
             collectBoudariesJob.useOldWay = OcclusionUseOldWay;
             jobHandle = Schedule(collectBoudariesJob, jobHandle);
 
-            // here should ensure last job is complete, to get actual floodingContext.usedBoundaryLines.Lengt
+            // here should ensure last job is complete, to get actual floodingContext.usedBoundaryLines.Length
+            // if not do it, the length will be zero and memery leak will happen
             jobHandle.Complete();
             var projectedBoundaries = new NativeList<PolarSegment>(floodingContext.usedBoundaryLines.Length, Allocator.TempJob);
 
