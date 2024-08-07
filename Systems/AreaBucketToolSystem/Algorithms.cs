@@ -141,20 +141,30 @@ namespace AreaBucket.Systems
 
             var floodingContext = new CommonContext().Init(floodingDefinition); // Area bucket jobs common context
 
-            var projectedBoundaries = new NativeList<PolarSegment>(Allocator.TempJob);
+           
             var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
             collectBoudariesJob.useOldWay = OcclusionUseOldWay;
             jobHandle = Schedule(collectBoudariesJob, jobHandle);
+
+            // here should ensure last job is complete, to get actual floodingContext.usedBoundaryLines.Lengt
+            jobHandle.Complete();
+            var projectedBoundaries = new NativeList<PolarSegment>(floodingContext.usedBoundaryLines.Length, Allocator.TempJob);
 
             if (CheckOcclusion && !OcclusionUseOldWay)
             {
                 var projectionJob = new PolarProjectionJob
                 {
                     polarCenter = floodingContext.floodingDefinition.rayStartPoint,
-                    boudaries = floodingContext.usedBoundaryLines,
-                    projectedBoundaries = projectedBoundaries,
+                    boudaries = floodingContext.usedBoundaryLines.AsParallelReader(),
+                    projectedBoundaries = projectedBoundaries.AsParallelWriter(),
                 };
-                jobHandle = Schedule(projectionJob, jobHandle);
+                jobHandle = Schedule(
+                    () => projectionJob.Schedule(floodingContext.usedBoundaryLines.Length, 64, jobHandle), 
+                    nameof(PolarProjectionJob)
+                );
+
+
+                //jobHandle = Schedule(projectionJob, jobHandle);
                 var checkOcclusionJob = new CheckOcclusionJob
                 {
                     usedBoundaries = floodingContext.usedBoundaryLines,
@@ -163,7 +173,7 @@ namespace AreaBucket.Systems
                 };
                 jobHandle = Schedule(checkOcclusionJob, jobHandle);
             }
-
+            
             jobHandle = projectedBoundaries.Dispose(jobHandle);
             jobHandle.Complete();
             usedBoundariesCount += floodingContext.usedBoundaryLines.Length;

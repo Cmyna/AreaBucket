@@ -2,6 +2,7 @@
 using Colossal.Mathematics;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Entities.UniversalDelegates;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -164,15 +165,15 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var boundariesCache = new NativeList<Line2>(Allocator.Temp);
             for (int i = 0; i < occlusionBuffer.Length; i++) occlusionBuffer[i] = float.MaxValue;
 
-            for (int i = 0; i < usedBoundaries.Length; i++)
+            for (int i = 0; i < projectedBoundaries.Length; i++)
             {
                 UpdateOcclusionBuffer(projectedBoundaries[i], occlusionBuffer);
             }
 
-            for (int i = 0; i < usedBoundaries.Length; i++)
+            for (int i = 0; i < projectedBoundaries.Length; i++)
             {
                 if (IsObscured(projectedBoundaries[i], occlusionBuffer)) continue;
-                boundariesCache.Add(usedBoundaries[i]);
+                boundariesCache.Add(projectedBoundaries[i].originalLine);
             }
             usedBoundaries.Clear();
             usedBoundaries.AddRange(boundariesCache.AsArray());
@@ -200,48 +201,52 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     }
 
     [BurstCompile]
-    public struct PolarProjectionJob : IJob
+    public struct PolarProjectionJob : IJobParallelFor
     {
 
-        public NativeList<Line2> boudaries;
+        public NativeArray<Line2>.ReadOnly boudaries;
 
-        public NativeList<PolarSegment> projectedBoundaries;
+        public NativeList<PolarSegment>.ParallelWriter projectedBoundaries;
 
         [ReadOnly] public float2 polarCenter;
 
-        public void Execute()
+        public void Execute(int index)
         {
-            for (int i = 0; i < boudaries.Length; i++)
+            var line = boudaries[index];
+            var projectedSegment = CreateProjection(line, polarCenter);
+            projectedBoundaries.AddNoResize(projectedSegment);
+            /*for (int i = 0; i < boudaries.Length; i++)
             {
                 var line = boudaries[i];
-                var projectedSegment = CreateProjection(new Line2.Segment(line.a, line.b), polarCenter);
-                projectedBoundaries.Add(projectedSegment);
-            }
+                var projectedSegment = CreateProjection(line, polarCenter);
+                projectedBoundaries.AddNoResize(projectedSegment);
+            }*/
         }
 
-        public static PolarSegment CreateProjection(Line2.Segment segment, float2 polarCenter)
+        public static PolarSegment CreateProjection(Line2 segment, float2 polarCenter)
         {
             var v1 = segment.a - polarCenter;
             var v2 = segment.b - polarCenter;
 
-            var minDist = MinDist(segment, polarCenter);
+            var minDist = MinDist(new Line2.Segment(segment.a, segment.b), polarCenter);
             var maxDist = math.max(math.length(v1), math.length(v2));
 
             var projecedSegment = new PolarSegment
             {
                 minDist = minDist,
                 maxDist = maxDist,
-                bounds = GetThetaProjBounds(v1, v2, out _, out _)
+                bounds = GetThetaProjBounds(v1, v2, out _, out _),
+                originalLine = segment,
             };
             return projecedSegment;
         }
 
-        private static float MinDist(Line2.Segment line, float2 polarCenter)
+        private static float MinDist(Line2.Segment segment, float2 polarCenter)
         {
-            var dist = MathUtils.Distance(line, polarCenter, out var t);
+            var dist = MathUtils.Distance(segment, polarCenter, out var t);
             if (t >= 0 && t <= 1) return dist;
-            var v1 = line.a - polarCenter;
-            var v2 = line.b - polarCenter;
+            var v1 = segment.a - polarCenter;
+            var v2 = segment.b - polarCenter;
 
             return math.min(math.length(v1), math.length(v2));
         }
@@ -283,5 +288,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         /// segment bounds projected on theta axis
         /// </summary>
         public float2 bounds;
+
+        public Line2 originalLine;
     }
 }
