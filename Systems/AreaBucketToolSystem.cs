@@ -82,7 +82,7 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool CheckOcclusion { get; set; } = true;
 
-        public bool CheckBoundariesCrossing { get; set; } = true;
+        public bool CheckBoundariesCrossing { get; set; } = false;
 
         public bool CheckIntersection { get; set; } = true;
 

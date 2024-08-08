@@ -23,7 +23,7 @@ const simple2WayBindings = {
     fillRange: simple2WayBinding<number>("FillRange"),
     boundaryMask: simple2WayBinding<number>("BoundaryMask"),
     
-    //extraPoints: simple2WayBinding<boolean>("ExtraPoints"),
+    extraPoints: simple2WayBinding<boolean>("CheckBoundariesCrossing"),
     floodingDepth: simple2WayBinding<number>("RecursiveFloodingDepth")
 }
 
@@ -85,13 +85,13 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
 
         if (!activeBindings.active.value) return result // shows tool options iff it is active
 
-        // if (useExpOptions) result.props.children?.push(
-        // <Radio title={translateTool("DetectCrossing")}
-        //     src={couiStandard + "Jackhammer.svg"}
-        //     binding={activeBindings.extraPoints}
-        //     tooltip={translateToolDesc("DetectCrossing")}
-        //     {...ctx}
-        // />)
+        if (useExpOptions) result.props.children?.push(
+        <Radio title={translateTool("DetectCrossing")}
+            src={couiStandard + "Jackhammer.svg"}
+            binding={activeBindings.extraPoints}
+            tooltip={translateToolDesc("DetectCrossing")}
+            {...ctx}
+        />)
 
 
         // tool control filling range
