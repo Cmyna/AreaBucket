@@ -181,7 +181,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private static void UpdateOcclusionBuffer(PolarSegment segment, NativeArray<float> buffer)
         {
-            for (int i = Mathf.FloorToInt(segment.bounds.x); i < Mathf.CeilToInt(segment.bounds.y); i++)
+            for (int i = Mathf.CeilToInt(segment.bounds.x); i < Mathf.FloorToInt(segment.bounds.y); i++)
             {
                 var idx = i % buffer.Length;
                 buffer[idx] = math.min(buffer[idx], segment.maxDist);
