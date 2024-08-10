@@ -109,6 +109,15 @@ namespace AreaBucket.Systems
                     setter = (v) => MaxFloodingTimes = math.clamp(v, 1, 32)
                 },
 
+                new DebugUI.FloatField
+                {
+                    displayName = nameof(Curve2LineAngleLimit),
+                    incStep = 1f,
+                    min = () => 0f, max = () => 30f,
+                    getter = () => Curve2LineAngleLimit,
+                    setter = (v) => Curve2LineAngleLimit = v,
+                },
+
                 CreateVisualizeDebugUI(),
                 CreateMergePointsDebugUI(),
                 new DebugUI.Container(

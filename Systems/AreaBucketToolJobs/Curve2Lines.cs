@@ -9,6 +9,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
@@ -18,9 +19,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public SingletonData staticData;
 
-        public Curve2Lines Init(SingletonData signletonData)
+        [ReadOnly] public float angleLimit;
+
+        public Curve2Lines Init(SingletonData signletonData, float angleLimit)
         {
             this.staticData = signletonData;
+            this.angleLimit = angleLimit;
             return this;
         }
 
@@ -41,7 +45,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 return;
             }
             var bounds = GetDistanceBound(curve);
-            if (bounds.max < 0.5f)
+            var angleMeasure = ControlPointAngleMeasure(curve);
+            if (bounds.max < 0.5f || angleMeasure <= angleLimit)
             {
                 staticData.totalBoundaryLines.Add(new Line2 { a = curve.a.xz, b = curve.d.xz });
                 return;
@@ -59,6 +64,18 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             max += math.length(curve.c.xz - curve.b.xz);
             max += math.length(curve.d.xz - curve.c.xz);
             return new Bounds1 { min = min, max = max };
+        }
+
+        private float ControlPointAngleMeasure(Bezier4x3 curve)
+        {
+            var ab = curve.b.xz - curve.a.xz; ab /= math.length(ab);
+            var bc = curve.c.xz - curve.b.xz; bc /= math.length(bc);
+            var cd = curve.d.xz - curve.c.xz; cd /= math.length(cd);
+
+            var angle1 = MathUtils.RotationAngle(ab, bc) * Mathf.Rad2Deg; //angle1 = math.abs(angle1);
+            var angle2 = MathUtils.RotationAngle(bc, cd) * Mathf.Rad2Deg; //angle2 = math.abs(angle2);
+
+            return angle1 + angle2;
         }
     }
 }

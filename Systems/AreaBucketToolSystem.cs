@@ -151,6 +151,8 @@ namespace AreaBucket.Systems
 
         public bool OcclusionUseOldWay = false;
 
+        public float Curve2LineAngleLimit = 5f;
+
         private AudioManager _audioManager;
 
         private EntityQuery _soundQuery;
@@ -398,7 +400,7 @@ namespace AreaBucket.Systems
                 jobHandle = Schedule(collectNetLanesJob, jobHandle);
             }
 
-            var curve2LinesJob = default(Curve2Lines).Init(singletonData);
+            var curve2LinesJob = default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit);
             jobHandle = Schedule(curve2LinesJob, jobHandle);
 
             return jobHandle;
