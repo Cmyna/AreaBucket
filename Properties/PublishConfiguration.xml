@@ -45,15 +45,18 @@ You can active Anarchy in tool options panel to hide the warning.
   <Screenshot Value="Properties/Images/settings.jpg" />
 	<Tag Value="Code Mod" />
 	<ForumLink Value="" />
-	<ModVersion Value="0.3.1" />
+	<ModVersion Value="0.4.0" />
 	<GameVersion Value="1.1.*" />
 
   <Dependency Id="74417" /> <!--Dependency Unified Icon Library -->
 
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
   <ChangeLog>
-* fix issue (after game patch 1.1.16f1) mouse place area action not work when using the tool 
-* net lane and sub net boundary masks are out of experimental 
+### Features
+* Add drawing color overlay option in setting
+* Add surface preview option in setting
+### Improve tool performance
+
   </ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/Cmyna/AreaBucket" />
