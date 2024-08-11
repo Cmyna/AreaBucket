@@ -239,12 +239,6 @@ namespace AreaBucket.Systems
             AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
             if (Mod.modSetting?.DrawAreaOverlay == true) requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
 
-
-            if (_applyAction != null) // temporary use reflection to set it enabled
-            {
-                _applyAction.GetType().GetProperty(nameof(ProxyAction.enabled)).SetValue(_applyAction, true);
-            }
-
             applyMode = ApplyMode.Clear;
             if (!GetRaycastResult(out var raycastPoint))
             {
