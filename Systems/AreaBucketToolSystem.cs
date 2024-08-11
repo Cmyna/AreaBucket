@@ -147,7 +147,15 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool RecursiveFlooding { get; set; } = true;
 
-        public bool PreviewSurface { get; set; } = false;
+        public bool PreviewSurface
+        {
+            get => Mod.modSetting?.PreviewSurface ?? false;
+            set 
+            {
+                if (Mod.modSetting == null) return;
+                Mod.modSetting.PreviewSurface = value;
+            }
+        }
 
         public bool OcclusionUseOldWay = false;
 

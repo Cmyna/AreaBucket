@@ -34,6 +34,9 @@ namespace AreaBucket
         [SettingsUISection(ksMain, kgMain)]
         public bool DrawAreaOverlay { get; set; } = true;
 
+        [SettingsUISection(ksMain, kgMain)]
+        public bool PreviewSurface { get; set; } = false;
+
         [SettingsUIHidden]
         public bool AlterVanillaGeometrySystem { get; set; } = false;
 
@@ -53,6 +56,8 @@ namespace AreaBucket
         {
             MinGeneratedLineLength = 1f;
             UseExperientalOption = false;
+            PreviewSurface = false;
+            DrawAreaOverlay = true;
         }
 
 
