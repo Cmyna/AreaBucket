@@ -28,9 +28,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct CreateDefinitionsJobCopy : IJob
     {
-        /// <summary>
-        /// is it used for specifing probabilities of picking prefabs for those random prefab generation?
-        /// </summary>
         private struct VariationData
         {
             public Entity m_Prefab;
@@ -76,7 +73,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             public ComponentLookup<Game.Objects.Elevation> m_ElevationData;
 
-            public ComponentLookup<Game.Tools.EditorContainer> m_EditorContainerData;
+            public ComponentLookup<EditorContainer> m_EditorContainerData;
 
             public ComponentLookup<LocalTransformCache> m_LocalTransformCacheData;
 
@@ -198,7 +195,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 }
                 if (m_EditorContainerData.HasComponent(item))
                 {
-                    Game.Tools.EditorContainer editorContainer = m_EditorContainerData[item];
+                    EditorContainer editorContainer = m_EditorContainerData[item];
                     component.m_SubPrefab = editorContainer.m_Prefab;
                     component2.m_Scale = editorContainer.m_Scale;
                     component2.m_Intensity = editorContainer.m_Intensity;
@@ -209,7 +206,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        
         [ReadOnly]
         public bool m_EditorMode;
 
@@ -431,43 +427,30 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public TerrainHeightData m_TerrainHeightData;
 
         public EntityCommandBuffer m_CommandBuffer;
-        
 
         public void Execute()
         {
-            // is it the point player's mouse hits?
             ControlPoint startPoint = m_ControlPoints[0];
-
-            Entity ownerEntity = m_Owner;
-            Entity originalEntity = m_Original;
+            Entity entity = m_Owner;
+            Entity entity2 = m_Original;
             Entity updatedTopLevel = Entity.Null;
             Entity lotEntity = Entity.Null;
             OwnerDefinition ownerDefinition = default(OwnerDefinition);
             bool upgrade = false;
-            bool hasOriginalEntity = originalEntity != Entity.Null;
+            bool flag = entity2 != Entity.Null;
             bool topLevel = true;
-            int parentMesh = ((!(ownerEntity != Entity.Null)) ? (-1) : 0);
-
-
-            if (
-                !hasOriginalEntity && m_PrefabNetObjectData.HasComponent(m_ObjectPrefab) && 
-                m_AttachedData.HasComponent(startPoint.m_OriginalEntity) && 
-                (m_EditorMode || !m_OwnerData.HasComponent(startPoint.m_OriginalEntity))
-                )
+            int parentMesh = ((!(entity != Entity.Null)) ? (-1) : 0);
+            if (!flag && m_PrefabNetObjectData.HasComponent(m_ObjectPrefab) && m_AttachedData.HasComponent(startPoint.m_OriginalEntity) && (m_EditorMode || !m_OwnerData.HasComponent(startPoint.m_OriginalEntity)))
             {
                 Attached attached = m_AttachedData[startPoint.m_OriginalEntity];
                 if (m_NodeData.HasComponent(attached.m_Parent) || m_EdgeData.HasComponent(attached.m_Parent))
                 {
-                    originalEntity = startPoint.m_OriginalEntity;
+                    entity2 = startPoint.m_OriginalEntity;
                     startPoint.m_OriginalEntity = attached.m_Parent;
                     upgrade = true;
                 }
             }
-
-
             Owner componentData4;
-
-
             if (m_EditorMode)
             {
                 Entity entity3 = startPoint.m_OriginalEntity;
@@ -507,16 +490,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 }
                 if (m_TransformData.HasComponent(entity3) && m_SubObjects.HasBuffer(entity3))
                 {
-                    ownerEntity = entity3;
+                    entity = entity3;
                     topLevel = flag2;
                     parentMesh = num;
                 }
-                if (m_OwnerData.HasComponent(originalEntity))
+                if (m_OwnerData.HasComponent(entity2))
                 {
-                    Owner owner = m_OwnerData[originalEntity];
-                    if (owner.m_Owner != ownerEntity)
+                    Owner owner = m_OwnerData[entity2];
+                    if (owner.m_Owner != entity)
                     {
-                        ownerEntity = owner.m_Owner;
+                        entity = owner.m_Owner;
                         topLevel = flag2;
                         parentMesh = -1;
                     }
@@ -526,53 +509,49 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     startPoint.m_OriginalEntity = Entity.Null;
                 }
             }
-            else if (hasOriginalEntity && ownerEntity == Entity.Null && m_OwnerData.TryGetComponent(originalEntity, out componentData4))
+            else if (flag && entity == Entity.Null && m_OwnerData.TryGetComponent(entity2, out componentData4))
             {
-                ownerEntity = componentData4.m_Owner;
+                entity = componentData4.m_Owner;
             }
-
-
             NativeList<ClearAreaData> clearAreas = default(NativeList<ClearAreaData>);
-
-
-            if (m_TransformData.HasComponent(ownerEntity))
+            if (m_TransformData.HasComponent(entity))
             {
-                Game.Objects.Transform transform = m_TransformData[ownerEntity];
-                m_ElevationData.TryGetComponent(ownerEntity, out var componentData5);
+                Game.Objects.Transform transform = m_TransformData[entity];
+                m_ElevationData.TryGetComponent(entity, out var componentData5);
                 Entity owner2 = Entity.Null;
-                if (m_OwnerData.HasComponent(ownerEntity))
+                if (m_OwnerData.HasComponent(entity))
                 {
-                    owner2 = m_OwnerData[ownerEntity].m_Owner;
+                    owner2 = m_OwnerData[entity].m_Owner;
                 }
-                ownerDefinition.m_Prefab = m_PrefabRefData[ownerEntity].m_Prefab;
+                ownerDefinition.m_Prefab = m_PrefabRefData[entity].m_Prefab;
                 ownerDefinition.m_Position = transform.m_Position;
                 ownerDefinition.m_Rotation = transform.m_Rotation;
                 if (m_Stamping || CheckParentPrefab(ownerDefinition.m_Prefab, m_ObjectPrefab))
                 {
-                    updatedTopLevel = ownerEntity;
+                    updatedTopLevel = entity;
                     if (m_PrefabServiceUpgradeBuilding.HasBuffer(m_ObjectPrefab))
                     {
                         ClearAreaHelpers.FillClearAreas(ownerTransform: new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation), ownerPrefab: m_ObjectPrefab, prefabObjectGeometryData: m_PrefabObjectGeometryData, prefabAreaGeometryData: m_PrefabAreaGeometryData, prefabSubAreas: m_PrefabSubAreas, prefabSubAreaNodes: m_PrefabSubAreaNodes, clearAreas: ref clearAreas);
                         ClearAreaHelpers.InitClearAreas(clearAreas, transform);
-                        if (originalEntity == Entity.Null)
+                        if (entity2 == Entity.Null)
                         {
-                            lotEntity = ownerEntity;
+                            lotEntity = entity;
                         }
                     }
                     bool flag3 = m_ObjectPrefab == Entity.Null;
                     Entity parent = Entity.Null;
-                    if (flag3 && m_InstalledUpgrades.TryGetBuffer(ownerEntity, out var bufferData3))
+                    if (flag3 && m_InstalledUpgrades.TryGetBuffer(entity, out var bufferData3))
                     {
                         ClearAreaHelpers.FillClearAreas(bufferData3, Entity.Null, m_TransformData, m_AreaClearData, m_PrefabRefData, m_PrefabObjectGeometryData, m_SubAreas, m_AreaNodes, m_AreaTriangles, ref clearAreas);
                         ClearAreaHelpers.InitClearAreas(clearAreas, transform);
                     }
-                    if (flag3 && m_AttachedData.TryGetComponent(ownerEntity, out var componentData6) && m_BuildingData.HasComponent(componentData6.m_Parent))
+                    if (flag3 && m_AttachedData.TryGetComponent(entity, out var componentData6) && m_BuildingData.HasComponent(componentData6.m_Parent))
                     {
                         Game.Objects.Transform transform2 = m_TransformData[componentData6.m_Parent];
                         parent = m_PrefabRefData[componentData6.m_Parent].m_Prefab;
                         UpdateObject(Entity.Null, Entity.Null, Entity.Null, componentData6.m_Parent, Entity.Null, componentData6.m_Parent, Entity.Null, transform2, 0f, default(OwnerDefinition), clearAreas, upgrade: false, relocate: false, rebuild: false, topLevel: true, optional: false, -1, -1);
                     }
-                    UpdateObject(Entity.Null, Entity.Null, owner2, ownerEntity, parent, updatedTopLevel, Entity.Null, transform, componentData5.m_Elevation, default(OwnerDefinition), clearAreas, upgrade: true, relocate: false, flag3, topLevel: true, optional: false, -1, -1);
+                    UpdateObject(Entity.Null, Entity.Null, owner2, entity, parent, updatedTopLevel, Entity.Null, transform, componentData5.m_Elevation, default(OwnerDefinition), clearAreas, upgrade: true, relocate: false, flag3, topLevel: true, optional: false, -1, -1);
                     if (clearAreas.IsCreated)
                     {
                         clearAreas.Clear();
@@ -583,19 +562,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     ownerDefinition = default(OwnerDefinition);
                 }
             }
-
-
-            if (originalEntity != Entity.Null && m_InstalledUpgrades.TryGetBuffer(originalEntity, out var bufferData4))
+            if (entity2 != Entity.Null && m_InstalledUpgrades.TryGetBuffer(entity2, out var bufferData4))
             {
                 ClearAreaHelpers.FillClearAreas(bufferData4, Entity.Null, m_TransformData, m_AreaClearData, m_PrefabRefData, m_PrefabObjectGeometryData, m_SubAreas, m_AreaNodes, m_AreaTriangles, ref clearAreas);
-                ClearAreaHelpers.TransformClearAreas(clearAreas, m_TransformData[originalEntity], new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation));
+                ClearAreaHelpers.TransformClearAreas(clearAreas, m_TransformData[entity2], new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation));
                 ClearAreaHelpers.InitClearAreas(clearAreas, new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation));
             }
-
-            // 
             if (m_ObjectPrefab != Entity.Null)
             {
-                // create objects by brush
                 if (m_BrushPrefab != Entity.Null)
                 {
                     if (m_ControlPoints.Length >= 2)
@@ -603,65 +577,34 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         CreateBrushes(startPoint, m_ControlPoints[1], updatedTopLevel, ownerDefinition, clearAreas, topLevel, parentMesh);
                     }
                 }
-                else // so here is creating a single object entity (with its owner/sub entity, etc. ?)?
+                else
                 {
-                    Entity objectPrefabEntity = m_ObjectPrefab;
-
-                    // looks like the random prefab picking a actual prefab object by their probability
-                    // I guess this one affects lots entities creations, maybe net entities (which has lots of placeholders) also depends on it
-                    if (
-                        originalEntity == Entity.Null && 
-                        ownerDefinition.m_Prefab == Entity.Null && 
-                        m_PrefabPlaceholderElements.TryGetBuffer(m_ObjectPrefab, out var placeHolders) && 
-                        !m_PrefabCreatureSpawnData.HasComponent(m_ObjectPrefab))
+                    Entity entity5 = m_ObjectPrefab;
+                    if (entity2 == Entity.Null && ownerDefinition.m_Prefab == Entity.Null && m_PrefabPlaceholderElements.TryGetBuffer(m_ObjectPrefab, out var bufferData5) && !m_PrefabCreatureSpawnData.HasComponent(m_ObjectPrefab))
                     {
                         Unity.Mathematics.Random random = m_RandomSeed.GetRandom(1000000);
                         int num2 = 0;
-                        for (int j = 0; j < placeHolders.Length; j++)
+                        for (int j = 0; j < bufferData5.Length; j++)
                         {
-                            if (GetVariationData(placeHolders[j], out var variation))
+                            if (GetVariationData(bufferData5[j], out var variation))
                             {
                                 num2 += variation.m_Probability;
                                 if (random.NextInt(num2) < variation.m_Probability)
                                 {
-                                    objectPrefabEntity = variation.m_Prefab;
+                                    entity5 = variation.m_Prefab;
                                 }
                             }
                         }
                     }
-
-
-                    UpdateObject(
-                        objectPrefabEntity, 
-                        m_TransformPrefab, 
-                        Entity.Null, 
-                        originalEntity, 
-                        startPoint.m_OriginalEntity, 
-                        updatedTopLevel, 
-                        lotEntity, 
-                        new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation), 
-                        startPoint.m_Elevation, 
-                        ownerDefinition, 
-                        clearAreas, 
-                        upgrade, 
-                        hasOriginalEntity, 
-                        rebuild: false, 
-                        topLevel, 
-                        optional: false, 
-                        parentMesh, 
-                        0);
-                    
-                    // creating attachments
+                    UpdateObject(entity5, m_TransformPrefab, Entity.Null, entity2, startPoint.m_OriginalEntity, updatedTopLevel, lotEntity, new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation), startPoint.m_Elevation, ownerDefinition, clearAreas, upgrade, flag, rebuild: false, topLevel, optional: false, parentMesh, 0);
                     if (m_AttachmentPrefab.IsCreated && m_AttachmentPrefab.Value.m_Entity != Entity.Null)
                     {
                         Game.Objects.Transform transform3 = new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation);
                         transform3.m_Position += math.rotate(transform3.m_Rotation, m_AttachmentPrefab.Value.m_Offset);
-                        UpdateObject(m_AttachmentPrefab.Value.m_Entity, Entity.Null, Entity.Null, Entity.Null, objectPrefabEntity, updatedTopLevel, Entity.Null, transform3, startPoint.m_Elevation, ownerDefinition, clearAreas, upgrade: false, relocate: false, rebuild: false, topLevel, optional: false, parentMesh, 0);
+                        UpdateObject(m_AttachmentPrefab.Value.m_Entity, Entity.Null, Entity.Null, Entity.Null, entity5, updatedTopLevel, Entity.Null, transform3, startPoint.m_Elevation, ownerDefinition, clearAreas, upgrade: false, relocate: false, rebuild: false, topLevel, optional: false, parentMesh, 0);
                     }
                 }
             }
-
-
             if (clearAreas.IsCreated)
             {
                 clearAreas.Dispose();
@@ -1014,47 +957,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             return true;
         }
 
-        /// <summary>
-        /// this method is recursive method, guess it is for handling recursive sub element creations
-        /// </summary>
-        /// <param name="objectPrefab"></param>
-        /// <param name="transformPrefab"></param>
-        /// <param name="owner"></param>
-        /// <param name="original"></param>
-        /// <param name="parent"></param>
-        /// <param name="updatedTopLevel"></param>
-        /// <param name="lotEntity"></param>
-        /// <param name="transform"></param>
-        /// <param name="elevation"></param>
-        /// <param name="ownerDefinition"></param>
-        /// <param name="clearAreas"></param>
-        /// <param name="upgrade"></param>
-        /// <param name="relocate"></param>
-        /// <param name="rebuild"></param>
-        /// <param name="topLevel"></param>
-        /// <param name="optional"></param>
-        /// <param name="parentMesh"></param>
-        /// <param name="randomIndex"></param>
-        private void UpdateObject(
-            Entity objectPrefab, 
-            Entity transformPrefab, 
-            Entity owner, 
-            Entity original, 
-            Entity parent, 
-            Entity updatedTopLevel, 
-            Entity lotEntity,
-            Game.Objects.Transform transform, 
-            float elevation, 
-            OwnerDefinition ownerDefinition, 
-            NativeList<ClearAreaData> clearAreas, 
-            bool upgrade, 
-            bool relocate, 
-            bool rebuild, 
-            bool topLevel, 
-            bool optional, 
-            int parentMesh, 
-            int randomIndex
-            )
+        private void UpdateObject(Entity objectPrefab, Entity transformPrefab, Entity owner, Entity original, Entity parent, Entity updatedTopLevel, Entity lotEntity, Game.Objects.Transform transform, float elevation, OwnerDefinition ownerDefinition, NativeList<ClearAreaData> clearAreas, bool upgrade, bool relocate, bool rebuild, bool topLevel, bool optional, int parentMesh, int randomIndex)
         {
             OwnerDefinition ownerDefinition2 = ownerDefinition;
             Unity.Mathematics.Random random = m_RandomSeed.GetRandom(randomIndex);
@@ -1884,7 +1787,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         dynamicBuffer4 = m_CommandBuffer.AddBuffer<LocalNodeCache>(e);
                         dynamicBuffer4.ResizeUninitialized(dynamicBuffer3.Length);
                     }
-                    int num = ObjectToolBaseSystem.GetFirstNodeIndex(dynamicBuffer2, subArea.m_NodeRange);
+                    int num = GetFirstNodeIndex(dynamicBuffer2, subArea.m_NodeRange);
                     int num2 = 0;
                     for (int j = subArea.m_NodeRange.x; j <= subArea.m_NodeRange.y; j++)
                     {
