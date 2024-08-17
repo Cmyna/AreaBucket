@@ -83,9 +83,11 @@ namespace AreaBucket
 
 
             updateSystem.UpdateAt<AreaBucketToolSystem>(SystemUpdatePhase.ToolUpdate);
+            updateSystem.UpdateAt<LotObjectToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<SurfacePreviewSystem>(SystemUpdatePhase.Modification1);
             // updateSystem.UpdateAt<AreaReplacementToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<AreaBucketToolUISystem>(SystemUpdatePhase.UIUpdate);
+
 
         }
 
