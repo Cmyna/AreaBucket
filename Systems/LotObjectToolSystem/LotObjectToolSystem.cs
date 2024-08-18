@@ -1,27 +1,22 @@
-﻿using AreaBucket.Systems.AreaBucketToolJobs;
+﻿using AreaBucket.Controllers;
+using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Utils;
 using Colossal.Entities;
 using Game;
 using Game.Areas;
 using Game.Buildings;
-using Game.Citizens;
 using Game.Common;
 using Game.Input;
 using Game.Net;
 using Game.Objects;
 using Game.Prefabs;
-using Game.Routes;
-using Game.Simulation;
 using Game.Tools;
-using System;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
-using static Colossal.IO.AssetDatabase.AtlasFrame;
 
 
 namespace AreaBucket.Systems
@@ -40,7 +35,13 @@ namespace AreaBucket.Systems
 
         private ProxyAction _applyAction;
 
+        private ProxyAction _secondaryApplyAction;
+
         private EntityQuery _buildingQuery;
+
+        private RandomSeed _randomSeed;
+
+        private VanillaLikeRotationController _rotationController;
 
         protected override void OnCreate()
         {
@@ -51,6 +52,10 @@ namespace AreaBucket.Systems
 
             _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
             BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
+            _secondaryApplyAction = Mod.modSetting.GetAction(Mod.kModAreaToolSecondaryApply);
+            BindingUtils.MimicBuiltinBinding(_secondaryApplyAction, InputManager.kToolMap, "Secondary Apply", nameof(Mouse));
+
+            _rotationController = new VanillaLikeRotationController();
 
             _buildingQuery = GetEntityQuery(
                 ComponentType.ReadOnly<BuildingData>(), 
@@ -59,12 +64,14 @@ namespace AreaBucket.Systems
                 ComponentType.ReadOnly<PrefabData>()
                 );
 
+
             CreateDebugUI();
         }
 
         protected override void OnStartRunning()
         {
             _applyAction.shouldBeEnabled = true;
+            _secondaryApplyAction.shouldBeEnabled = true;
             base.OnStartRunning();
         }
 
@@ -75,13 +82,16 @@ namespace AreaBucket.Systems
             // clear tool apply state
             applyMode = ApplyMode.Clear;
 
-            if (!GetRaycastResult(out var raycastResult)) return inputDeps;
+            if (!GetRaycastResult(out var raycastPoint)) return inputDeps;
 
             if (_applyAction.WasPressedThisFrame())
             {
-                applyMode = ApplyMode.Apply;
+                applyMode = ApplyMode.Apply; 
+                _randomSeed = RandomSeed.Next(); // change random seed only after applied
                 return inputDeps;
             }
+
+            UpdateRotationState(raycastPoint.m_Position);
 
             var jobHandle = inputDeps;
 
@@ -99,7 +109,7 @@ namespace AreaBucket.Systems
                 jobHandle = FindAttachments(objectPrefabEntity, placeholderBuildingData, attachmentPrefab, jobHandle);
             }
 
-            jobHandle = CreateDefinition(objectPrefabEntity, raycastResult, attachmentPrefab, jobHandle);
+            jobHandle = CreateDefinition(objectPrefabEntity, GetPlaceControlPoint(raycastPoint), attachmentPrefab, jobHandle);
             if (attachmentPrefab.IsCreated)
             {
                 attachmentPrefab.Dispose(jobHandle);
@@ -110,6 +120,7 @@ namespace AreaBucket.Systems
         protected override void OnStopRunning()
         {
             _applyAction.shouldBeEnabled = false;
+            _secondaryApplyAction.shouldBeEnabled = false;
             base.OnStopRunning();
         }
 
@@ -139,6 +150,32 @@ namespace AreaBucket.Systems
             m_ToolRaycastSystem.typeMask = TypeMask.Terrain;
         }
 
+        private ControlPoint GetPlaceControlPoint(ControlPoint raycastPoint)
+        {
+            return new ControlPoint 
+            { 
+                m_Position = raycastPoint.m_Position, 
+                m_Rotation = _rotationController.Rotation,
+            };
+        }
+
+        private void UpdateRotationState(float3 raycastWorldPosM)
+        {
+            var controllerIsRotating = _rotationController.State == VanillaLikeRotationController.ControllerState.Rotating;
+            if (!controllerIsRotating && _secondaryApplyAction.WasPressedThisFrame())
+            {
+                _rotationController.StartRotation(raycastWorldPosM);
+            }
+            else if (controllerIsRotating && _secondaryApplyAction.WasReleasedThisFrame())
+            {
+                _rotationController.StopRotation();
+            } 
+            else
+            {
+                _rotationController.UpdateRotation(raycastWorldPosM);
+            }
+        }
+
 
         private JobHandle FindAttachments(
             Entity objectPrefabEntity, 
@@ -151,18 +188,17 @@ namespace AreaBucket.Systems
             BuildingData componentData2 = base.EntityManager.GetComponentData<BuildingData>(objectPrefabEntity);
             _buildingQuery.ResetFilter();
             _buildingQuery.SetSharedComponentFilter(new BuildingSpawnGroupData(componentData.m_ZoneType));
-            JobHandle outJobHandle;
-            NativeList<ArchetypeChunk> chunks = _buildingQuery.ToArchetypeChunkListAsync(Allocator.TempJob, out outJobHandle);
+            NativeList<ArchetypeChunk> chunks = _buildingQuery.ToArchetypeChunkListAsync(Allocator.TempJob, out var buildingQueryJobHandle);
 
-            FindAttachmentBuildingJobCopy jobData = default(FindAttachmentBuildingJobCopy);
+            FindAttachmentBuildingJobCopy jobData = default;
             jobData.m_EntityType = SystemAPI.GetEntityTypeHandle();
             jobData.m_BuildingDataType = SystemAPI.GetComponentTypeHandle<BuildingData>(isReadOnly: true);
             jobData.m_SpawnableBuildingType = SystemAPI.GetComponentTypeHandle<SpawnableBuildingData>(isReadOnly: true);
             jobData.m_BuildingData = componentData2;
-            jobData.m_RandomSeed = RandomSeed.Next();
+            jobData.m_RandomSeed = _randomSeed;
             jobData.m_Chunks = chunks;
             jobData.m_AttachmentPrefab = attachmentPrefab;
-            var jobHandle = IJobExtensions.Schedule(jobData, JobHandle.CombineDependencies(deps, outJobHandle));
+            var jobHandle = IJobExtensions.Schedule(jobData, JobHandle.CombineDependencies(deps, buildingQueryJobHandle));
             chunks.Dispose(jobHandle);
             return jobHandle;
         }
@@ -190,7 +226,7 @@ namespace AreaBucket.Systems
             jobData.m_Original = Entity.Null;
             jobData.m_LaneEditor = Entity.Null;
             jobData.m_Theme = Entity.Null;
-            jobData.m_RandomSeed = RandomSeed.Next(); // from ObjectToolSystem.Randomize
+            jobData.m_RandomSeed = _randomSeed; // from ObjectToolSystem.Randomize
             jobData.m_Snap = GetActualSnap();
             // dont know why but ObjectToolSystem.actualAgeMask seems use this enum as default if not 'allowAgeMask'
             jobData.m_AgeMask = Game.Tools.AgeMask.Sapling; 
@@ -278,6 +314,37 @@ namespace AreaBucket.Systems
                     {
                         displayName = nameof(_selectedLotPrefab),
                         getter = () => _selectedLotPrefab?.prefab?.ToString() ?? "null",
+                    },
+
+                    new DebugUI.Value
+                    {
+                        displayName = "Rotation State",
+                        getter = () =>
+                        {
+                            if (_rotationController == null) return "Error: Rotation Controller is null";
+                            if (_rotationController.State == VanillaLikeRotationController.ControllerState.Stop) return "Stop";
+                            else if (_rotationController.State == VanillaLikeRotationController.ControllerState.Rotating) return "Rotating";
+                            else return "Unknown";
+                        }
+                    },
+
+                    new DebugUI.Value
+                    {
+                        displayName = "Rotation Angle",
+                        getter = () =>
+                        {
+                            if (_rotationController == null) return "Error: Rotation Controller is null";
+                            var id = UnityEngine.Quaternion.identity;
+                            var rotation = new UnityEngine.Quaternion(
+                                _rotationController.Rotation.value.x,
+                                _rotationController.Rotation.value.y,
+                                _rotationController.Rotation.value.z,
+                                _rotationController.Rotation.value.w
+                                );
+
+                            var angleDegree = UnityEngine.Quaternion.Angle(id, rotation);
+                            return angleDegree;
+                        }
                     }
                 }
                 );

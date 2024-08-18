@@ -12,6 +12,7 @@ namespace AreaBucket
     [SettingsUIGroupOrder(kgMain)]
     [SettingsUIShowGroupName(kgMain)]
     [SettingsUIMouseAction(Mod.kModAreaToolApply, Mod.kModToolUsage)]
+    [SettingsUIMouseAction(Mod.kModAreaToolSecondaryApply, Mod.kModToolUsage)]
     public class Setting : ModSetting
     {
         public const string ksMain = "Main";
@@ -51,6 +52,9 @@ namespace AreaBucket
         [SettingsUIMouseBinding(Mod.kModAreaToolApply)]
         public ProxyBinding AreaBucketToolApply { get; set; }
 
+        [SettingsUIHidden]
+        [SettingsUIMouseBinding(Mod.kModAreaToolSecondaryApply)]
+        public ProxyBinding AreaBucketToolSecondaryApply { get; set; }
 
         public override void SetDefaults()
         {

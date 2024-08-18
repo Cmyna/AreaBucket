@@ -19,6 +19,8 @@ namespace AreaBucket
 
         public const string kModAreaToolApply = "AreaToolModApplyAction";
 
+        public const string kModAreaToolSecondaryApply = "AreaToolModSecondaryApplyAction";
+
         public const string kModToolUsage = "AreaBucketModToolUsage";
 
         public static ILog Logger = LogManager.GetLogger($"{nameof(AreaBucket)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
