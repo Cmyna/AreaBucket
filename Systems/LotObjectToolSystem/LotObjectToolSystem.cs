@@ -1,6 +1,7 @@
 ﻿using AreaBucket.Controllers;
 using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Utils;
+using Colossal.Collections;
 using Colossal.Entities;
 using Game;
 using Game.Areas;
@@ -17,7 +18,9 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
-
+using static Colossal.AssetPipeline.Diagnostic.Report;
+using NetSearchSystem = Game.Net.SearchSystem;
+using ZoneSearchSystem = Game.Zones.SearchSystem;
 
 namespace AreaBucket.Systems
 {
@@ -41,7 +44,15 @@ namespace AreaBucket.Systems
 
         private RandomSeed _randomSeed;
 
+        private quaternion _snapedRotation;
+
         private VanillaLikeRotationController _rotationController;
+
+        private NetSearchSystem _netSearchSystem;
+
+        private ZoneSearchSystem _zoneSearchSystem;
+
+        private bool _hasSnapping = false;
 
         protected override void OnCreate()
         {
@@ -64,6 +75,8 @@ namespace AreaBucket.Systems
                 ComponentType.ReadOnly<PrefabData>()
                 );
 
+            _netSearchSystem = World.GetOrCreateSystemManaged<NetSearchSystem>();
+            _zoneSearchSystem = World.GetOrCreateSystemManaged<ZoneSearchSystem>();
 
             CreateDebugUI();
         }
@@ -91,25 +104,33 @@ namespace AreaBucket.Systems
                 return inputDeps;
             }
 
+            GetAvailableSnapMask(out m_SnapOnMask, out m_SnapOffMask);
             UpdateRotationState(raycastPoint.m_Position);
 
             var jobHandle = inputDeps;
 
             var objectPrefabEntity = m_PrefabSystem.GetEntity(_selectedPrefab);
             NativeReference<AttachmentData> attachmentPrefab = default;
-            if (
-                !m_ToolSystem.actionMode.IsEditor() && 
-                EntityManager.TryGetComponent<PlaceholderBuildingData>(
-                    objectPrefabEntity, 
-                    out var placeholderBuildingData
-                    )
-                )
+
+            var isInEditorScene = m_ToolSystem.actionMode.IsEditor();
+            var hasPlaceHolderInBuildingPrefab = EntityManager.TryGetComponent<PlaceholderBuildingData>(
+                objectPrefabEntity, 
+                out var placeholderBuildingData
+                );
+
+            if (!isInEditorScene && hasPlaceHolderInBuildingPrefab)
             {
                 attachmentPrefab = new NativeReference<AttachmentData>(Allocator.TempJob);
                 jobHandle = FindAttachments(objectPrefabEntity, placeholderBuildingData, attachmentPrefab, jobHandle);
             }
 
-            jobHandle = CreateDefinition(objectPrefabEntity, GetPlaceControlPoint(raycastPoint), attachmentPrefab, jobHandle);
+            var targetControlPoint = raycastPoint;
+            Rotation targetRotation = default;
+            targetRotation.m_Rotation = _rotationController.Rotation;
+
+            jobHandle = SnapControlPoint(objectPrefabEntity, raycastPoint, jobHandle, out targetControlPoint, out targetRotation);
+
+            jobHandle = CreateDefinition(objectPrefabEntity, GetPlaceControlPoint(targetControlPoint, targetRotation), attachmentPrefab, jobHandle);
             if (attachmentPrefab.IsCreated)
             {
                 attachmentPrefab.Dispose(jobHandle);
@@ -150,12 +171,12 @@ namespace AreaBucket.Systems
             m_ToolRaycastSystem.typeMask = TypeMask.Terrain;
         }
 
-        private ControlPoint GetPlaceControlPoint(ControlPoint raycastPoint)
+        private ControlPoint GetPlaceControlPoint(ControlPoint raycastPoint, Rotation rotation)
         {
             return new ControlPoint 
             { 
                 m_Position = raycastPoint.m_Position, 
-                m_Rotation = _rotationController.Rotation,
+                m_Rotation = _hasSnapping ? raycastPoint.m_Rotation : _rotationController.Rotation,
             };
         }
 
@@ -296,6 +317,214 @@ namespace AreaBucket.Systems
             jobHandle = jobData.m_ControlPoints.Dispose(jobHandle);
             return jobHandle;
         }
+
+
+        private JobHandle SnapControlPoint(
+            Entity objectPrefabEntity, 
+            ControlPoint sourceControlPoint, 
+            JobHandle inputDeps,
+            out ControlPoint snappedControlPoint,
+            out Rotation snappedRotation
+            )
+        {
+            // Entity selected = ((actualMode == Mode.Move) ? m_MovingObject : m_ToolSystem.selected);
+            SnapJob jobData = default;
+            jobData.m_EditorMode = m_ToolSystem.actionMode.IsEditor();
+            jobData.m_Snap = GetActualSnap();
+            // jobData.m_Snap = Snap.NetSide;
+            jobData.m_Mode = ObjectToolSystem.Mode.Create;
+            jobData.m_Prefab = objectPrefabEntity;
+            // jobData.m_Selected = selected;
+            jobData.m_Selected = Entity.Null;
+
+            // components lookup handle
+            jobData.m_OwnerData = SystemAPI.GetComponentLookup<Owner>(isReadOnly: true);
+            jobData.m_TransformData = SystemAPI.GetComponentLookup<Transform>(isReadOnly: true);
+            jobData.m_AttachedData = SystemAPI.GetComponentLookup<Attached>(isReadOnly: true);
+            jobData.m_TerrainData = SystemAPI.GetComponentLookup<Game.Common.Terrain>(isReadOnly: true);
+            jobData.m_LocalTransformCacheData = SystemAPI.GetComponentLookup<LocalTransformCache>(isReadOnly: true);
+            jobData.m_EdgeData = SystemAPI.GetComponentLookup<Edge>(isReadOnly: true);
+            jobData.m_NodeData = SystemAPI.GetComponentLookup<Game.Net.Node>(isReadOnly: true);
+            jobData.m_OrphanData = SystemAPI.GetComponentLookup<Orphan>(isReadOnly: true);
+            jobData.m_CurveData = SystemAPI.GetComponentLookup<Curve>(isReadOnly: true);
+            jobData.m_CompositionData = SystemAPI.GetComponentLookup<Composition>(isReadOnly: true);
+            jobData.m_EdgeGeometryData = SystemAPI.GetComponentLookup<EdgeGeometry>(isReadOnly: true);
+            jobData.m_StartNodeGeometryData = SystemAPI.GetComponentLookup<StartNodeGeometry>(isReadOnly: true);
+            jobData.m_EndNodeGeometryData = SystemAPI.GetComponentLookup<EndNodeGeometry>(isReadOnly: true);
+            jobData.m_PrefabRefData = SystemAPI.GetComponentLookup<PrefabRef>(isReadOnly: true);
+            jobData.m_ObjectGeometryData = SystemAPI.GetComponentLookup<ObjectGeometryData>(isReadOnly: true);
+            jobData.m_BuildingData = SystemAPI.GetComponentLookup<BuildingData>(isReadOnly: true);
+            jobData.m_BuildingExtensionData = SystemAPI.GetComponentLookup<BuildingExtensionData>(isReadOnly: true);
+            jobData.m_PrefabCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>(isReadOnly: true);
+            jobData.m_PlaceableObjectData = SystemAPI.GetComponentLookup<PlaceableObjectData>(isReadOnly: true);
+            jobData.m_AssetStampData = SystemAPI.GetComponentLookup<AssetStampData>(isReadOnly: true);
+            jobData.m_OutsideConnectionData = SystemAPI.GetComponentLookup<OutsideConnectionData>(isReadOnly: true);
+            jobData.m_NetObjectData = SystemAPI.GetComponentLookup<NetObjectData>(isReadOnly: true);
+            jobData.m_TransportStopData = SystemAPI.GetComponentLookup<TransportStopData>(isReadOnly: true);
+            jobData.m_StackData = SystemAPI.GetComponentLookup<StackData>(isReadOnly: true);
+            jobData.m_ServiceUpgradeData = SystemAPI.GetComponentLookup<ServiceUpgradeData>(isReadOnly: true);
+            jobData.m_BlockData = SystemAPI.GetComponentLookup<Game.Zones.Block>(isReadOnly: true);
+            // buffers
+            jobData.m_SubObjects = SystemAPI.GetBufferLookup<Game.Objects.SubObject>(isReadOnly: true);
+            jobData.m_ConnectedEdges = SystemAPI.GetBufferLookup<ConnectedEdge>(isReadOnly: true);
+            jobData.m_PrefabCompositionAreas = SystemAPI.GetBufferLookup<NetCompositionArea>(isReadOnly: true);
+            // search trees
+            jobData.m_ObjectSearchTree = m_ObjectSearchSystem.GetStaticSearchTree(readOnly: true, out var objSearchDeps);
+            jobData.m_NetSearchTree = _netSearchSystem.GetNetSearchTree(readOnly: true, out var netSearchDeps);
+            jobData.m_ZoneSearchTree = _zoneSearchSystem.GetSearchTree(readOnly: true, out var zoneSearchDeps);
+            jobData.m_WaterSurfaceData = m_WaterSystem.GetSurfaceData(out var waterDataDeps);
+            jobData.m_TerrainHeightData = m_TerrainSystem.GetHeightData();
+
+            // jobData.m_ControlPoints = m_ControlPoints;
+            jobData.m_ControlPoints = new NativeList<ControlPoint>(Allocator.TempJob);
+            jobData.m_ControlPoints.Add(sourceControlPoint);
+
+            jobData.hasSnapping = new NativeReference<bool>(Allocator.TempJob);
+
+            var rotationData = default(Rotation);
+            rotationData.m_Rotation = _rotationController.Rotation;
+            rotationData.m_ParentRotation = quaternion.identity;
+            rotationData.m_IsAligned = false;
+            jobData.m_Rotation = new NativeValue<Rotation>(rotationData, Allocator.TempJob);
+
+
+
+            var depsFinal = JobUtils.CombineDependencies(inputDeps, objSearchDeps, netSearchDeps, zoneSearchDeps, waterDataDeps);
+            JobHandle jobHandle = IJobExtensions.Schedule(jobData, depsFinal);
+
+            m_ObjectSearchSystem.AddStaticSearchTreeReader(jobHandle);
+            _netSearchSystem.AddNetSearchTreeReader(jobHandle);
+            _zoneSearchSystem.AddSearchTreeReader(jobHandle);
+            m_WaterSystem.AddSurfaceReader(jobHandle);
+
+            // to get snapped rotation data
+            jobHandle.Complete();
+
+            snappedRotation = jobData.m_Rotation.value;
+            snappedControlPoint = jobData.m_ControlPoints[0];
+            _hasSnapping = jobData.hasSnapping.Value;
+
+            jobData.m_ControlPoints.Dispose(jobHandle);
+            jobData.m_Rotation.Dispose();
+            jobData.hasSnapping.Dispose(jobHandle);
+
+            return jobHandle;
+        }
+
+
+        public override void GetAvailableSnapMask(out Snap onMask, out Snap offMask)
+        {
+            if (_selectedPrefab != null)
+            {
+                bool flag = m_PrefabSystem.HasComponent<BuildingData>(_selectedPrefab);
+                bool isAssetStamp = false;
+                bool flag2 = false;
+                bool stamping = false;
+                if (m_PrefabSystem.HasComponent<PlaceableObjectData>(_selectedPrefab))
+                {
+                    GetAvailableSnapMask(
+                        m_PrefabSystem.GetComponentData<PlaceableObjectData>(_selectedPrefab), 
+                        m_ToolSystem.actionMode.IsEditor(), 
+                        flag, 
+                        isAssetStamp, 
+                        flag2, 
+                        stamping, 
+                        out onMask, 
+                        out offMask
+                        );
+                }
+                else
+                {
+                    GetAvailableSnapMask(
+                        default(PlaceableObjectData), 
+                        m_ToolSystem.actionMode.IsEditor(),
+                        flag, 
+                        isAssetStamp, 
+                        flag2, 
+                        stamping, 
+                        out onMask, 
+                        out offMask
+                        );
+                }
+            }
+            else
+            {
+                base.GetAvailableSnapMask(out onMask, out offMask);
+            }
+        }
+
+        private static void GetAvailableSnapMask(PlaceableObjectData prefabPlaceableData, bool editorMode, bool isBuilding, bool isAssetStamp, bool brushing, bool stamping, out Snap onMask, out Snap offMask)
+        {
+            onMask = Snap.Upright;
+            offMask = Snap.None;
+            if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadSide | Game.Objects.PlacementFlags.OwnerSide)) == Game.Objects.PlacementFlags.OwnerSide)
+            {
+                onMask |= Snap.OwnerSide;
+            }
+            else if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadSide | Game.Objects.PlacementFlags.Shoreline | Game.Objects.PlacementFlags.Floating | Game.Objects.PlacementFlags.Hovering)) != 0)
+            {
+                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.OwnerSide) != 0)
+                {
+                    onMask |= Snap.OwnerSide;
+                    offMask |= Snap.OwnerSide;
+                }
+                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadSide) != 0)
+                {
+                    onMask |= Snap.NetSide;
+                    offMask |= Snap.NetSide;
+                }
+                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadEdge) != 0)
+                {
+                    onMask |= Snap.NetArea;
+                    offMask |= Snap.NetArea;
+                }
+                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.Shoreline) != 0)
+                {
+                    onMask |= Snap.Shoreline;
+                    offMask |= Snap.Shoreline;
+                }
+                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.Hovering) != 0)
+                {
+                    onMask |= Snap.ObjectSurface;
+                    offMask |= Snap.ObjectSurface;
+                }
+            }
+            else if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadNode | Game.Objects.PlacementFlags.RoadEdge)) != 0)
+            {
+                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadNode) != 0)
+                {
+                    onMask |= Snap.NetNode;
+                }
+                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadEdge) != 0)
+                {
+                    onMask |= Snap.NetArea;
+                }
+            }
+            else if (editorMode && !isBuilding)
+            {
+                onMask |= Snap.ObjectSurface;
+                offMask |= Snap.ObjectSurface;
+                offMask |= Snap.Upright;
+            }
+            if (editorMode && (!isAssetStamp || stamping))
+            {
+                onMask |= Snap.AutoParent;
+                offMask |= Snap.AutoParent;
+            }
+            if (brushing)
+            {
+                onMask &= Snap.Upright;
+                offMask &= Snap.Upright;
+                onMask |= Snap.PrefabType;
+                offMask |= Snap.PrefabType;
+            }
+            if (isBuilding || isAssetStamp)
+            {
+                onMask |= Snap.ContourLines;
+                offMask |= Snap.ContourLines;
+            }
+        }
+
 
         private void CreateDebugUI()
         {
