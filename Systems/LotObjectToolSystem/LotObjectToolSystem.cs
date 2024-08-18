@@ -1,5 +1,6 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Utils;
+using Colossal.Entities;
 using Game;
 using Game.Areas;
 using Game.Buildings;
@@ -20,6 +21,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using static Colossal.IO.AssetDatabase.AtlasFrame;
 
 
 namespace AreaBucket.Systems
@@ -38,6 +40,8 @@ namespace AreaBucket.Systems
 
         private ProxyAction _applyAction;
 
+        private EntityQuery _buildingQuery;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -47,6 +51,13 @@ namespace AreaBucket.Systems
 
             _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
             BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
+
+            _buildingQuery = GetEntityQuery(
+                ComponentType.ReadOnly<BuildingData>(), 
+                ComponentType.ReadOnly<SpawnableBuildingData>(), 
+                ComponentType.ReadOnly<BuildingSpawnGroupData>(), 
+                ComponentType.ReadOnly<PrefabData>()
+                );
 
             CreateDebugUI();
         }
@@ -72,8 +83,28 @@ namespace AreaBucket.Systems
                 return inputDeps;
             }
 
+            var jobHandle = inputDeps;
+
             var objectPrefabEntity = m_PrefabSystem.GetEntity(_selectedPrefab);
-            return CreateDefinition(objectPrefabEntity, raycastResult, inputDeps);
+            NativeReference<AttachmentData> attachmentPrefab = default;
+            if (
+                !m_ToolSystem.actionMode.IsEditor() && 
+                EntityManager.TryGetComponent<PlaceholderBuildingData>(
+                    objectPrefabEntity, 
+                    out var placeholderBuildingData
+                    )
+                )
+            {
+                attachmentPrefab = new NativeReference<AttachmentData>(Allocator.TempJob);
+                jobHandle = FindAttachments(objectPrefabEntity, placeholderBuildingData, attachmentPrefab, jobHandle);
+            }
+
+            jobHandle = CreateDefinition(objectPrefabEntity, raycastResult, attachmentPrefab, jobHandle);
+            if (attachmentPrefab.IsCreated)
+            {
+                attachmentPrefab.Dispose(jobHandle);
+            }
+            return jobHandle;
         }
 
         protected override void OnStopRunning()
@@ -109,7 +140,39 @@ namespace AreaBucket.Systems
         }
 
 
-        private JobHandle CreateDefinition(Entity objectPrefabEntity, ControlPoint controlPoint, JobHandle deps)
+        private JobHandle FindAttachments(
+            Entity objectPrefabEntity, 
+            PlaceholderBuildingData component, 
+            NativeReference<AttachmentData> attachmentPrefab, 
+            JobHandle deps
+            )
+        {
+            ZoneData componentData = base.EntityManager.GetComponentData<ZoneData>(component.m_ZonePrefab);
+            BuildingData componentData2 = base.EntityManager.GetComponentData<BuildingData>(objectPrefabEntity);
+            _buildingQuery.ResetFilter();
+            _buildingQuery.SetSharedComponentFilter(new BuildingSpawnGroupData(componentData.m_ZoneType));
+            JobHandle outJobHandle;
+            NativeList<ArchetypeChunk> chunks = _buildingQuery.ToArchetypeChunkListAsync(Allocator.TempJob, out outJobHandle);
+
+            FindAttachmentBuildingJobCopy jobData = default(FindAttachmentBuildingJobCopy);
+            jobData.m_EntityType = SystemAPI.GetEntityTypeHandle();
+            jobData.m_BuildingDataType = SystemAPI.GetComponentTypeHandle<BuildingData>(isReadOnly: true);
+            jobData.m_SpawnableBuildingType = SystemAPI.GetComponentTypeHandle<SpawnableBuildingData>(isReadOnly: true);
+            jobData.m_BuildingData = componentData2;
+            jobData.m_RandomSeed = RandomSeed.Next();
+            jobData.m_Chunks = chunks;
+            jobData.m_AttachmentPrefab = attachmentPrefab;
+            var jobHandle = IJobExtensions.Schedule(jobData, JobHandle.CombineDependencies(deps, outJobHandle));
+            chunks.Dispose(jobHandle);
+            return jobHandle;
+        }
+
+        private JobHandle CreateDefinition(
+            Entity objectPrefabEntity, 
+            ControlPoint controlPoint, 
+            NativeReference<AttachmentData> attachmentPrefab,
+            JobHandle deps
+            )
         {
             CreateDefinitionsJobCopy jobData = default;
             jobData.m_EditorMode = m_ToolSystem.actionMode.IsEditor();
@@ -133,7 +196,7 @@ namespace AreaBucket.Systems
             jobData.m_AgeMask = Game.Tools.AgeMask.Sapling; 
             jobData.m_ControlPoints = new NativeList<ControlPoint>(Allocator.TempJob);
             jobData.m_ControlPoints.Add(controlPoint);
-            jobData.m_AttachmentPrefab = default; // from ObjectToolSystem.UpdateDefinitions, seems doesn't require initializations
+            jobData.m_AttachmentPrefab = attachmentPrefab; // from ObjectToolSystem.UpdateDefinitions, seems doesn't require initializations
             jobData.m_OwnerData = SystemAPI.GetComponentLookup<Owner>();
             jobData.m_TransformData = SystemAPI.GetComponentLookup<Game.Objects.Transform>();
             jobData.m_AttachedData = SystemAPI.GetComponentLookup<Attached>();
