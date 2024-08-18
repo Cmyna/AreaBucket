@@ -489,6 +489,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             public ComponentLookup<Block> m_BlockData;
 
+            public bool hasSnapping;
+
             public bool Intersect(Bounds2 bounds)
             {
                 return MathUtils.Intersect(bounds, m_Bounds);
@@ -513,6 +515,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         entity = componentData.m_Owner;
                     }
                 }
+                
                 Block block = m_BlockData[blockEntity];
                 Quad2 quad = ZoneUtils.CalculateCorners(block);
                 Line2.Segment line = new Line2.Segment(quad.a, quad.b);
@@ -528,6 +531,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 }
                 if (!(num >= m_BestDistance))
                 {
+                    // it seems that this if scope is for applying snapping and all snapping pre-condition is satisfied
+                    hasSnapping = true;
                     m_BestDistance = num;
                     float2 y = m_ControlPoint.m_HitPosition.xz - block.m_Position.xz;
                     float2 float2 = MathUtils.Left(block.m_Direction);
@@ -670,6 +675,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public NativeValue<Rotation> m_Rotation;
 
+        public NativeReference<bool> hasSnapping;
+
         public void Execute()
         {
             ControlPoint controlPoint = m_ControlPoints[0];
@@ -718,9 +725,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 zoneBlockIterator.m_IgnoreOwner = ((m_Mode == Mode.Move) ? m_Selected : Entity.Null);
                 zoneBlockIterator.m_OwnerData = m_OwnerData;
                 zoneBlockIterator.m_BlockData = m_BlockData;
+                zoneBlockIterator.hasSnapping = false;
                 ZoneBlockIterator iterator = zoneBlockIterator;
                 m_ZoneSearchTree.Iterate(ref iterator);
                 bestSnapPosition = iterator.m_BestSnapPosition;
+
+                hasSnapping.Value |= iterator.hasSnapping;
             }
             if ((m_Snap & Snap.OwnerSide) != 0)
             {
