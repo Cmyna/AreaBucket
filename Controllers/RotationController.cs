@@ -49,10 +49,12 @@ namespace AreaBucket.Controllers
         }
 
         /// <summary>
-        /// vanilla like object rotation reference from ObjectToolSystem.OnUpdate decompiled code (1.1.7f1 version)
+        /// vanilla like object rotation, reference from ObjectToolSystem.OnUpdate decompiled code (1.1.7f1 version)
+        /// 
+        /// 
         /// </summary>
-        /// <param name="source"></param>
-        /// <param name="offseted"></param>
+        /// <param name="source">the source rotation point</param>
+        /// <param name="offseted">in pratical, related to current player's mouse hit position</param>
         /// <param name="atWall">is rotating in vertical or not</param>
         /// <returns></returns>
         /// <exception cref="System.NotImplementedException"></exception>
