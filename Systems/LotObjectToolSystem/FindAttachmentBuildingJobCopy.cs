@@ -13,7 +13,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     /// it seems that find attachment is highly used for specialized-lot building creation
     /// </summary>
     [BurstCompile]
-    public struct FindAttachmentBuildingJob : IJob
+    public struct FindAttachmentBuildingJobCopy : IJob
     {
         [ReadOnly]
         public EntityTypeHandle m_EntityType;
