@@ -1,4 +1,8 @@
-﻿using Game.Common;
+﻿// Substantial portions derived from decompiled game code. 
+// Copyright (c) Colossal Order and Paradox Interactive.
+// Not for reuse or distribution except in accordance with the Paradox Interactive End User License Agreement.
+
+using Game.Common;
 using Game.Prefabs;
 using Unity.Burst;
 using Unity.Collections;

@@ -1,4 +1,9 @@
-﻿using Colossal.Collections;
+﻿// Substantial portions derived from decompiled game code.
+// Copyright (c) Colossal Order and Paradox Interactive.
+// Not for reuse or distribution except in accordance with the Paradox Interactive End User License Agreement.
+
+
+using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Buildings;
 using Game.Common;
