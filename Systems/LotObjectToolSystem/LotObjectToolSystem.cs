@@ -340,7 +340,6 @@ namespace AreaBucket.Systems
             // components lookup handle
             jobData.m_OwnerData = SystemAPI.GetComponentLookup<Owner>(isReadOnly: true);
             jobData.m_TerrainData = SystemAPI.GetComponentLookup<Game.Common.Terrain>(isReadOnly: true);
-            jobData.m_ObjectGeometryData = SystemAPI.GetComponentLookup<ObjectGeometryData>(isReadOnly: true);
             jobData.m_BuildingData = SystemAPI.GetComponentLookup<BuildingData>(isReadOnly: true);
             jobData.m_PlaceableObjectData = SystemAPI.GetComponentLookup<PlaceableObjectData>(isReadOnly: true);
             jobData.m_BlockData = SystemAPI.GetComponentLookup<Game.Zones.Block>(isReadOnly: true);

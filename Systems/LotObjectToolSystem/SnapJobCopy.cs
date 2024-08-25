@@ -139,17 +139,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public ComponentLookup<Terrain> m_TerrainData;
 
         [ReadOnly]
-        public ComponentLookup<ObjectGeometryData> m_ObjectGeometryData;
-
-        [ReadOnly]
         public ComponentLookup<BuildingData> m_BuildingData;
 
         [ReadOnly]
         public ComponentLookup<PlaceableObjectData> m_PlaceableObjectData;
-
-        [ReadOnly]
-        public ComponentLookup<OutsideConnectionData> m_OutsideConnectionData;
-
 
         [ReadOnly]
         public ComponentLookup<Block> m_BlockData;
@@ -264,13 +257,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             controlPoint.m_Position.y = num;
         }
 
-        private static void AddSnapPosition(ref ControlPoint bestSnapPosition, ControlPoint snapPosition)
-        {
-            if (ToolUtils.CompareSnapPriority(snapPosition.m_SnapPriority, bestSnapPosition.m_SnapPriority))
-            {
-                bestSnapPosition = snapPosition;
-            }
-        }
     }
 
 }
