@@ -330,7 +330,6 @@ namespace AreaBucket.Systems
         {
             // Entity selected = ((actualMode == Mode.Move) ? m_MovingObject : m_ToolSystem.selected);
             SnapJob jobData = default;
-            jobData.m_EditorMode = m_ToolSystem.actionMode.IsEditor();
             jobData.m_Snap = GetActualSnap(); // it seems that current mask for lot building is NetSite | ContourLine | Upright
             // jobData.m_Snap = Snap.NetSide;
             jobData.m_Mode = ObjectToolSystem.Mode.Create;
@@ -340,38 +339,16 @@ namespace AreaBucket.Systems
 
             // components lookup handle
             jobData.m_OwnerData = SystemAPI.GetComponentLookup<Owner>(isReadOnly: true);
-            jobData.m_TransformData = SystemAPI.GetComponentLookup<Transform>(isReadOnly: true);
-            jobData.m_AttachedData = SystemAPI.GetComponentLookup<Attached>(isReadOnly: true);
             jobData.m_TerrainData = SystemAPI.GetComponentLookup<Game.Common.Terrain>(isReadOnly: true);
-            jobData.m_LocalTransformCacheData = SystemAPI.GetComponentLookup<LocalTransformCache>(isReadOnly: true);
-            jobData.m_EdgeData = SystemAPI.GetComponentLookup<Edge>(isReadOnly: true);
-            jobData.m_NodeData = SystemAPI.GetComponentLookup<Game.Net.Node>(isReadOnly: true);
-            jobData.m_OrphanData = SystemAPI.GetComponentLookup<Orphan>(isReadOnly: true);
-            jobData.m_CurveData = SystemAPI.GetComponentLookup<Curve>(isReadOnly: true);
-            jobData.m_CompositionData = SystemAPI.GetComponentLookup<Composition>(isReadOnly: true);
-            jobData.m_EdgeGeometryData = SystemAPI.GetComponentLookup<EdgeGeometry>(isReadOnly: true);
-            jobData.m_StartNodeGeometryData = SystemAPI.GetComponentLookup<StartNodeGeometry>(isReadOnly: true);
-            jobData.m_EndNodeGeometryData = SystemAPI.GetComponentLookup<EndNodeGeometry>(isReadOnly: true);
-            jobData.m_PrefabRefData = SystemAPI.GetComponentLookup<PrefabRef>(isReadOnly: true);
             jobData.m_ObjectGeometryData = SystemAPI.GetComponentLookup<ObjectGeometryData>(isReadOnly: true);
             jobData.m_BuildingData = SystemAPI.GetComponentLookup<BuildingData>(isReadOnly: true);
-            jobData.m_BuildingExtensionData = SystemAPI.GetComponentLookup<BuildingExtensionData>(isReadOnly: true);
-            jobData.m_PrefabCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>(isReadOnly: true);
             jobData.m_PlaceableObjectData = SystemAPI.GetComponentLookup<PlaceableObjectData>(isReadOnly: true);
-            jobData.m_AssetStampData = SystemAPI.GetComponentLookup<AssetStampData>(isReadOnly: true);
             jobData.m_OutsideConnectionData = SystemAPI.GetComponentLookup<OutsideConnectionData>(isReadOnly: true);
-            jobData.m_NetObjectData = SystemAPI.GetComponentLookup<NetObjectData>(isReadOnly: true);
-            jobData.m_TransportStopData = SystemAPI.GetComponentLookup<TransportStopData>(isReadOnly: true);
             jobData.m_StackData = SystemAPI.GetComponentLookup<StackData>(isReadOnly: true);
-            jobData.m_ServiceUpgradeData = SystemAPI.GetComponentLookup<ServiceUpgradeData>(isReadOnly: true);
             jobData.m_BlockData = SystemAPI.GetComponentLookup<Game.Zones.Block>(isReadOnly: true);
             // buffers
             jobData.m_SubObjects = SystemAPI.GetBufferLookup<Game.Objects.SubObject>(isReadOnly: true);
-            jobData.m_ConnectedEdges = SystemAPI.GetBufferLookup<ConnectedEdge>(isReadOnly: true);
-            jobData.m_PrefabCompositionAreas = SystemAPI.GetBufferLookup<NetCompositionArea>(isReadOnly: true);
             // search trees
-            jobData.m_ObjectSearchTree = m_ObjectSearchSystem.GetStaticSearchTree(readOnly: true, out var objSearchDeps);
-            jobData.m_NetSearchTree = _netSearchSystem.GetNetSearchTree(readOnly: true, out var netSearchDeps);
             jobData.m_ZoneSearchTree = _zoneSearchSystem.GetSearchTree(readOnly: true, out var zoneSearchDeps);
             jobData.m_WaterSurfaceData = m_WaterSystem.GetSurfaceData(out var waterDataDeps);
             jobData.m_TerrainHeightData = m_TerrainSystem.GetHeightData();
@@ -389,8 +366,7 @@ namespace AreaBucket.Systems
             jobData.m_Rotation = new NativeValue<Rotation>(rotationData, Allocator.TempJob);
 
 
-
-            var depsFinal = JobUtils.CombineDependencies(inputDeps, objSearchDeps, netSearchDeps, zoneSearchDeps, waterDataDeps);
+            var depsFinal = JobHandle.CombineDependencies(inputDeps, zoneSearchDeps, waterDataDeps);
             JobHandle jobHandle = IJobExtensions.Schedule(jobData, depsFinal);
 
             m_ObjectSearchSystem.AddStaticSearchTreeReader(jobHandle);

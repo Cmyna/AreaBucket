@@ -121,9 +121,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         }
 
         [ReadOnly]
-        public bool m_EditorMode;
-
-        [ReadOnly]
         public Snap m_Snap;
 
         [ReadOnly]
@@ -139,43 +136,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public ComponentLookup<Owner> m_OwnerData;
 
         [ReadOnly]
-        public ComponentLookup<Transform> m_TransformData;
-
-        [ReadOnly]
-        public ComponentLookup<Attached> m_AttachedData;
-
-        [ReadOnly]
         public ComponentLookup<Terrain> m_TerrainData;
-
-        [ReadOnly]
-        public ComponentLookup<LocalTransformCache> m_LocalTransformCacheData;
-
-        [ReadOnly]
-        public ComponentLookup<Edge> m_EdgeData;
-
-        [ReadOnly]
-        public ComponentLookup<Node> m_NodeData;
-
-        [ReadOnly]
-        public ComponentLookup<Orphan> m_OrphanData;
-
-        [ReadOnly]
-        public ComponentLookup<Curve> m_CurveData;
-
-        [ReadOnly]
-        public ComponentLookup<Composition> m_CompositionData;
-
-        [ReadOnly]
-        public ComponentLookup<EdgeGeometry> m_EdgeGeometryData;
-
-        [ReadOnly]
-        public ComponentLookup<StartNodeGeometry> m_StartNodeGeometryData;
-
-        [ReadOnly]
-        public ComponentLookup<EndNodeGeometry> m_EndNodeGeometryData;
-
-        [ReadOnly]
-        public ComponentLookup<PrefabRef> m_PrefabRefData;
 
         [ReadOnly]
         public ComponentLookup<ObjectGeometryData> m_ObjectGeometryData;
@@ -184,31 +145,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public ComponentLookup<BuildingData> m_BuildingData;
 
         [ReadOnly]
-        public ComponentLookup<BuildingExtensionData> m_BuildingExtensionData;
-
-        [ReadOnly]
-        public ComponentLookup<NetCompositionData> m_PrefabCompositionData;
-
-        [ReadOnly]
         public ComponentLookup<PlaceableObjectData> m_PlaceableObjectData;
-
-        [ReadOnly]
-        public ComponentLookup<AssetStampData> m_AssetStampData;
 
         [ReadOnly]
         public ComponentLookup<OutsideConnectionData> m_OutsideConnectionData;
 
         [ReadOnly]
-        public ComponentLookup<NetObjectData> m_NetObjectData;
-
-        [ReadOnly]
-        public ComponentLookup<TransportStopData> m_TransportStopData;
-
-        [ReadOnly]
         public ComponentLookup<StackData> m_StackData;
-
-        [ReadOnly]
-        public ComponentLookup<ServiceUpgradeData> m_ServiceUpgradeData;
 
         [ReadOnly]
         public ComponentLookup<Block> m_BlockData;
@@ -216,17 +159,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         [ReadOnly]
         public BufferLookup<Game.Objects.SubObject> m_SubObjects;
 
-        [ReadOnly]
-        public BufferLookup<ConnectedEdge> m_ConnectedEdges;
-
-        [ReadOnly]
-        public BufferLookup<NetCompositionArea> m_PrefabCompositionAreas;
-
-        [ReadOnly]
-        public NativeQuadTree<Entity, QuadTreeBoundsXZ> m_ObjectSearchTree;
-
-        [ReadOnly]
-        public NativeQuadTree<Entity, QuadTreeBoundsXZ> m_NetSearchTree;
 
         [ReadOnly]
         public NativeQuadTree<Entity, Bounds2> m_ZoneSearchTree;
