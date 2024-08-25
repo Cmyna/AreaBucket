@@ -278,7 +278,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             CalculateHeight(ref bestSnapPosition, waterSurfaceHeight);
             Rotation value = m_Rotation.value;
             value.m_IsAligned &= value.m_Rotation.Equals(bestSnapPosition.m_Rotation);
-            AlignObject(ref bestSnapPosition, ref value.m_ParentRotation, value.m_IsAligned);
             value.m_Rotation = bestSnapPosition.m_Rotation;
             m_Rotation.value = value;
             if (m_StackData.TryGetComponent(m_Prefab, out var componentData7) && componentData7.m_Direction == StackDirection.Up)
@@ -332,120 +331,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 forward.xz = math.sign(@float);
                 snapPosition.m_Rotation = quaternion.LookRotationSafe(forward, math.up());
                 AddSnapPosition(ref bestSnapPosition, snapPosition);
-            }
-        }
-
-        public static void AlignRotation(ref quaternion rotation, quaternion parentRotation, bool zAxis)
-        {
-            if (zAxis)
-            {
-                float3 forward = math.rotate(rotation, new float3(0f, 0f, 1f));
-                float3 up = math.rotate(parentRotation, new float3(0f, 1f, 0f));
-                quaternion a = quaternion.LookRotationSafe(forward, up);
-                quaternion q = rotation;
-                float num = float.MaxValue;
-                for (int i = 0; i < 8; i++)
-                {
-                    quaternion quaternion = math.mul(a, Unity.Mathematics.quaternion.RotateZ((float)i * (MathF.PI / 4f)));
-                    float num2 = MathUtils.RotationAngle(rotation, quaternion);
-                    if (num2 < num)
-                    {
-                        q = quaternion;
-                        num = num2;
-                    }
-                }
-                rotation = math.normalizesafe(q, quaternion.identity);
-                return;
-            }
-            float3 forward2 = math.rotate(rotation, new float3(0f, 1f, 0f));
-            float3 up2 = math.rotate(parentRotation, new float3(1f, 0f, 0f));
-            quaternion a2 = math.mul(quaternion.LookRotationSafe(forward2, up2), quaternion.RotateX(MathF.PI / 2f));
-            quaternion q2 = rotation;
-            float num3 = float.MaxValue;
-            for (int j = 0; j < 8; j++)
-            {
-                quaternion quaternion2 = math.mul(a2, quaternion.RotateY((float)j * (MathF.PI / 4f)));
-                float num4 = MathUtils.RotationAngle(rotation, quaternion2);
-                if (num4 < num3)
-                {
-                    q2 = quaternion2;
-                    num3 = num4;
-                }
-            }
-            rotation = math.normalizesafe(q2, quaternion.identity);
-        }
-
-        private void AlignObject(ref ControlPoint controlPoint, ref quaternion parentRotation, bool alignRotation)
-        {
-            PlaceableObjectData placeableObjectData = default(PlaceableObjectData);
-            if (m_PlaceableObjectData.HasComponent(m_Prefab))
-            {
-                placeableObjectData = m_PlaceableObjectData[m_Prefab];
-            }
-            if ((placeableObjectData.m_Flags & Game.Objects.PlacementFlags.Hanging) != 0)
-            {
-                ObjectGeometryData objectGeometryData = m_ObjectGeometryData[m_Prefab];
-                controlPoint.m_Position.y -= objectGeometryData.m_Bounds.max.y;
-            }
-            parentRotation = quaternion.identity;
-            if (m_TransformData.HasComponent(controlPoint.m_OriginalEntity))
-            {
-                Entity entity = controlPoint.m_OriginalEntity;
-                PrefabRef prefabRef = m_PrefabRefData[entity];
-                parentRotation = m_TransformData[entity].m_Rotation;
-                while (m_OwnerData.HasComponent(entity) && !m_BuildingData.HasComponent(prefabRef.m_Prefab))
-                {
-                    entity = m_OwnerData[entity].m_Owner;
-                    prefabRef = m_PrefabRefData[entity];
-                    if (m_TransformData.HasComponent(entity))
-                    {
-                        parentRotation = m_TransformData[entity].m_Rotation;
-                    }
-                }
-            }
-            if ((placeableObjectData.m_Flags & Game.Objects.PlacementFlags.Wall) != 0)
-            {
-                float3 @float = math.forward(controlPoint.m_Rotation);
-                float3 value = controlPoint.m_HitDirection;
-                value.y = math.select(value.y, 0f, (m_Snap & Snap.Upright) != 0);
-                if (!MathUtils.TryNormalize(ref value))
-                {
-                    value = @float;
-                    value.y = math.select(value.y, 0f, (m_Snap & Snap.Upright) != 0);
-                    if (!MathUtils.TryNormalize(ref value))
-                    {
-                        value = new float3(0f, 0f, 1f);
-                    }
-                }
-                float3 value2 = math.cross(@float, value);
-                if (MathUtils.TryNormalize(ref value2))
-                {
-                    float angle = math.acos(math.clamp(math.dot(@float, value), -1f, 1f));
-                    controlPoint.m_Rotation = math.normalizesafe(math.mul(quaternion.AxisAngle(value2, angle), controlPoint.m_Rotation), quaternion.identity);
-                    if (alignRotation)
-                    {
-                        AlignRotation(ref controlPoint.m_Rotation, parentRotation, zAxis: true);
-                    }
-                }
-                controlPoint.m_Position += math.forward(controlPoint.m_Rotation) * placeableObjectData.m_PlacementOffset.z;
-                return;
-            }
-            float3 float2 = math.rotate(controlPoint.m_Rotation, new float3(0f, 1f, 0f));
-            float3 hitDirection = controlPoint.m_HitDirection;
-            hitDirection = math.select(hitDirection, new float3(0f, 1f, 0f), (m_Snap & Snap.Upright) != 0);
-            if (!MathUtils.TryNormalize(ref hitDirection))
-            {
-                hitDirection = float2;
-            }
-            float3 value3 = math.cross(float2, hitDirection);
-            if (MathUtils.TryNormalize(ref value3))
-            {
-                float angle2 = math.acos(math.clamp(math.dot(float2, hitDirection), -1f, 1f));
-                controlPoint.m_Rotation = math.normalizesafe(math.mul(quaternion.AxisAngle(value3, angle2), controlPoint.m_Rotation), quaternion.identity);
-                if (alignRotation)
-                {
-                    AlignRotation(ref controlPoint.m_Rotation, parentRotation, zAxis: false);
-                }
             }
         }
 
