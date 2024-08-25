@@ -619,47 +619,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             return true;
         }
 
-        private Game.Objects.Transform SampleTransform(PlaceableObjectData placeableObjectData, float3 position, float rotation, out float elevation)
-        {
-            float3 normal;
-            float num = TerrainUtils.SampleHeight(ref m_TerrainHeightData, position, out normal);
-            elevation = 0f;
-            if ((placeableObjectData.m_Flags & Game.Objects.PlacementFlags.Hovering) != 0)
-            {
-                float num2 = WaterUtils.SampleHeight(ref m_WaterSurfaceData, ref m_TerrainHeightData, position);
-                num2 += placeableObjectData.m_PlacementOffset.y;
-                elevation = math.max(0f, num2 - num);
-                num = math.max(num, num2);
-            }
-            else if ((placeableObjectData.m_Flags & (Game.Objects.PlacementFlags.Shoreline | Game.Objects.PlacementFlags.Floating)) == 0)
-            {
-                num += placeableObjectData.m_PlacementOffset.y;
-            }
-            else
-            {
-                float num3 = WaterUtils.SampleHeight(ref m_WaterSurfaceData, ref m_TerrainHeightData, position, out var waterDepth);
-                if (waterDepth >= 0.2f)
-                {
-                    num3 += placeableObjectData.m_PlacementOffset.y;
-                    if ((placeableObjectData.m_Flags & Game.Objects.PlacementFlags.Floating) != 0)
-                    {
-                        elevation = math.max(0f, num3 - num);
-                    }
-                    num = math.max(num, num3);
-                }
-            }
-            Game.Objects.Transform result = default(Game.Objects.Transform);
-            result.m_Position = position;
-            result.m_Position.y = num;
-            result.m_Rotation = quaternion.RotateY(rotation);
-            if ((m_Snap & Snap.Upright) == 0)
-            {
-                float3 forward = math.cross(math.right(), normal);
-                result.m_Rotation = math.mul(quaternion.LookRotation(forward, normal), result.m_Rotation);
-            }
-            return result;
-        }
-
         private bool CheckParentPrefab(Entity parentPrefab, Entity objectPrefab)
         {
             if (parentPrefab == objectPrefab)
