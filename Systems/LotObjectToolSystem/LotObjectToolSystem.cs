@@ -356,8 +356,6 @@ namespace AreaBucket.Systems
 
             var rotationData = default(Rotation);
             rotationData.m_Rotation = _rotationController.Rotation;
-            rotationData.m_ParentRotation = quaternion.identity;
-            rotationData.m_IsAligned = false;
             jobData.m_Rotation = new NativeValue<Rotation>(rotationData, Allocator.TempJob);
 
 

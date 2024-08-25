@@ -18,7 +18,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using MathF = UnityEngine.Mathf;
 using Mode = Game.Tools.ObjectToolSystem.Mode;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
@@ -26,10 +25,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     public struct Rotation
     {
         public quaternion m_Rotation;
-
-        public quaternion m_ParentRotation;
-
-        public bool m_IsAligned;
     }
 
     [BurstCompile]
@@ -174,7 +169,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
             CalculateHeight(ref bestSnapPosition);
             Rotation value = m_Rotation.value;
-            value.m_IsAligned &= value.m_Rotation.Equals(bestSnapPosition.m_Rotation);
             value.m_Rotation = bestSnapPosition.m_Rotation;
             m_Rotation.value = value;
             m_ControlPoints[0] = bestSnapPosition;
