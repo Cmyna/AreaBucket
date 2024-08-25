@@ -343,8 +343,6 @@ namespace AreaBucket.Systems
             jobData.m_ObjectGeometryData = SystemAPI.GetComponentLookup<ObjectGeometryData>(isReadOnly: true);
             jobData.m_BuildingData = SystemAPI.GetComponentLookup<BuildingData>(isReadOnly: true);
             jobData.m_PlaceableObjectData = SystemAPI.GetComponentLookup<PlaceableObjectData>(isReadOnly: true);
-            jobData.m_OutsideConnectionData = SystemAPI.GetComponentLookup<OutsideConnectionData>(isReadOnly: true);
-            jobData.m_StackData = SystemAPI.GetComponentLookup<StackData>(isReadOnly: true);
             jobData.m_BlockData = SystemAPI.GetComponentLookup<Game.Zones.Block>(isReadOnly: true);
             // buffers
             jobData.m_SubObjects = SystemAPI.GetBufferLookup<Game.Objects.SubObject>(isReadOnly: true);

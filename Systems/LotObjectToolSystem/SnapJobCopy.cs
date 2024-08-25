@@ -150,8 +150,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         [ReadOnly]
         public ComponentLookup<OutsideConnectionData> m_OutsideConnectionData;
 
-        [ReadOnly]
-        public ComponentLookup<StackData> m_StackData;
 
         [ReadOnly]
         public ComponentLookup<Block> m_BlockData;
@@ -180,10 +178,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             ControlPoint controlPoint = m_ControlPoints[0];
             ControlPoint bestSnapPosition = controlPoint;
             bestSnapPosition.m_OriginalEntity = Entity.Null;
-            if (m_OutsideConnectionData.HasComponent(m_Prefab))
-            {
-                HandleWorldSize(ref bestSnapPosition, controlPoint);
-            }
             float waterSurfaceHeight = float.MinValue;
             if ((m_Snap & Snap.NetSide) != 0)
             {
@@ -212,59 +206,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             value.m_IsAligned &= value.m_Rotation.Equals(bestSnapPosition.m_Rotation);
             value.m_Rotation = bestSnapPosition.m_Rotation;
             m_Rotation.value = value;
-            if (m_StackData.TryGetComponent(m_Prefab, out var componentData7) && componentData7.m_Direction == StackDirection.Up)
-            {
-                float num5 = componentData7.m_FirstBounds.max + MathUtils.Size(componentData7.m_MiddleBounds) * 2f - componentData7.m_LastBounds.min;
-                bestSnapPosition.m_Elevation += num5;
-                bestSnapPosition.m_Position.y += num5;
-            }
             m_ControlPoints[0] = bestSnapPosition;
         }
 
-        private void HandleWorldSize(ref ControlPoint bestSnapPosition, ControlPoint controlPoint)
-        {
-            Bounds3 bounds = TerrainUtils.GetBounds(ref m_TerrainHeightData);
-            bool2 @bool = false;
-            float2 @float = 0f;
-            Bounds3 bounds2 = new Bounds3(controlPoint.m_HitPosition, controlPoint.m_HitPosition);
-            if (m_ObjectGeometryData.TryGetComponent(m_Prefab, out var componentData))
-            {
-                bounds2 = ObjectUtils.CalculateBounds(controlPoint.m_HitPosition, controlPoint.m_Rotation, componentData);
-            }
-            if (bounds2.min.x < bounds.min.x)
-            {
-                @bool.x = true;
-                @float.x = bounds.min.x;
-            }
-            else if (bounds2.max.x > bounds.max.x)
-            {
-                @bool.x = true;
-                @float.x = bounds.max.x;
-            }
-            if (bounds2.min.z < bounds.min.z)
-            {
-                @bool.y = true;
-                @float.y = bounds.min.z;
-            }
-            else if (bounds2.max.z > bounds.max.z)
-            {
-                @bool.y = true;
-                @float.y = bounds.max.z;
-            }
-            if (math.any(@bool))
-            {
-                ControlPoint snapPosition = controlPoint;
-                snapPosition.m_OriginalEntity = Entity.Null;
-                snapPosition.m_Direction = new float2(0f, 1f);
-                snapPosition.m_Position.xz = math.select(controlPoint.m_HitPosition.xz, @float, @bool);
-                snapPosition.m_Position.y = controlPoint.m_HitPosition.y;
-                snapPosition.m_SnapPriority = ToolUtils.CalculateSnapPriority(2f, 1f, controlPoint.m_HitPosition.xz, snapPosition.m_Position.xz, snapPosition.m_Direction);
-                float3 forward = default(float3);
-                forward.xz = math.sign(@float);
-                snapPosition.m_Rotation = quaternion.LookRotationSafe(forward, math.up());
-                AddSnapPosition(ref bestSnapPosition, snapPosition);
-            }
-        }
 
         private void CalculateHeight(ref ControlPoint controlPoint, float waterSurfaceHeight)
         {
