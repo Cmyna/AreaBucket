@@ -210,51 +210,35 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 return;
             }
             PlaceableObjectData placeableObjectData = m_PlaceableObjectData[m_Prefab];
+
+
             if (m_SubObjects.HasBuffer(controlPoint.m_OriginalEntity))
             {
                 controlPoint.m_Position.y += placeableObjectData.m_PlacementOffset.y;
                 return;
             }
-            float num;
-            if ((placeableObjectData.m_Flags & Game.Objects.PlacementFlags.RoadSide) != 0 && m_BuildingData.HasComponent(m_Prefab))
+
+
+            float finalHeight;
+            float3 heightPivotPosition = controlPoint.m_Position;
+
+            var isBuilding = m_BuildingData.HasComponent(m_Prefab);
+            var shouldPlaceAtRoadSide = (placeableObjectData.m_Flags & Game.Objects.PlacementFlags.RoadSide) != 0;
+
+            
+            if (isBuilding && shouldPlaceAtRoadSide)
             {
                 BuildingData buildingData = m_BuildingData[m_Prefab];
-                float3 worldPosition = BuildingUtils.CalculateFrontPosition(new Transform(controlPoint.m_Position, controlPoint.m_Rotation), buildingData.m_LotSize.y);
-                num = TerrainUtils.SampleHeight(ref m_TerrainHeightData, worldPosition);
+                heightPivotPosition = BuildingUtils.CalculateFrontPosition(
+                    new Transform(controlPoint.m_Position, controlPoint.m_Rotation), 
+                    buildingData.m_LotSize.y
+                    );
             }
-            else
-            {
-                num = TerrainUtils.SampleHeight(ref m_TerrainHeightData, controlPoint.m_Position);
-            }
-            if ((placeableObjectData.m_Flags & Game.Objects.PlacementFlags.Hovering) != 0)
-            {
-                float num2 = WaterUtils.SampleHeight(ref m_WaterSurfaceData, ref m_TerrainHeightData, controlPoint.m_Position);
-                num2 += placeableObjectData.m_PlacementOffset.y;
-                controlPoint.m_Elevation = math.max(0f, num2 - num);
-                num = math.max(num, num2);
-            }
-            else if ((placeableObjectData.m_Flags & (Game.Objects.PlacementFlags.Shoreline | Game.Objects.PlacementFlags.Floating)) == 0)
-            {
-                num += placeableObjectData.m_PlacementOffset.y;
-            }
-            else
-            {
-                float num3 = WaterUtils.SampleHeight(ref m_WaterSurfaceData, ref m_TerrainHeightData, controlPoint.m_Position, out var waterDepth);
-                if (waterDepth >= 0.2f)
-                {
-                    num3 += placeableObjectData.m_PlacementOffset.y;
-                    if ((placeableObjectData.m_Flags & Game.Objects.PlacementFlags.Floating) != 0)
-                    {
-                        controlPoint.m_Elevation = math.max(0f, num3 - num);
-                    }
-                    num = math.max(num, num3);
-                }
-            }
-            if ((m_Snap & Snap.Shoreline) != 0)
-            {
-                num = math.max(num, waterSurfaceHeight + placeableObjectData.m_PlacementOffset.y);
-            }
-            controlPoint.m_Position.y = num;
+
+            finalHeight = TerrainUtils.SampleHeight(ref m_TerrainHeightData, heightPivotPosition); 
+            finalHeight += placeableObjectData.m_PlacementOffset.y;
+
+            controlPoint.m_Position.y = finalHeight;
         }
 
     }
