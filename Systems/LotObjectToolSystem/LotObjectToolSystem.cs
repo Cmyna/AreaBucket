@@ -345,7 +345,6 @@ namespace AreaBucket.Systems
             jobData.m_SubObjects = SystemAPI.GetBufferLookup<Game.Objects.SubObject>(isReadOnly: true);
             // search trees
             jobData.m_ZoneSearchTree = _zoneSearchSystem.GetSearchTree(readOnly: true, out var zoneSearchDeps);
-            jobData.m_WaterSurfaceData = m_WaterSystem.GetSurfaceData(out var waterDataDeps);
             jobData.m_TerrainHeightData = m_TerrainSystem.GetHeightData();
 
             // jobData.m_ControlPoints = m_ControlPoints;

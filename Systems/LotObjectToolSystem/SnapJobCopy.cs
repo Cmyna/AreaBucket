@@ -130,9 +130,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public NativeQuadTree<Entity, Bounds2> m_ZoneSearchTree;
 
         [ReadOnly]
-        public WaterSurfaceData m_WaterSurfaceData;
-
-        [ReadOnly]
         public TerrainHeightData m_TerrainHeightData;
 
         public NativeList<ControlPoint> m_ControlPoints;
@@ -183,7 +180,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
             PlaceableObjectData placeableObjectData = m_PlaceableObjectData[m_Prefab];
 
-
+            // why there is a y position modifiying?
             if (m_SubObjects.HasBuffer(controlPoint.m_OriginalEntity))
             {
                 controlPoint.m_Position.y += placeableObjectData.m_PlacementOffset.y;
