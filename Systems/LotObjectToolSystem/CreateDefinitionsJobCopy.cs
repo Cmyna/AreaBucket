@@ -242,9 +242,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public Snap m_Snap;
 
         [ReadOnly]
-        public AgeMask m_AgeMask;
-
-        [ReadOnly]
         public NativeList<ControlPoint> m_ControlPoints;
 
         [NativeDisableContainerSafetyRestriction]
@@ -746,8 +743,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 {
                     component2.m_Elevation = elevation;
                 }
-
-                component2.m_Age = ToolUtils.GetRandomAge(ref random, m_AgeMask);
 
                 if (ownerDefinition.m_Prefab != Entity.Null)
                 {

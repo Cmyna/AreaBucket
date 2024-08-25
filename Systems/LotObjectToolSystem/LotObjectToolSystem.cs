@@ -243,8 +243,6 @@ namespace AreaBucket.Systems
             jobData.m_Theme = Entity.Null;
             jobData.m_RandomSeed = _randomSeed; // from ObjectToolSystem.Randomize
             jobData.m_Snap = GetActualSnap();
-            // dont know why but ObjectToolSystem.actualAgeMask seems use this enum as default if not 'allowAgeMask'
-            jobData.m_AgeMask = Game.Tools.AgeMask.Sapling; 
             jobData.m_ControlPoints = new NativeList<ControlPoint>(Allocator.TempJob);
             jobData.m_ControlPoints.Add(controlPoint);
             jobData.m_AttachmentPrefab = attachmentPrefab; // from ObjectToolSystem.UpdateDefinitions, seems doesn't require initializations
