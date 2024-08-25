@@ -12,6 +12,7 @@ using Game.Net;
 using Game.Objects;
 using Game.Prefabs;
 using Game.Tools;
+using System;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -330,7 +331,7 @@ namespace AreaBucket.Systems
             // Entity selected = ((actualMode == Mode.Move) ? m_MovingObject : m_ToolSystem.selected);
             SnapJob jobData = default;
             jobData.m_EditorMode = m_ToolSystem.actionMode.IsEditor();
-            jobData.m_Snap = GetActualSnap();
+            jobData.m_Snap = GetActualSnap(); // it seems that current mask for lot building is NetSite | ContourLine | Upright
             // jobData.m_Snap = Snap.NetSide;
             jobData.m_Mode = ObjectToolSystem.Mode.Create;
             jobData.m_Prefab = objectPrefabEntity;
@@ -453,18 +454,28 @@ namespace AreaBucket.Systems
             }
         }
 
-        private static void GetAvailableSnapMask(PlaceableObjectData prefabPlaceableData, bool editorMode, bool isBuilding, bool isAssetStamp, bool brushing, bool stamping, out Snap onMask, out Snap offMask)
+        private static void GetAvailableSnapMask(
+            PlaceableObjectData prefabPlaceableData, 
+            bool editorMode, 
+            bool isBuilding, 
+            bool isAssetStamp, 
+            bool brushing, 
+            bool stamping, 
+            out Snap onMask, 
+            out Snap offMask
+            )
         {
             onMask = Snap.Upright;
             offMask = Snap.None;
+            
             if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadSide | Game.Objects.PlacementFlags.OwnerSide)) == Game.Objects.PlacementFlags.OwnerSide)
-            {
+            { // if placeable flag have OwnerSide and dont have RoadSide
                 onMask |= Snap.OwnerSide;
             }
             else if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadSide | Game.Objects.PlacementFlags.Shoreline | Game.Objects.PlacementFlags.Floating | Game.Objects.PlacementFlags.Hovering)) != 0)
-            {
+            { // if flag has any (RoadSide, Shoreline, Floating, Hovering)
                 if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.OwnerSide) != 0)
-                {
+                { 
                     onMask |= Snap.OwnerSide;
                     offMask |= Snap.OwnerSide;
                 }
@@ -490,7 +501,7 @@ namespace AreaBucket.Systems
                 }
             }
             else if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadNode | Game.Objects.PlacementFlags.RoadEdge)) != 0)
-            {
+            { // if flag has any (RoadNode, RoadEdge)
                 if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadNode) != 0)
                 {
                     onMask |= Snap.NetNode;
@@ -501,7 +512,7 @@ namespace AreaBucket.Systems
                 }
             }
             else if (editorMode && !isBuilding)
-            {
+            { // if it is not building and it is in editorMode
                 onMask |= Snap.ObjectSurface;
                 offMask |= Snap.ObjectSurface;
                 offMask |= Snap.Upright;
@@ -543,6 +554,40 @@ namespace AreaBucket.Systems
                     {
                         displayName = nameof(_selectedLotPrefab),
                         getter = () => _selectedLotPrefab?.prefab?.ToString() ?? "null",
+                    },
+
+                    new DebugUI.Value
+                    {
+                        displayName = "Actual Snap",
+                        getter = () =>
+                        {
+                            var snapMask = GetActualSnap();
+                            if (snapMask == Snap.All) return "All";
+                            if (snapMask == Snap.None) return "None";
+
+                            string res = "";
+                            
+                            if ((snapMask & Snap.ExistingGeometry) != 0) res += "| ExistingGeometry";
+                            if ((snapMask & Snap.CellLength) != 0) res += "| CellLength";
+                            if ((snapMask & Snap.StraightDirection) != 0) res += "| StraightDirection";
+                            if ((snapMask & Snap.NetSide) != 0) res += "| NetSide";
+                            if ((snapMask & Snap.NetArea) != 0) res += "| NetArea";
+                            if ((snapMask & Snap.OwnerSide) != 0) res += "| OwnerSide";
+                            if ((snapMask & Snap.ObjectSide) != 0) res += "| ObjectSide";
+                            if ((snapMask & Snap.NetMiddle) != 0) res += "| NetMiddle";
+                            if ((snapMask & Snap.Shoreline) != 0) res += "| Shoreline";
+                            if ((snapMask & Snap.NearbyGeometry) != 0) res += "| NearbyGeometry";
+                            if ((snapMask & Snap.GuideLines) != 0) res += "| GuideLines";
+                            if ((snapMask & Snap.ZoneGrid) != 0) res += "| ZoneGrid";
+                            if ((snapMask & Snap.ObjectSurface) != 0) res += "| ObjectSurface";
+                            if ((snapMask & Snap.Upright) != 0) res += "| Upright";
+                            if ((snapMask & Snap.LotGrid) != 0) res += "| LotGrid";
+                            if ((snapMask & Snap.AutoParent) != 0) res += "| AutoParent";
+                            if ((snapMask & Snap.PrefabType) != 0) res += "| PrefabType";
+                            if ((snapMask & Snap.ContourLines) != 0) res += "| ContourLines";
+
+                            return res;
+                        }
                     },
 
                     new DebugUI.Value
