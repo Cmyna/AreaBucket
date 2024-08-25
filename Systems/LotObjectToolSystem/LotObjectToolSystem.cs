@@ -234,15 +234,9 @@ namespace AreaBucket.Systems
         {
             CreateDefinitionsJobCopy jobData = default;
             jobData.m_LefthandTraffic = false;
-            jobData.m_Removing = false; // guess is true when object is rotating
             jobData.m_Stamping = false;
-            jobData.m_BrushSize = brushSize;
-            jobData.m_BrushAngle = brushAngle;
-            jobData.m_BrushStrength = brushStrength;
-            jobData.m_DeltaTime = UnityEngine.Time.deltaTime; // from ObjectToolSystem.UpdateDefinitions, use unity's delta time if not using brush
             jobData.m_ObjectPrefab = objectPrefabEntity;
             jobData.m_TransformPrefab = Entity.Null;
-            jobData.m_BrushPrefab = Entity.Null;
             jobData.m_Owner = Entity.Null;
             jobData.m_Original = Entity.Null;
             jobData.m_LaneEditor = Entity.Null;
