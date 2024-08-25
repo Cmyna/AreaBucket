@@ -233,7 +233,6 @@ namespace AreaBucket.Systems
             )
         {
             CreateDefinitionsJobCopy jobData = default;
-            jobData.m_EditorMode = m_ToolSystem.actionMode.IsEditor();
             jobData.m_LefthandTraffic = false;
             jobData.m_Removing = false; // guess is true when object is rotating
             jobData.m_Stamping = false;

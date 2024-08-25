@@ -209,9 +209,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        
-        [ReadOnly]
-        public bool m_EditorMode;
 
         [ReadOnly]
         public bool m_LefthandTraffic;
@@ -452,7 +449,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (
                 !hasOriginalEntity && m_PrefabNetObjectData.HasComponent(m_ObjectPrefab) && 
                 m_AttachedData.HasComponent(startPoint.m_OriginalEntity) && 
-                (m_EditorMode || !m_OwnerData.HasComponent(startPoint.m_OriginalEntity))
+                (!m_OwnerData.HasComponent(startPoint.m_OriginalEntity))
                 )
             {
                 Attached attached = m_AttachedData[startPoint.m_OriginalEntity];
@@ -468,65 +465,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             Owner componentData4;
 
 
-            if (m_EditorMode)
-            {
-                Entity entity3 = startPoint.m_OriginalEntity;
-                int num = startPoint.m_ElementIndex.x;
-                while (m_OwnerData.HasComponent(entity3) && !m_BuildingData.HasComponent(entity3))
-                {
-                    if (m_LocalTransformCacheData.HasComponent(entity3))
-                    {
-                        num = m_LocalTransformCacheData[entity3].m_ParentMesh;
-                        num += math.select(1000, -1000, num < 0);
-                    }
-                    entity3 = m_OwnerData[entity3].m_Owner;
-                }
-                if (m_InstalledUpgrades.TryGetBuffer(entity3, out var bufferData) && bufferData.Length != 0)
-                {
-                    entity3 = bufferData[0].m_Upgrade;
-                }
-                bool flag2 = false;
-                if (m_PrefabRefData.TryGetComponent(entity3, out var componentData) && m_PrefabServiceUpgradeBuilding.TryGetBuffer(m_ObjectPrefab, out var bufferData2))
-                {
-                    Entity entity4 = Entity.Null;
-                    if (m_TransformData.TryGetComponent(entity3, out var componentData2) && m_PrefabBuildingExtensionData.TryGetComponent(m_ObjectPrefab, out var componentData3))
-                    {
-                        for (int i = 0; i < bufferData2.Length; i++)
-                        {
-                            if (bufferData2[i].m_Building == componentData.m_Prefab)
-                            {
-                                entity4 = entity3;
-                                startPoint.m_Position = ObjectUtils.LocalToWorld(componentData2, componentData3.m_Position);
-                                startPoint.m_Rotation = componentData2.m_Rotation;
-                                break;
-                            }
-                        }
-                    }
-                    entity3 = entity4;
-                    flag2 = true;
-                }
-                if (m_TransformData.HasComponent(entity3) && m_SubObjects.HasBuffer(entity3))
-                {
-                    ownerEntity = entity3;
-                    topLevel = flag2;
-                    parentMesh = num;
-                }
-                if (m_OwnerData.HasComponent(originalEntity))
-                {
-                    Owner owner = m_OwnerData[originalEntity];
-                    if (owner.m_Owner != ownerEntity)
-                    {
-                        ownerEntity = owner.m_Owner;
-                        topLevel = flag2;
-                        parentMesh = -1;
-                    }
-                }
-                if (!m_EdgeData.HasComponent(startPoint.m_OriginalEntity) && !m_NodeData.HasComponent(startPoint.m_OriginalEntity))
-                {
-                    startPoint.m_OriginalEntity = Entity.Null;
-                }
-            }
-            else if (hasOriginalEntity && ownerEntity == Entity.Null && m_OwnerData.TryGetComponent(originalEntity, out componentData4))
+            if (hasOriginalEntity && ownerEntity == Entity.Null && m_OwnerData.TryGetComponent(originalEntity, out componentData4))
             {
                 ownerEntity = componentData4.m_Owner;
             }
@@ -1121,14 +1060,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 {
                     component2.m_Elevation = elevation;
                 }
-                if (m_EditorMode)
-                {
-                    component2.m_Age = random.NextFloat(1f);
-                }
-                else
-                {
-                    component2.m_Age = ToolUtils.GetRandomAge(ref random, m_AgeMask);
-                }
+
+                component2.m_Age = ToolUtils.GetRandomAge(ref random, m_AgeMask);
+
                 if (ownerDefinition.m_Prefab != Entity.Null)
                 {
                     m_CommandBuffer.AddComponent(e, ownerDefinition);
@@ -1549,12 +1483,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 Upgraded component3 = upgraded;
                 m_CommandBuffer.AddComponent(e, component3);
             }
-            if (m_EditorMode)
-            {
-                LocalCurveCache component4 = default(LocalCurveCache);
-                component4.m_Curve = curve;
-                m_CommandBuffer.AddComponent(e, component4);
-            }
         }
 
         private bool GetOwnerLot(Entity lotOwner, out BuildingUtils.LotInfo lotInfo)
@@ -1573,7 +1501,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private void UpdateSubNets(Game.Objects.Transform transform, Game.Objects.Transform mainTransform, Game.Objects.Transform mainInverseTransform, Entity prefab, Entity original, Entity lotEntity, bool relocate, bool topLevel, OwnerDefinition ownerDefinition, NativeList<ClearAreaData> clearAreas, ref Unity.Mathematics.Random random)
         {
-            bool flag = original == Entity.Null || (relocate && m_EditorMode);
+            bool flag = original == Entity.Null || (relocate && false);
             if (flag && topLevel && m_PrefabSubNets.HasBuffer(prefab))
             {
                 DynamicBuffer<Game.Prefabs.SubNet> subNets = m_PrefabSubNets[prefab];
@@ -1612,43 +1540,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     CreateSubNet(subNet2.m_Prefab, Entity.Null, subNet2.m_Curve, subNet2.m_NodeIndex, subNet2.m_ParentMesh, subNet2.m_Upgrades, nodePositions, transform, ownerDefinition, clearAreas, lotInfo, ownerLot, ref random);
                 }
                 nodePositions.Dispose();
-            }
-            if (flag && topLevel && m_EditorMode && m_PrefabSubLanes.HasBuffer(prefab))
-            {
-                DynamicBuffer<Game.Prefabs.SubLane> dynamicBuffer = m_PrefabSubLanes[prefab];
-                NativeList<float4> nodePositions2 = new NativeList<float4>(dynamicBuffer.Length * 2, Allocator.Temp);
-                for (int l = 0; l < dynamicBuffer.Length; l++)
-                {
-                    Game.Prefabs.SubLane subLane = dynamicBuffer[l];
-                    if (subLane.m_NodeIndex.x >= 0)
-                    {
-                        while (nodePositions2.Length <= subLane.m_NodeIndex.x)
-                        {
-                            float4 value = default(float4);
-                            nodePositions2.Add(in value);
-                        }
-                        nodePositions2[subLane.m_NodeIndex.x] += new float4(subLane.m_Curve.a, 1f);
-                    }
-                    if (subLane.m_NodeIndex.y >= 0)
-                    {
-                        while (nodePositions2.Length <= subLane.m_NodeIndex.y)
-                        {
-                            float4 value = default(float4);
-                            nodePositions2.Add(in value);
-                        }
-                        nodePositions2[subLane.m_NodeIndex.y] += new float4(subLane.m_Curve.d, 1f);
-                    }
-                }
-                for (int m = 0; m < nodePositions2.Length; m++)
-                {
-                    nodePositions2[m] /= math.max(1f, nodePositions2[m].w);
-                }
-                for (int n = 0; n < dynamicBuffer.Length; n++)
-                {
-                    Game.Prefabs.SubLane subLane2 = dynamicBuffer[n];
-                    CreateSubNet(m_LaneEditor, subLane2.m_Prefab, subLane2.m_Curve, subLane2.m_NodeIndex, subLane2.m_ParentMesh, default(CompositionFlags), nodePositions2, transform, ownerDefinition, clearAreas, default(BuildingUtils.LotInfo), hasLot: false, ref random);
-                }
-                nodePositions2.Dispose();
             }
             if (!m_SubNets.HasBuffer(original))
             {
@@ -1834,7 +1725,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 {
                     Game.Prefabs.SubArea subArea = dynamicBuffer[i];
                     int seed;
-                    if (!m_EditorMode && m_PrefabPlaceholderElements.HasBuffer(subArea.m_Prefab))
+                    if (m_PrefabPlaceholderElements.HasBuffer(subArea.m_Prefab))
                     {
                         DynamicBuffer<PlaceholderObjectElement> placeholderElements = m_PrefabPlaceholderElements[subArea.m_Prefab];
                         if (!selectedSpawnables.IsCreated)
@@ -1879,11 +1770,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     DynamicBuffer<Game.Areas.Node> dynamicBuffer3 = m_CommandBuffer.AddBuffer<Game.Areas.Node>(e);
                     dynamicBuffer3.ResizeUninitialized(subArea.m_NodeRange.y - subArea.m_NodeRange.x + 1);
                     DynamicBuffer<LocalNodeCache> dynamicBuffer4 = default(DynamicBuffer<LocalNodeCache>);
-                    if (m_EditorMode)
-                    {
-                        dynamicBuffer4 = m_CommandBuffer.AddBuffer<LocalNodeCache>(e);
-                        dynamicBuffer4.ResizeUninitialized(dynamicBuffer3.Length);
-                    }
+
+
                     int num = ObjectToolBaseSystem.GetFirstNodeIndex(dynamicBuffer2, subArea.m_NodeRange);
                     int num2 = 0;
                     for (int j = subArea.m_NodeRange.x; j <= subArea.m_NodeRange.y; j++)
@@ -1893,14 +1781,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         int parentMesh = dynamicBuffer2[num].m_ParentMesh;
                         float elevation = math.select(float.MinValue, position.y, parentMesh >= 0);
                         dynamicBuffer3[num2] = new Game.Areas.Node(position2, elevation);
-                        if (m_EditorMode)
-                        {
-                            dynamicBuffer4[num2] = new LocalNodeCache
-                            {
-                                m_Position = position,
-                                m_ParentMesh = parentMesh
-                            };
-                        }
+
+
                         num2++;
                         if (++num == subArea.m_NodeRange.y)
                         {
