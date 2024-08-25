@@ -763,7 +763,20 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             return false;
         }
 
-        private void UpdateSubObjects(Game.Objects.Transform transform, Game.Objects.Transform mainTransform, Game.Objects.Transform mainInverseTransform, Entity prefab, Entity original, bool relocate, bool rebuild, bool topLevel, bool isParent, OwnerDefinition ownerDefinition, ref Unity.Mathematics.Random random, ref NativeParallelHashMap<Entity, int> selectedSpawnables)
+        private void UpdateSubObjects(
+            Game.Objects.Transform transform, 
+            Game.Objects.Transform mainTransform, 
+            Game.Objects.Transform mainInverseTransform, 
+            Entity prefab,
+            Entity original, 
+            bool relocate, 
+            bool rebuild, 
+            bool topLevel, 
+            bool isParent, 
+            OwnerDefinition ownerDefinition, 
+            ref Unity.Mathematics.Random random, 
+            ref NativeParallelHashMap<Entity, int> selectedSpawnables
+            )
         {
             if (!m_InstalledUpgrades.HasBuffer(original) || !m_TransformData.HasComponent(original))
             {
@@ -868,7 +881,20 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        private void CreateSubNet(Entity netPrefab, Entity lanePrefab, Bezier4x3 curve, int2 nodeIndex, int2 parentMesh, CompositionFlags upgrades, NativeList<float4> nodePositions, Game.Objects.Transform parentTransform, OwnerDefinition ownerDefinition, NativeList<ClearAreaData> clearAreas, BuildingUtils.LotInfo lotInfo, bool hasLot, ref Unity.Mathematics.Random random)
+        private void CreateSubNet(
+            Entity netPrefab, 
+            Entity lanePrefab, 
+            Bezier4x3 curve, 
+            int2 nodeIndex, 
+            int2 parentMesh, 
+            CompositionFlags upgrades, 
+            NativeList<float4> nodePositions, 
+            Game.Objects.Transform parentTransform, 
+            OwnerDefinition ownerDefinition, 
+            NativeList<ClearAreaData> clearAreas, 
+            BuildingUtils.LotInfo lotInfo, 
+            bool hasLot, 
+            ref Unity.Mathematics.Random random)
         {
             m_PrefabNetGeometryData.TryGetComponent(netPrefab, out var componentData);
             CreationDefinition component = default(CreationDefinition);
@@ -1003,7 +1029,19 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             return false;
         }
 
-        private void UpdateSubNets(Game.Objects.Transform transform, Game.Objects.Transform mainTransform, Game.Objects.Transform mainInverseTransform, Entity prefab, Entity original, Entity lotEntity, bool relocate, bool topLevel, OwnerDefinition ownerDefinition, NativeList<ClearAreaData> clearAreas, ref Unity.Mathematics.Random random)
+        private void UpdateSubNets(
+            Game.Objects.Transform transform, 
+            Game.Objects.Transform mainTransform, 
+            Game.Objects.Transform mainInverseTransform, 
+            Entity prefab, 
+            Entity original, 
+            Entity lotEntity, 
+            bool relocate, 
+            bool topLevel, 
+            OwnerDefinition ownerDefinition, 
+            NativeList<ClearAreaData> clearAreas, 
+            ref Unity.Mathematics.Random random
+            )
         {
             bool flag = original == Entity.Null || (relocate && false);
             if (flag && topLevel && m_PrefabSubNets.HasBuffer(prefab))
@@ -1218,7 +1256,18 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        private void UpdateSubAreas(Game.Objects.Transform transform, Entity prefab, Entity original, bool relocate, bool rebuild, bool topLevel, OwnerDefinition ownerDefinition, NativeList<ClearAreaData> clearAreas, ref Unity.Mathematics.Random random, ref NativeParallelHashMap<Entity, int> selectedSpawnables)
+        private void UpdateSubAreas(
+            Game.Objects.Transform transform, 
+            Entity prefab, 
+            Entity original, 
+            bool relocate, 
+            bool rebuild, 
+            bool topLevel, 
+            OwnerDefinition ownerDefinition, 
+            NativeList<ClearAreaData> clearAreas, 
+            ref Unity.Mathematics.Random random, 
+            ref NativeParallelHashMap<Entity, int> selectedSpawnables
+            )
         {
             bool flag = original == Entity.Null || relocate || rebuild;
             if (flag && topLevel && m_PrefabSubAreas.HasBuffer(prefab))
