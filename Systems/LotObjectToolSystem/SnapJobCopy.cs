@@ -35,63 +35,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct SnapJob : IJob
     {
-        private struct OriginalObjectIterator : INativeQuadTreeIterator<Entity, QuadTreeBoundsXZ>, IUnsafeQuadTreeIterator<Entity, QuadTreeBoundsXZ>
-        {
-            public Entity m_Parent;
-
-            public Entity m_Result;
-
-            public Bounds3 m_Bounds;
-
-            public float m_BestDistance;
-
-            public bool m_EditorMode;
-
-            public TransportStopData m_TransportStopData1;
-
-            public ComponentLookup<Owner> m_OwnerData;
-
-            public ComponentLookup<Attached> m_AttachedData;
-
-            public ComponentLookup<PrefabRef> m_PrefabRefData;
-
-            public ComponentLookup<NetObjectData> m_NetObjectData;
-
-            public ComponentLookup<TransportStopData> m_TransportStopData;
-
-            public bool Intersect(QuadTreeBoundsXZ bounds)
-            {
-                return MathUtils.Intersect(bounds.m_Bounds, m_Bounds);
-            }
-
-            public void Iterate(QuadTreeBoundsXZ bounds, Entity item)
-            {
-                if (!MathUtils.Intersect(bounds.m_Bounds, m_Bounds) || !m_AttachedData.HasComponent(item) || (!m_EditorMode && m_OwnerData.HasComponent(item)) || m_AttachedData[item].m_Parent != m_Parent)
-                {
-                    return;
-                }
-                PrefabRef prefabRef = m_PrefabRefData[item];
-                if (!m_NetObjectData.HasComponent(prefabRef.m_Prefab))
-                {
-                    return;
-                }
-                TransportStopData transportStopData = default(TransportStopData);
-                if (m_TransportStopData.HasComponent(prefabRef.m_Prefab))
-                {
-                    transportStopData = m_TransportStopData[prefabRef.m_Prefab];
-                }
-                if (m_TransportStopData1.m_TransportType == transportStopData.m_TransportType)
-                {
-                    float num = math.distance(MathUtils.Center(m_Bounds), MathUtils.Center(bounds.m_Bounds));
-                    if (num < m_BestDistance)
-                    {
-                        m_Result = item;
-                        m_BestDistance = num;
-                    }
-                }
-            }
-        }
-
         private struct ZoneBlockIterator : INativeQuadTreeIterator<Entity, Bounds2>, IUnsafeQuadTreeIterator<Entity, Bounds2>
         {
             public ControlPoint m_ControlPoint;
@@ -333,10 +276,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 hasSnapping.Value |= iterator.hasSnapping;
             }
             CalculateHeight(ref bestSnapPosition, waterSurfaceHeight);
-            if (m_Mode == Mode.Create && m_NetObjectData.HasComponent(m_Prefab) && (m_NodeData.HasComponent(bestSnapPosition.m_OriginalEntity) || m_EdgeData.HasComponent(bestSnapPosition.m_OriginalEntity)))
-            {
-                FindOriginalObject(ref bestSnapPosition, controlPoint);
-            }
             Rotation value = m_Rotation.value;
             value.m_IsAligned &= value.m_Rotation.Equals(bestSnapPosition.m_Rotation);
             AlignObject(ref bestSnapPosition, ref value.m_ParentRotation, value.m_IsAligned);
@@ -349,38 +288,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 bestSnapPosition.m_Position.y += num5;
             }
             m_ControlPoints[0] = bestSnapPosition;
-        }
-
-
-        private void FindOriginalObject(ref ControlPoint bestSnapPosition, ControlPoint controlPoint)
-        {
-            OriginalObjectIterator originalObjectIterator = default(OriginalObjectIterator);
-            originalObjectIterator.m_Parent = bestSnapPosition.m_OriginalEntity;
-            originalObjectIterator.m_BestDistance = float.MaxValue;
-            originalObjectIterator.m_EditorMode = m_EditorMode;
-            originalObjectIterator.m_OwnerData = m_OwnerData;
-            originalObjectIterator.m_AttachedData = m_AttachedData;
-            originalObjectIterator.m_PrefabRefData = m_PrefabRefData;
-            originalObjectIterator.m_NetObjectData = m_NetObjectData;
-            originalObjectIterator.m_TransportStopData = m_TransportStopData;
-            OriginalObjectIterator iterator = originalObjectIterator;
-            if (m_ObjectGeometryData.TryGetComponent(m_Prefab, out var componentData))
-            {
-                iterator.m_Bounds = ObjectUtils.CalculateBounds(bestSnapPosition.m_Position, bestSnapPosition.m_Rotation, componentData);
-            }
-            else
-            {
-                iterator.m_Bounds = new Bounds3(bestSnapPosition.m_Position - 1f, bestSnapPosition.m_Position + 1f);
-            }
-            if (m_TransportStopData.TryGetComponent(m_Prefab, out var componentData2))
-            {
-                iterator.m_TransportStopData1 = componentData2;
-            }
-            m_ObjectSearchTree.Iterate(ref iterator);
-            if (iterator.m_Result != Entity.Null)
-            {
-                bestSnapPosition.m_OriginalEntity = iterator.m_Result;
-            }
         }
 
         private void HandleWorldSize(ref ControlPoint bestSnapPosition, ControlPoint controlPoint)
