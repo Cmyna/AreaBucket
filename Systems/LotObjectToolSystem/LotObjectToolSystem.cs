@@ -239,10 +239,8 @@ namespace AreaBucket.Systems
             jobData.m_TransformPrefab = Entity.Null;
             jobData.m_Owner = Entity.Null;
             jobData.m_Original = Entity.Null;
-            jobData.m_LaneEditor = Entity.Null;
             jobData.m_Theme = Entity.Null;
             jobData.m_RandomSeed = _randomSeed; // from ObjectToolSystem.Randomize
-            jobData.m_Snap = GetActualSnap();
             jobData.m_ControlPoints = new NativeList<ControlPoint>(Allocator.TempJob);
             jobData.m_ControlPoints.Add(controlPoint);
             jobData.m_AttachmentPrefab = attachmentPrefab; // from ObjectToolSystem.UpdateDefinitions, seems doesn't require initializations
