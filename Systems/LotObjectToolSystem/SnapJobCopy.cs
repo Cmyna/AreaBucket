@@ -49,8 +49,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             public float2 m_Direction;
 
-            public Entity m_IgnoreOwner;
-
             public ComponentLookup<Owner> m_OwnerData;
 
             public ComponentLookup<Block> m_BlockData;
@@ -64,42 +62,27 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             public void Iterate(Bounds2 bounds, Entity blockEntity)
             {
-                if (!MathUtils.Intersect(bounds, m_Bounds))
-                {
-                    return;
-                }
-                if (m_IgnoreOwner != Entity.Null)
-                {
-                    Entity entity = blockEntity;
-                    Owner componentData;
-                    while (m_OwnerData.TryGetComponent(entity, out componentData))
-                    {
-                        if (componentData.m_Owner == m_IgnoreOwner)
-                        {
-                            return;
-                        }
-                        entity = componentData.m_Owner;
-                    }
-                }
+                if (!MathUtils.Intersect(bounds, m_Bounds)) return;
                 
                 Block block = m_BlockData[blockEntity];
-                Quad2 quad = ZoneUtils.CalculateCorners(block);
-                Line2.Segment line = new Line2.Segment(quad.a, quad.b);
-                Line2.Segment line2 = new Line2.Segment(m_ControlPoint.m_HitPosition.xz, m_ControlPoint.m_HitPosition.xz);
+                Quad2 zoneBlockQuad = ZoneUtils.CalculateCorners(block);
+                // is it zone block line closed to road side?
+                Line2.Segment zoneFirstLine = new Line2.Segment(zoneBlockQuad.a, zoneBlockQuad.b);
+                Line2.Segment buildingCurrentDirLine = new Line2.Segment(m_ControlPoint.m_HitPosition.xz, m_ControlPoint.m_HitPosition.xz);
                 float2 @float = m_Direction * (math.max(0f, m_LotSize.y - m_LotSize.x) * 4f);
-                line2.a -= @float;
-                line2.b += @float;
+                buildingCurrentDirLine.a -= @float;
+                buildingCurrentDirLine.b += @float;
                 float2 t;
-                float num = MathUtils.Distance(line, line2, out t);
-                if (num == 0f)
+                float measuredDistance = MathUtils.Distance(zoneFirstLine, buildingCurrentDirLine, out t);
+                if (measuredDistance == 0f)
                 {
-                    num -= 0.5f - math.abs(t.y - 0.5f);
+                    measuredDistance -= 0.5f - math.abs(t.y - 0.5f);
                 }
-                if (!(num >= m_BestDistance))
+                if (measuredDistance < m_BestDistance)
                 {
                     // it seems that this if scope is for applying snapping and all snapping pre-condition is satisfied
                     hasSnapping = true;
-                    m_BestDistance = num;
+                    m_BestDistance = measuredDistance;
                     float2 y = m_ControlPoint.m_HitPosition.xz - block.m_Position.xz;
                     float2 float2 = MathUtils.Left(block.m_Direction);
                     float num2 = (float)block.m_Size.y * 4f;
@@ -128,9 +111,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly]
         public Entity m_Prefab;
-
-        [ReadOnly]
-        public Entity m_Selected;
 
         [ReadOnly]
         public ComponentLookup<Owner> m_OwnerData;
@@ -171,20 +151,18 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             ControlPoint controlPoint = m_ControlPoints[0];
             ControlPoint bestSnapPosition = controlPoint;
             bestSnapPosition.m_OriginalEntity = Entity.Null;
-            float waterSurfaceHeight = float.MinValue;
             if ((m_Snap & Snap.NetSide) != 0)
             {
                 BuildingData buildingData = m_BuildingData[m_Prefab];
-                float num = (float)buildingData.m_LotSize.y * 4f + 16f;
+                float boundOffset = (float)buildingData.m_LotSize.y * 4f + 16f;
                 float bestDistance = (float)math.cmin(buildingData.m_LotSize) * 4f + 16f;
                 ZoneBlockIterator zoneBlockIterator = default(ZoneBlockIterator);
                 zoneBlockIterator.m_ControlPoint = controlPoint;
                 zoneBlockIterator.m_BestSnapPosition = bestSnapPosition;
                 zoneBlockIterator.m_BestDistance = bestDistance;
                 zoneBlockIterator.m_LotSize = buildingData.m_LotSize;
-                zoneBlockIterator.m_Bounds = new Bounds2(controlPoint.m_Position.xz - num, controlPoint.m_Position.xz + num);
+                zoneBlockIterator.m_Bounds = new Bounds2(controlPoint.m_Position.xz - boundOffset, controlPoint.m_Position.xz + boundOffset);
                 zoneBlockIterator.m_Direction = math.forward(m_Rotation.value.m_Rotation).xz;
-                zoneBlockIterator.m_IgnoreOwner = ((m_Mode == Mode.Move) ? m_Selected : Entity.Null);
                 zoneBlockIterator.m_OwnerData = m_OwnerData;
                 zoneBlockIterator.m_BlockData = m_BlockData;
                 zoneBlockIterator.hasSnapping = false;
@@ -194,7 +172,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                 hasSnapping.Value |= iterator.hasSnapping;
             }
-            CalculateHeight(ref bestSnapPosition, waterSurfaceHeight);
+            CalculateHeight(ref bestSnapPosition);
             Rotation value = m_Rotation.value;
             value.m_IsAligned &= value.m_Rotation.Equals(bestSnapPosition.m_Rotation);
             value.m_Rotation = bestSnapPosition.m_Rotation;
@@ -203,7 +181,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         }
 
 
-        private void CalculateHeight(ref ControlPoint controlPoint, float waterSurfaceHeight)
+        private void CalculateHeight(ref ControlPoint controlPoint)
         {
             if (!m_PlaceableObjectData.HasComponent(m_Prefab))
             {

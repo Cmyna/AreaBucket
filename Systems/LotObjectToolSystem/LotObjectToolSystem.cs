@@ -334,8 +334,6 @@ namespace AreaBucket.Systems
             // jobData.m_Snap = Snap.NetSide;
             jobData.m_Mode = ObjectToolSystem.Mode.Create;
             jobData.m_Prefab = objectPrefabEntity;
-            // jobData.m_Selected = selected;
-            jobData.m_Selected = Entity.Null;
 
             // components lookup handle
             jobData.m_OwnerData = SystemAPI.GetComponentLookup<Owner>(isReadOnly: true);
