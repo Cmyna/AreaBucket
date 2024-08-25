@@ -358,7 +358,7 @@ namespace AreaBucket.Systems
             jobData.m_Rotation = new NativeValue<Rotation>(rotationData, Allocator.TempJob);
 
 
-            var depsFinal = JobHandle.CombineDependencies(inputDeps, zoneSearchDeps, waterDataDeps);
+            var depsFinal = JobHandle.CombineDependencies(inputDeps, zoneSearchDeps);
             JobHandle jobHandle = IJobExtensions.Schedule(jobData, depsFinal);
 
             m_ObjectSearchSystem.AddStaticSearchTreeReader(jobHandle);
@@ -383,127 +383,9 @@ namespace AreaBucket.Systems
 
         public override void GetAvailableSnapMask(out Snap onMask, out Snap offMask)
         {
-            if (_selectedPrefab != null)
-            {
-                bool flag = m_PrefabSystem.HasComponent<BuildingData>(_selectedPrefab);
-                bool isAssetStamp = false;
-                bool flag2 = false;
-                bool stamping = false;
-                if (m_PrefabSystem.HasComponent<PlaceableObjectData>(_selectedPrefab))
-                {
-                    GetAvailableSnapMask(
-                        m_PrefabSystem.GetComponentData<PlaceableObjectData>(_selectedPrefab), 
-                        m_ToolSystem.actionMode.IsEditor(), 
-                        flag, 
-                        isAssetStamp, 
-                        flag2, 
-                        stamping, 
-                        out onMask, 
-                        out offMask
-                        );
-                }
-                else
-                {
-                    GetAvailableSnapMask(
-                        default(PlaceableObjectData), 
-                        m_ToolSystem.actionMode.IsEditor(),
-                        flag, 
-                        isAssetStamp, 
-                        flag2, 
-                        stamping, 
-                        out onMask, 
-                        out offMask
-                        );
-                }
-            }
-            else
-            {
-                base.GetAvailableSnapMask(out onMask, out offMask);
-            }
+            onMask = offMask = Snap.Upright | Snap.NetSide | Snap.ContourLines;
+            return;
         }
-
-        private static void GetAvailableSnapMask(
-            PlaceableObjectData prefabPlaceableData, 
-            bool editorMode, 
-            bool isBuilding, 
-            bool isAssetStamp, 
-            bool brushing, 
-            bool stamping, 
-            out Snap onMask, 
-            out Snap offMask
-            )
-        {
-            onMask = Snap.Upright;
-            offMask = Snap.None;
-            
-            if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadSide | Game.Objects.PlacementFlags.OwnerSide)) == Game.Objects.PlacementFlags.OwnerSide)
-            { // if placeable flag have OwnerSide and dont have RoadSide
-                onMask |= Snap.OwnerSide;
-            }
-            else if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadSide | Game.Objects.PlacementFlags.Shoreline | Game.Objects.PlacementFlags.Floating | Game.Objects.PlacementFlags.Hovering)) != 0)
-            { // if flag has any (RoadSide, Shoreline, Floating, Hovering)
-                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.OwnerSide) != 0)
-                { 
-                    onMask |= Snap.OwnerSide;
-                    offMask |= Snap.OwnerSide;
-                }
-                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadSide) != 0)
-                {
-                    onMask |= Snap.NetSide;
-                    offMask |= Snap.NetSide;
-                }
-                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadEdge) != 0)
-                {
-                    onMask |= Snap.NetArea;
-                    offMask |= Snap.NetArea;
-                }
-                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.Shoreline) != 0)
-                {
-                    onMask |= Snap.Shoreline;
-                    offMask |= Snap.Shoreline;
-                }
-                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.Hovering) != 0)
-                {
-                    onMask |= Snap.ObjectSurface;
-                    offMask |= Snap.ObjectSurface;
-                }
-            }
-            else if ((prefabPlaceableData.m_Flags & (Game.Objects.PlacementFlags.RoadNode | Game.Objects.PlacementFlags.RoadEdge)) != 0)
-            { // if flag has any (RoadNode, RoadEdge)
-                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadNode) != 0)
-                {
-                    onMask |= Snap.NetNode;
-                }
-                if ((prefabPlaceableData.m_Flags & Game.Objects.PlacementFlags.RoadEdge) != 0)
-                {
-                    onMask |= Snap.NetArea;
-                }
-            }
-            else if (editorMode && !isBuilding)
-            { // if it is not building and it is in editorMode
-                onMask |= Snap.ObjectSurface;
-                offMask |= Snap.ObjectSurface;
-                offMask |= Snap.Upright;
-            }
-            if (editorMode && (!isAssetStamp || stamping))
-            {
-                onMask |= Snap.AutoParent;
-                offMask |= Snap.AutoParent;
-            }
-            if (brushing)
-            {
-                onMask &= Snap.Upright;
-                offMask &= Snap.Upright;
-                onMask |= Snap.PrefabType;
-                offMask |= Snap.PrefabType;
-            }
-            if (isBuilding || isAssetStamp)
-            {
-                onMask |= Snap.ContourLines;
-                offMask |= Snap.ContourLines;
-            }
-        }
-
 
         private void CreateDebugUI()
         {
