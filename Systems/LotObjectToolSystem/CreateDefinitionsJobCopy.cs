@@ -280,7 +280,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                     UpdateObject(
                         objectPrefabEntity, 
-                        Entity.Null, // it is Entity.Null
                         startPoint.m_OriginalEntity, 
                         new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation), 
                         startPoint.m_Elevation, 
@@ -297,7 +296,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         transform3.m_Position += math.rotate(transform3.m_Rotation, m_AttachmentPrefab.Value.m_Offset);
                         UpdateObject(
                             m_AttachmentPrefab.Value.m_Entity, 
-                            Entity.Null, 
                             objectPrefabEntity,
                             transform3, 
                             startPoint.m_Elevation, 
@@ -397,7 +395,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         /// <param name="randomIndex"></param>
         private void UpdateObject(
             Entity objectPrefab, 
-            Entity transformPrefab, 
             Entity parent, 
             Game.Objects.Transform transform, 
             float elevation, 
@@ -416,7 +413,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 Entity e = m_CommandBuffer.CreateEntity();
                 CreationDefinition component = default(CreationDefinition);
                 component.m_Prefab = objectPrefab;
-                component.m_SubPrefab = transformPrefab;
+                component.m_SubPrefab = Entity.Null;
                 component.m_Owner = Entity.Null; //owner;
                 component.m_Original = Entity.Null;
                 component.m_RandomSeed = random.NextInt();
@@ -434,10 +431,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 component2.m_PrefabSubIndex = -1;
                 component2.m_Scale = 1f;
                 component2.m_Intensity = 1f;
-                if (transformPrefab != Entity.Null)
+
+                /*if (transformPrefab != Entity.Null)
                 {
                     component2.m_GroupIndex = -1;
-                }
+                }*/
+
+
                 if (m_PrefabPlaceableObjectData.HasComponent(objectPrefab))
                 {
                     PlaceableObjectData placeableObjectData = m_PrefabPlaceableObjectData[objectPrefab];
@@ -518,7 +518,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         Game.Objects.Transform transform4 = ObjectUtils.LocalToWorld(transform, subObject.m_Position, subObject.m_Rotation);
                         UpdateObject(
                             subObject.m_Prefab, 
-                            Entity.Null, 
                             parent, 
                             transform4, elevation, 
                             ownerDefinition, 
