@@ -551,6 +551,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 ref random, 
                 ref selectedSpawnables
                 );
+
             if (selectedSpawnables.IsCreated)
             {
                 selectedSpawnables.Dispose();
@@ -924,51 +925,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     }
                 }
             }
-
-            /*
-            if (!m_SubAreas.HasBuffer(original))
-            {
-                return;
-            }
-            DynamicBuffer<Game.Areas.SubArea> dynamicBuffer5 = m_SubAreas[original];
-            for (int k = 0; k < dynamicBuffer5.Length; k++)
-            {
-                Entity area = dynamicBuffer5[k].m_Area;
-                DynamicBuffer<Game.Areas.Node> nodes = m_AreaNodes[area];
-                bool flag2 = flag;
-                if (!flag2 && m_AreaSpaceData.HasComponent(area))
-                {
-                    DynamicBuffer<Triangle> triangles = m_AreaTriangles[area];
-                    flag2 = ClearAreaHelpers.ShouldClear(clearAreas, nodes, triangles, transform);
-                }
-                if (m_AreaLotData.HasComponent(area))
-                {
-                    if (!flag2)
-                    {
-                        continue;
-                    }
-                    flag2 = !rebuild;
-                }
-                Entity e2 = m_CommandBuffer.CreateEntity();
-                CreationDefinition component2 = default(CreationDefinition);
-                component2.m_Original = area;
-                if (flag2)
-                {
-                    component2.m_Flags |= CreationFlags.Delete | CreationFlags.Hidden;
-                }
-                else if (ownerDefinition.m_Prefab != Entity.Null)
-                {
-                    m_CommandBuffer.AddComponent(e2, ownerDefinition);
-                }
-                m_CommandBuffer.AddComponent(e2, component2);
-                m_CommandBuffer.AddComponent(e2, default(Updated));
-                m_CommandBuffer.AddBuffer<Game.Areas.Node>(e2).CopyFrom(nodes.AsNativeArray());
-                if (m_CachedNodes.HasBuffer(area))
-                {
-                    DynamicBuffer<LocalNodeCache> dynamicBuffer6 = m_CachedNodes[area];
-                    m_CommandBuffer.AddBuffer<LocalNodeCache>(e2).CopyFrom(dynamicBuffer6.AsNativeArray());
-                }
-            }*/
         }
 
         private bool HasEdgeStartOrEnd(Entity node, Entity owner)
