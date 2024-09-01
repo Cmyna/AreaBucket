@@ -240,7 +240,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             // Entity ownerEntity = Entity.Null;
             // Entity originalEntity = Entity.Null;
-            Entity updatedTopLevel = Entity.Null;
+            // Entity updatedTopLevel = Entity.Null;
             // Entity lotEntity = Entity.Null;
             OwnerDefinition ownerDefinition = default(OwnerDefinition);
             bool upgrade = false;
@@ -369,17 +369,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     UpdateObject(
                         objectPrefabEntity, 
                         m_TransformPrefab, 
-                        Entity.Null,
-                        Entity.Null, //originalEntity, 
                         startPoint.m_OriginalEntity, 
-                        updatedTopLevel, 
-                        Entity.Null, //lotEntity, 
+                        // Entity.Null, // updatedTopLevel, 
                         new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation), 
                         startPoint.m_Elevation, 
                         ownerDefinition, 
                         clearAreas, 
-                        upgrade, 
-                        false, // hasOriginalEntity,
+                        upgrade,
+                        // relocate: false, // hasOriginalEntity,
                         rebuild: false, 
                         topLevel, 
                         optional: false, 
@@ -391,7 +388,24 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     {
                         Game.Objects.Transform transform3 = new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation);
                         transform3.m_Position += math.rotate(transform3.m_Rotation, m_AttachmentPrefab.Value.m_Offset);
-                        UpdateObject(m_AttachmentPrefab.Value.m_Entity, Entity.Null, Entity.Null, Entity.Null, objectPrefabEntity, updatedTopLevel, Entity.Null, transform3, startPoint.m_Elevation, ownerDefinition, clearAreas, upgrade: false, relocate: false, rebuild: false, topLevel, optional: false, parentMesh, 0);
+                        UpdateObject(
+                            m_AttachmentPrefab.Value.m_Entity, 
+                            Entity.Null, 
+                            // Entity.Null, 
+                            objectPrefabEntity,
+                            // Entity.Null, // updatedTopLevel, 
+                            // Entity.Null, // lotEntity
+                            transform3, 
+                            startPoint.m_Elevation, 
+                            ownerDefinition, 
+                            clearAreas, 
+                            upgrade: false, 
+                            // relocate: false, 
+                            rebuild: false, 
+                            topLevel, 
+                            optional: false, 
+                            parentMesh, 0
+                            );
                     }
                 }
             }
@@ -484,17 +498,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private void UpdateObject(
             Entity objectPrefab, 
             Entity transformPrefab, 
-            Entity owner, // Entity.Null
-            Entity original, // Entity.Null
             Entity parent, 
-            Entity updatedTopLevel, 
-            Entity lotEntity,
+            // Entity updatedTopLevel, // Entity.Null
             Game.Objects.Transform transform, 
             float elevation, 
             OwnerDefinition ownerDefinition, 
             NativeList<ClearAreaData> clearAreas, 
             bool upgrade, 
-            bool relocate, 
+            // bool relocate, 
             bool rebuild, 
             bool topLevel, 
             bool optional, 
@@ -512,16 +523,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 component.m_Prefab = objectPrefab;
                 component.m_SubPrefab = transformPrefab;
                 component.m_Owner = Entity.Null; //owner;
-                component.m_Original = original;
+                component.m_Original = Entity.Null;
                 component.m_RandomSeed = random.NextInt();
                 if (optional)
                 {
                     component.m_Flags |= CreationFlags.Optional;
                 }
-                if (objectPrefab == Entity.Null && m_PrefabRefData.HasComponent(original))
+                /*if (objectPrefab == Entity.Null && m_PrefabRefData.HasComponent(original))
                 {
                     objectPrefab = m_PrefabRefData[original].m_Prefab;
-                }
+                }*/
                 if (m_PrefabBuildingData.HasComponent(objectPrefab))
                 {
                     parentMesh = -1;
@@ -534,7 +545,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 component2.m_PrefabSubIndex = -1;
                 component2.m_Scale = 1f;
                 component2.m_Intensity = 1f;
-                if (original == Entity.Null && transformPrefab != Entity.Null)
+                if (transformPrefab != Entity.Null)
                 {
                     component2.m_GroupIndex = -1;
                 }
@@ -546,20 +557,20 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         component2.m_Probability = placeableObjectData.m_DefaultProbability;
                     }
                 }
-                if (m_EditorContainerData.HasComponent(original))
+                /*if (m_EditorContainerData.HasComponent(original))
                 {
                     EditorContainer editorContainer = m_EditorContainerData[original];
                     component.m_SubPrefab = editorContainer.m_Prefab;
                     component2.m_Scale = editorContainer.m_Scale;
                     component2.m_Intensity = editorContainer.m_Intensity;
                     component2.m_GroupIndex = editorContainer.m_GroupIndex;
-                }
-                if (m_LocalTransformCacheData.HasComponent(original))
+                }*/
+                /*if (m_LocalTransformCacheData.HasComponent(original))
                 {
                     LocalTransformCache localTransformCache = m_LocalTransformCacheData[original];
                     component2.m_Probability = localTransformCache.m_Probability;
                     component2.m_PrefabSubIndex = localTransformCache.m_PrefabSubIndex;
-                }
+                }*/
                 if (parentMesh != -1)
                 {
                     component2.m_Elevation = transform.m_Position.y - ownerDefinition.m_Position.y;
@@ -603,7 +614,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     if (m_PrefabNetObjectData.HasComponent(objectPrefab))
                     {
                         entity = parent;
-                        UpdateAttachedParent(parent, updatedTopLevel);
+                        UpdateAttachedParent(parent, Entity.Null);
                     }
                     else
                     {
@@ -615,22 +626,22 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     component.m_Flags |= CreationFlags.Attach;
                     component.m_Attached = parent;
                 }
-                if (m_AttachedData.HasComponent(original))
+                /*if (m_AttachedData.HasComponent(original))
                 {
                     Attached attached = m_AttachedData[original];
                     if (attached.m_Parent != entity)
                     {
                         UpdateAttachedParent(attached.m_Parent, updatedTopLevel);
                     }
-                }
+                }*/
                 if (upgrade)
                 {
                     component.m_Flags |= CreationFlags.Upgrade | CreationFlags.Parent;
                 }
-                if (relocate)
+                /*if (relocate)
                 {
                     component.m_Flags |= CreationFlags.Relocate;
-                }
+                }*/
                 ownerDefinition2.m_Prefab = objectPrefab;
                 ownerDefinition2.m_Position = component2.m_Position;
                 ownerDefinition2.m_Rotation = component2.m_Rotation;
@@ -647,30 +658,59 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     {
                         Game.Prefabs.SubObject subObject = dynamicBuffer[i];
                         Game.Objects.Transform transform4 = ObjectUtils.LocalToWorld(transform, subObject.m_Position, subObject.m_Rotation);
-                        UpdateObject(subObject.m_Prefab, Entity.Null, Entity.Null /*owner*/, Entity.Null, parent, updatedTopLevel, lotEntity, transform4, elevation, ownerDefinition, default(NativeList<ClearAreaData>), upgrade: false, relocate: false, rebuild: false, topLevel: false, optional: false, parentMesh, i);
+                        UpdateObject(
+                            subObject.m_Prefab, 
+                            Entity.Null, 
+                            parent, 
+                            // Entity.Null, //updatedTopLevel, 
+                            transform4, elevation, 
+                            ownerDefinition, 
+                            default(NativeList<ClearAreaData>), 
+                            upgrade: false, 
+                            // relocate: false, 
+                            rebuild: false, 
+                            topLevel: false, 
+                            optional: false, 
+                            parentMesh, 
+                            i);
                     }
                 }
-                original = Entity.Null;
+                // original = Entity.Null;
                 topLevel = true;
             }
             NativeParallelHashMap<Entity, int> selectedSpawnables = default(NativeParallelHashMap<Entity, int>);
             Game.Objects.Transform mainInverseTransform = transform;
-            if (original != Entity.Null)
+            /*if (original != Entity.Null)
             {
                 mainInverseTransform = ObjectUtils.InverseTransform(m_TransformData[original]);
-            }
-            UpdateSubObjects(transform, transform, mainInverseTransform, objectPrefab, original, relocate, rebuild, topLevel, upgrade, ownerDefinition2, ref random, ref selectedSpawnables);
-            UpdateSubNets(transform, transform, mainInverseTransform, objectPrefab, original, lotEntity, relocate, topLevel, ownerDefinition2, clearAreas, ref random);
-            UpdateSubAreas(transform, objectPrefab, original, relocate, rebuild, topLevel, ownerDefinition2, clearAreas, ref random, ref selectedSpawnables);
+            }*/
+            UpdateSubObjects(transform, transform, mainInverseTransform, objectPrefab, Entity.Null /*original*/, relocate: false, rebuild, topLevel, upgrade, ownerDefinition2, ref random, ref selectedSpawnables);
+            UpdateSubNets(
+                transform, 
+                transform, 
+                mainInverseTransform, 
+                objectPrefab, 
+                Entity.Null 
+                /*original*/,
+                Entity.Null /*lotEntity*/, 
+                relocate: false, 
+                topLevel, 
+                ownerDefinition2, 
+                clearAreas, 
+                ref random);
+            UpdateSubAreas(transform, objectPrefab, Entity.Null /*original*/, relocate: false, rebuild, topLevel, ownerDefinition2, clearAreas, ref random, ref selectedSpawnables);
             if (selectedSpawnables.IsCreated)
             {
                 selectedSpawnables.Dispose();
             }
         }
 
-        private void UpdateAttachedParent(Entity parent, Entity updatedTopLevel)
+        private void UpdateAttachedParent(
+            Entity parent,
+            Entity updatedTopLevel // Entity.Null
+            )
         {
-            if (updatedTopLevel != Entity.Null)
+            /*if (updatedTopLevel != Entity.Null)
             {
                 Entity entity = parent;
                 if (entity == updatedTopLevel)
@@ -685,7 +725,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         return;
                     }
                 }
-            }
+            }*/
             if (m_EdgeData.HasComponent(parent))
             {
                 Edge edge = m_EdgeData[parent];
