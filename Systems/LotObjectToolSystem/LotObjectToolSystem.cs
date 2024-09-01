@@ -234,11 +234,7 @@ namespace AreaBucket.Systems
         {
             CreateDefinitionsJobCopy jobData = default;
             jobData.m_LefthandTraffic = false;
-            jobData.m_Stamping = false;
             jobData.m_ObjectPrefab = objectPrefabEntity;
-            jobData.m_TransformPrefab = Entity.Null;
-            jobData.m_Owner = Entity.Null;
-            jobData.m_Original = Entity.Null;
             jobData.m_Theme = Entity.Null;
             jobData.m_RandomSeed = _randomSeed; // from ObjectToolSystem.Randomize
             jobData.m_ControlPoints = new NativeList<ControlPoint>(Allocator.TempJob);

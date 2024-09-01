@@ -43,20 +43,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public bool m_LefthandTraffic;
 
         [ReadOnly]
-        public bool m_Stamping;
-
-        [ReadOnly]
         public Entity m_ObjectPrefab;
-
-        [ReadOnly]
-        public Entity m_TransformPrefab;
-
-
-        [ReadOnly]
-        public Entity m_Owner;
-
-        [ReadOnly]
-        public Entity m_Original;
 
         [ReadOnly]
         public Entity m_Theme;
@@ -376,21 +363,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         /// this method is recursive method, guess it is for handling recursive sub element creations
         /// </summary>
         /// <param name="objectPrefab"></param>
-        /// <param name="transformPrefab"></param>
-        /// <param name="owner"></param>
-        /// <param name="original"></param>
         /// <param name="parent"></param>
-        /// <param name="updatedTopLevel"></param>
-        /// <param name="lotEntity"></param>
         /// <param name="transform"></param>
         /// <param name="elevation"></param>
         /// <param name="ownerDefinition"></param>
         /// <param name="clearAreas"></param>
-        /// <param name="upgrade"></param>
-        /// <param name="relocate"></param>
-        /// <param name="rebuild"></param>
         /// <param name="topLevel"></param>
-        /// <param name="optional"></param>
         /// <param name="parentMesh"></param>
         /// <param name="randomIndex"></param>
         private void UpdateObject(
@@ -432,11 +410,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 component2.m_Scale = 1f;
                 component2.m_Intensity = 1f;
 
-                /*if (transformPrefab != Entity.Null)
-                {
-                    component2.m_GroupIndex = -1;
-                }*/
-
 
                 if (m_PrefabPlaceableObjectData.HasComponent(objectPrefab))
                 {
@@ -470,7 +443,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     component2.m_LocalRotation = transform.m_Rotation;
                 }
 
-                Entity entity = Entity.Null;
                 if (m_SubObjects.HasBuffer(parent))
                 {
                     component.m_Flags |= CreationFlags.Attach;
@@ -485,7 +457,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     }
                     if (m_PrefabNetObjectData.HasComponent(objectPrefab))
                     {
-                        entity = parent;
                         UpdateAttachedParent(parent);
                     }
                     else
