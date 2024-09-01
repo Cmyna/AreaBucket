@@ -536,7 +536,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             UpdateSubNets(
                 transform, 
                 objectPrefab,
-                Entity.Null /*lotEntity*/, 
                 topLevel, 
                 ownerDefinition2, 
                 clearAreas, 
@@ -795,7 +794,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private void UpdateSubNets(
             Game.Objects.Transform transform, 
             Entity prefab, 
-            Entity lotEntity, 
             bool topLevel, 
             OwnerDefinition ownerDefinition, 
             NativeList<ClearAreaData> clearAreas, 
@@ -808,7 +806,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 DynamicBuffer<Game.Prefabs.SubNet> subNets = m_PrefabSubNets[prefab];
                 NativeList<float4> nodePositions = new NativeList<float4>(subNets.Length * 2, Allocator.Temp);
                 BuildingUtils.LotInfo lotInfo;
-                bool ownerLot = GetOwnerLot(lotEntity, out lotInfo);
+                bool ownerLot = GetOwnerLot(Entity.Null, out lotInfo);
                 for (int i = 0; i < subNets.Length; i++)
                 {
                     Game.Prefabs.SubNet subNet = subNets[i];
