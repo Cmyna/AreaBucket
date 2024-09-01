@@ -280,7 +280,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                     UpdateObject(
                         objectPrefabEntity, 
-                        m_TransformPrefab, 
+                        m_TransformPrefab, // it is Entity.Null
                         startPoint.m_OriginalEntity, 
                         new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation), 
                         startPoint.m_Elevation, 
@@ -411,7 +411,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             OwnerDefinition ownerDefinition2 = ownerDefinition;
             Unity.Mathematics.Random random = m_RandomSeed.GetRandom(randomIndex);
-            if (!m_PrefabAssetStampData.HasComponent(objectPrefab) || (!m_Stamping && ownerDefinition.m_Prefab == Entity.Null))
+            if (!m_PrefabAssetStampData.HasComponent(objectPrefab) || (ownerDefinition.m_Prefab == Entity.Null))
             {
                 Entity e = m_CommandBuffer.CreateEntity();
                 CreationDefinition component = default(CreationDefinition);
@@ -531,7 +531,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 topLevel = true;
             }
             NativeParallelHashMap<Entity, int> selectedSpawnables = default(NativeParallelHashMap<Entity, int>);
-            Game.Objects.Transform mainInverseTransform = transform;
 
             UpdateSubNets(
                 transform, 
@@ -643,7 +642,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private void CreateSubNet(
             Entity netPrefab, 
-            Entity lanePrefab, 
+            Entity lanePrefab, // Entity.Null
             Bezier4x3 curve, 
             int2 nodeIndex, 
             int2 parentMesh, 
@@ -679,18 +678,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 flag = flag2 || flag3;
                 if ((componentData.m_Flags & Game.Net.GeometryFlags.FlattenTerrain) != 0)
                 {
-                    /*if (hasLot)
-                    {
-                        component2.m_Curve = NetUtils.AdjustPosition(curve4, flag2, flag, flag3, ref lotInfo).m_Bezier;
-                        component2.m_Curve.a.y += curve.a.y;
-                        component2.m_Curve.b.y += curve.b.y;
-                        component2.m_Curve.c.y += curve.c.y;
-                        component2.m_Curve.d.y += curve.d.y;
-                    }
-                    else*/
-                    {
-                        component2.m_Curve = curve4.m_Bezier;
-                    }
+                    component2.m_Curve = curve4.m_Bezier;
                 }
                 else
                 {
@@ -787,9 +775,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             {
                 DynamicBuffer<Game.Prefabs.SubNet> subNets = m_PrefabSubNets[prefab];
                 NativeList<float4> nodePositions = new NativeList<float4>(subNets.Length * 2, Allocator.Temp);
-                // BuildingUtils.LotInfo lotInfo = default;
-                // bool ownerLot = GetOwnerLot(Entity.Null, out lotInfo);
-                // bool ownerLot = false;
+
                 for (int i = 0; i < subNets.Length; i++)
                 {
                     Game.Prefabs.SubNet subNet = subNets[i];
@@ -880,10 +866,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                             continue;
                         }
                     }
-                    /*else if (areaGeometryData.m_Type == AreaType.Lot && false)
-                    {
-                        continue;
-                    }*/
+
+
                     Entity e = m_CommandBuffer.CreateEntity();
                     CreationDefinition component = default(CreationDefinition);
                     component.m_Prefab = subArea.m_Prefab;
@@ -900,7 +884,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     }
                     DynamicBuffer<Game.Areas.Node> dynamicBuffer3 = m_CommandBuffer.AddBuffer<Game.Areas.Node>(e);
                     dynamicBuffer3.ResizeUninitialized(subArea.m_NodeRange.y - subArea.m_NodeRange.x + 1);
-                    // DynamicBuffer<LocalNodeCache> dynamicBuffer4 = default(DynamicBuffer<LocalNodeCache>);
 
 
                     int num = ObjectToolBaseSystem.GetFirstNodeIndex(dynamicBuffer2, subArea.m_NodeRange);
@@ -922,21 +905,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     }
                 }
             }
-        }
-
-        private bool HasEdgeStartOrEnd(Entity node, Entity owner)
-        {
-            DynamicBuffer<ConnectedEdge> dynamicBuffer = m_ConnectedEdges[node];
-            for (int i = 0; i < dynamicBuffer.Length; i++)
-            {
-                Entity edge = dynamicBuffer[i].m_Edge;
-                Edge edge2 = m_EdgeData[edge];
-                if ((edge2.m_Start == node || edge2.m_End == node) && m_OwnerData.HasComponent(edge) && m_OwnerData[edge].m_Owner == owner)
-                {
-                    return true;
-                }
-            }
-            return false;
         }
     }
 
