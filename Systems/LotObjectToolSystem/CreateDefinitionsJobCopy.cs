@@ -59,27 +59,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public NativeReference<AttachmentData> m_AttachmentPrefab;
 
         [ReadOnly]
-        public ComponentLookup<Owner> m_OwnerData;
-
-        [ReadOnly]
-        public ComponentLookup<Game.Objects.Transform> m_TransformData;
-
-        [ReadOnly]
-        public ComponentLookup<Attached> m_AttachedData;
-
-        [ReadOnly]
-        public ComponentLookup<LocalTransformCache> m_LocalTransformCacheData;
-
-        [ReadOnly]
-        public ComponentLookup<Game.Objects.Elevation> m_ElevationData;
-
-        [ReadOnly]
-        public ComponentLookup<Building> m_BuildingData;
-
-        [ReadOnly]
-        public ComponentLookup<Game.Buildings.Lot> m_LotData;
-
-        [ReadOnly]
         public ComponentLookup<Edge> m_EdgeData;
 
         [ReadOnly]
@@ -95,25 +74,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public ComponentLookup<Orphan> m_OrphanData;
 
         [ReadOnly]
-        public ComponentLookup<Upgraded> m_UpgradedData;
-
-        [ReadOnly]
-        public ComponentLookup<Clear> m_AreaClearData;
-
-        [ReadOnly]
         public ComponentLookup<Composition> m_CompositionData;
-
-        [ReadOnly]
-        public ComponentLookup<Game.Areas.Space> m_AreaSpaceData;
-
-        [ReadOnly]
-        public ComponentLookup<Game.Areas.Lot> m_AreaLotData;
-
-        [ReadOnly]
-        public ComponentLookup<EditorContainer> m_EditorContainerData;
-
-        [ReadOnly]
-        public ComponentLookup<PrefabRef> m_PrefabRefData;
 
         [ReadOnly]
         public ComponentLookup<NetObjectData> m_PrefabNetObjectData;
@@ -125,13 +86,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public ComponentLookup<AssetStampData> m_PrefabAssetStampData;
 
         [ReadOnly]
-        public ComponentLookup<BuildingExtensionData> m_PrefabBuildingExtensionData;
-
-        [ReadOnly]
         public ComponentLookup<SpawnableObjectData> m_PrefabSpawnableObjectData;
-
-        [ReadOnly]
-        public ComponentLookup<ObjectGeometryData> m_PrefabObjectGeometryData;
 
         [ReadOnly]
         public ComponentLookup<PlaceableObjectData> m_PrefabPlaceableObjectData;
@@ -141,12 +96,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly]
         public ComponentLookup<PlaceholderBuildingData> m_PlaceholderBuildingData;
-
-        [ReadOnly]
-        public ComponentLookup<BrushData> m_PrefabBrushData;
-
-        [ReadOnly]
-        public ComponentLookup<BuildingTerraformData> m_PrefabBuildingTerraformData;
 
         [ReadOnly]
         public ComponentLookup<CreatureSpawnData> m_PrefabCreatureSpawnData;
@@ -161,34 +110,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public ComponentLookup<NetCompositionData> m_PrefabCompositionData;
 
         [ReadOnly]
-        public BufferLookup<LocalNodeCache> m_CachedNodes;
-
-        [ReadOnly]
-        public BufferLookup<InstalledUpgrade> m_InstalledUpgrades;
-
-        [ReadOnly]
-        public BufferLookup<Game.Net.SubNet> m_SubNets;
-
-        [ReadOnly]
         public BufferLookup<ConnectedEdge> m_ConnectedEdges;
-
-        [ReadOnly]
-        public BufferLookup<Game.Areas.SubArea> m_SubAreas;
-
-        [ReadOnly]
-        public BufferLookup<Game.Areas.Node> m_AreaNodes;
-
-        [ReadOnly]
-        public BufferLookup<Triangle> m_AreaTriangles;
 
         [ReadOnly]
         public BufferLookup<Game.Prefabs.SubObject> m_PrefabSubObjects;
 
         [ReadOnly]
         public BufferLookup<Game.Prefabs.SubNet> m_PrefabSubNets;
-
-        [ReadOnly]
-        public BufferLookup<Game.Prefabs.SubLane> m_PrefabSubLanes;
 
         [ReadOnly]
         public BufferLookup<Game.Prefabs.SubArea> m_PrefabSubAreas;
@@ -201,15 +129,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         [ReadOnly]
         public BufferLookup<ObjectRequirementElement> m_PrefabRequirementElements;
-
-        [ReadOnly]
-        public BufferLookup<ServiceUpgradeBuilding> m_PrefabServiceUpgradeBuilding;
-
-        [ReadOnly]
-        public BufferLookup<BrushCell> m_PrefabBrushCells;
-
-        [ReadOnly]
-        public NativeQuadTree<Entity, QuadTreeBoundsXZ> m_ObjectSearchTree;
 
         [ReadOnly]
         public WaterSurfaceData m_WaterSurfaceData;
