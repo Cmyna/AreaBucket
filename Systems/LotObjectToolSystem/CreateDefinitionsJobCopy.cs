@@ -280,7 +280,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
                     UpdateObject(
                         objectPrefabEntity, 
-                        m_TransformPrefab, // it is Entity.Null
+                        Entity.Null, // it is Entity.Null
                         startPoint.m_OriginalEntity, 
                         new Game.Objects.Transform(startPoint.m_Position, startPoint.m_Rotation), 
                         startPoint.m_Elevation, 
