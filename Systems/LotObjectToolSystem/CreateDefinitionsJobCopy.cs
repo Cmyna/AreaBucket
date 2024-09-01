@@ -809,7 +809,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             ref Unity.Mathematics.Random random
             )
         {
-            bool flag = original == Entity.Null || (relocate && false);
+            bool flag = true;
             if (flag && topLevel && m_PrefabSubNets.HasBuffer(prefab))
             {
                 DynamicBuffer<Game.Prefabs.SubNet> subNets = m_PrefabSubNets[prefab];
@@ -849,7 +849,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 }
                 nodePositions.Dispose();
             }
-            if (!m_SubNets.HasBuffer(original))
+            /*if (!m_SubNets.HasBuffer(original))
             {
                 return;
             }
@@ -1019,7 +1019,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (nodePositions3.IsCreated)
             {
                 nodePositions3.Dispose();
-            }
+            }*/
         }
 
         private void UpdateSubAreas(
