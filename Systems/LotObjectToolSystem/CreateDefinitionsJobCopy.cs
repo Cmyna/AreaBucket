@@ -239,9 +239,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             ControlPoint startPoint = m_ControlPoints[0];
 
             // Entity ownerEntity = Entity.Null;
-            Entity originalEntity = Entity.Null;
+            // Entity originalEntity = Entity.Null;
             Entity updatedTopLevel = Entity.Null;
-            Entity lotEntity = Entity.Null;
+            // Entity lotEntity = Entity.Null;
             OwnerDefinition ownerDefinition = default(OwnerDefinition);
             bool upgrade = false;
             // bool hasOriginalEntity = false;
@@ -250,7 +250,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
 
             // checked by Scene Explorer Mod, m_PrefabNetObjectData (NetObjectData) is used for stop prefab
-            if (
+            /*if (
                 m_PrefabNetObjectData.HasComponent(m_ObjectPrefab) && 
                 m_AttachedData.HasComponent(startPoint.m_OriginalEntity) && 
                 (!m_OwnerData.HasComponent(startPoint.m_OriginalEntity))
@@ -263,7 +263,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     startPoint.m_OriginalEntity = attached.m_Parent;
                     upgrade = true;
                 }
-            }
+            }*/
 
 
             // Owner componentData4;
@@ -345,8 +345,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     // looks like the random prefab picking a actual prefab object by their probability
                     // I guess this one affects lots entities creations, maybe net entities (which has lots of placeholders) also depends on it
                     if (
-                        originalEntity == Entity.Null && 
-                        ownerDefinition.m_Prefab == Entity.Null && 
+                        // originalEntity == Entity.Null && 
+                        // ownerDefinition.m_Prefab == Entity.Null && 
                         m_PrefabPlaceholderElements.TryGetBuffer(m_ObjectPrefab, out var placeHolders) && 
                         !m_PrefabCreatureSpawnData.HasComponent(m_ObjectPrefab))
                     {
