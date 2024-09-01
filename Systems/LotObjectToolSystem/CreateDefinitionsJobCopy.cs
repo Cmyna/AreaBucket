@@ -545,9 +545,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             UpdateSubAreas(
                 transform, 
                 objectPrefab, 
-                Entity.Null /*original*/, 
-                relocate: false, 
-                rebuild: false, 
                 topLevel, 
                 ownerDefinition2, 
                 clearAreas, 
@@ -845,9 +842,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         private void UpdateSubAreas(
             Game.Objects.Transform transform, 
             Entity prefab, 
-            Entity original, 
-            bool relocate, 
-            bool rebuild, 
             bool topLevel, 
             OwnerDefinition ownerDefinition, 
             NativeList<ClearAreaData> clearAreas, 
@@ -855,7 +849,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             ref NativeParallelHashMap<Entity, int> selectedSpawnables
             )
         {
-            bool flag = original == Entity.Null || relocate || rebuild;
+            bool flag = true;
             if (flag && topLevel && m_PrefabSubAreas.HasBuffer(prefab))
             {
                 DynamicBuffer<Game.Prefabs.SubArea> dynamicBuffer = m_PrefabSubAreas[prefab];
@@ -888,10 +882,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                             continue;
                         }
                     }
-                    else if (areaGeometryData.m_Type == AreaType.Lot && rebuild)
+                    /*else if (areaGeometryData.m_Type == AreaType.Lot && false)
                     {
                         continue;
-                    }
+                    }*/
                     Entity e = m_CommandBuffer.CreateEntity();
                     CreationDefinition component = default(CreationDefinition);
                     component.m_Prefab = subArea.m_Prefab;
@@ -908,7 +902,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     }
                     DynamicBuffer<Game.Areas.Node> dynamicBuffer3 = m_CommandBuffer.AddBuffer<Game.Areas.Node>(e);
                     dynamicBuffer3.ResizeUninitialized(subArea.m_NodeRange.y - subArea.m_NodeRange.x + 1);
-                    DynamicBuffer<LocalNodeCache> dynamicBuffer4 = default(DynamicBuffer<LocalNodeCache>);
+                    // DynamicBuffer<LocalNodeCache> dynamicBuffer4 = default(DynamicBuffer<LocalNodeCache>);
 
 
                     int num = ObjectToolBaseSystem.GetFirstNodeIndex(dynamicBuffer2, subArea.m_NodeRange);
@@ -930,6 +924,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     }
                 }
             }
+
+            /*
             if (!m_SubAreas.HasBuffer(original))
             {
                 return;
@@ -972,7 +968,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     DynamicBuffer<LocalNodeCache> dynamicBuffer6 = m_CachedNodes[area];
                     m_CommandBuffer.AddBuffer<LocalNodeCache>(e2).CopyFrom(dynamicBuffer6.AsNativeArray());
                 }
-            }
+            }*/
         }
 
         private bool HasEdgeStartOrEnd(Entity node, Entity owner)
