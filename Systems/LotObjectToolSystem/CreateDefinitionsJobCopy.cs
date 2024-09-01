@@ -652,8 +652,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             Game.Objects.Transform parentTransform, 
             OwnerDefinition ownerDefinition, 
             NativeList<ClearAreaData> clearAreas, 
-            BuildingUtils.LotInfo lotInfo, 
-            bool hasLot, 
             ref Unity.Mathematics.Random random)
         {
             m_PrefabNetGeometryData.TryGetComponent(netPrefab, out var componentData);
@@ -681,7 +679,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 flag = flag2 || flag3;
                 if ((componentData.m_Flags & Game.Net.GeometryFlags.FlattenTerrain) != 0)
                 {
-                    if (hasLot)
+                    /*if (hasLot)
                     {
                         component2.m_Curve = NetUtils.AdjustPosition(curve4, flag2, flag, flag3, ref lotInfo).m_Bezier;
                         component2.m_Curve.a.y += curve.a.y;
@@ -689,7 +687,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                         component2.m_Curve.c.y += curve.c.y;
                         component2.m_Curve.d.y += curve.d.y;
                     }
-                    else
+                    else*/
                     {
                         component2.m_Curve = curve4.m_Bezier;
                     }
@@ -775,20 +773,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        private bool GetOwnerLot(Entity lotOwner, out BuildingUtils.LotInfo lotInfo)
-        {
-            if (m_LotData.TryGetComponent(lotOwner, out var componentData) && m_TransformData.TryGetComponent(lotOwner, out var componentData2) && m_PrefabRefData.TryGetComponent(lotOwner, out var componentData3) && m_PrefabBuildingData.TryGetComponent(componentData3.m_Prefab, out var componentData4))
-            {
-                float2 extents = new float2(componentData4.m_LotSize) * 4f;
-                m_ElevationData.TryGetComponent(lotOwner, out var componentData5);
-                m_InstalledUpgrades.TryGetBuffer(lotOwner, out var bufferData);
-                lotInfo = BuildingUtils.CalculateLotInfo(extents, componentData2, componentData5, componentData, componentData3, bufferData, m_TransformData, m_PrefabRefData, m_PrefabObjectGeometryData, m_PrefabBuildingTerraformData, m_PrefabBuildingExtensionData, defaultNoSmooth: false, out var _);
-                return true;
-            }
-            lotInfo = default(BuildingUtils.LotInfo);
-            return false;
-        }
-
         private void UpdateSubNets(
             Game.Objects.Transform transform, 
             Entity prefab, 
@@ -803,8 +787,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             {
                 DynamicBuffer<Game.Prefabs.SubNet> subNets = m_PrefabSubNets[prefab];
                 NativeList<float4> nodePositions = new NativeList<float4>(subNets.Length * 2, Allocator.Temp);
-                BuildingUtils.LotInfo lotInfo;
-                bool ownerLot = GetOwnerLot(Entity.Null, out lotInfo);
+                // BuildingUtils.LotInfo lotInfo = default;
+                // bool ownerLot = GetOwnerLot(Entity.Null, out lotInfo);
+                // bool ownerLot = false;
                 for (int i = 0; i < subNets.Length; i++)
                 {
                     Game.Prefabs.SubNet subNet = subNets[i];
@@ -834,7 +819,19 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 for (int k = 0; k < subNets.Length; k++)
                 {
                     Game.Prefabs.SubNet subNet2 = NetUtils.GetSubNet(subNets, k, m_LefthandTraffic, ref m_PrefabNetGeometryData);
-                    CreateSubNet(subNet2.m_Prefab, Entity.Null, subNet2.m_Curve, subNet2.m_NodeIndex, subNet2.m_ParentMesh, subNet2.m_Upgrades, nodePositions, transform, ownerDefinition, clearAreas, lotInfo, ownerLot, ref random);
+                    CreateSubNet(
+                        subNet2.m_Prefab, 
+                        Entity.Null, 
+                        subNet2.m_Curve, 
+                        subNet2.m_NodeIndex, 
+                        subNet2.m_ParentMesh, 
+                        subNet2.m_Upgrades, 
+                        nodePositions, 
+                        transform, 
+                        ownerDefinition, 
+                        clearAreas, 
+                        ref random
+                        );
                 }
                 nodePositions.Dispose();
             }
