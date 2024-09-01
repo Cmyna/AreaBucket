@@ -486,7 +486,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     if (m_PrefabNetObjectData.HasComponent(objectPrefab))
                     {
                         entity = parent;
-                        UpdateAttachedParent(parent, Entity.Null);
+                        UpdateAttachedParent(parent);
                     }
                     else
                     {
@@ -533,18 +533,18 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             NativeParallelHashMap<Entity, int> selectedSpawnables = default(NativeParallelHashMap<Entity, int>);
             Game.Objects.Transform mainInverseTransform = transform;
 
-            UpdateSubObjects(
+            /*UpdateSubObjects(
                 transform, 
                 transform, 
                 mainInverseTransform, 
-                Entity.Null /*original*/, 
+                Entity.Null, // orignal
                 relocate: false, 
                 rebuild: false, 
                 isParent: false, 
                 ownerDefinition2, 
                 ref random, 
                 ref selectedSpawnables
-                );
+                );*/
 
             UpdateSubNets(
                 transform, 
@@ -558,6 +558,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 ownerDefinition2, 
                 clearAreas, 
                 ref random);
+
             UpdateSubAreas(
                 transform, 
                 objectPrefab, 
@@ -576,10 +577,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
         }
 
-        private void UpdateAttachedParent(
-            Entity parent,
-            Entity updatedTopLevel // Entity.Null
-            )
+        private void UpdateAttachedParent(Entity parent)
         {
 
 
