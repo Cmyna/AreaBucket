@@ -535,16 +535,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
             UpdateSubNets(
                 transform, 
-                transform, 
-                mainInverseTransform, 
-                objectPrefab, 
-                Entity.Null /*original*/,
+                objectPrefab,
                 Entity.Null /*lotEntity*/, 
-                relocate: false, 
                 topLevel, 
                 ownerDefinition2, 
                 clearAreas, 
-                ref random);
+                ref random
+                );
 
             UpdateSubAreas(
                 transform, 
@@ -797,12 +794,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         private void UpdateSubNets(
             Game.Objects.Transform transform, 
-            Game.Objects.Transform mainTransform, 
-            Game.Objects.Transform mainInverseTransform, 
             Entity prefab, 
-            Entity original, 
             Entity lotEntity, 
-            bool relocate, 
             bool topLevel, 
             OwnerDefinition ownerDefinition, 
             NativeList<ClearAreaData> clearAreas, 
