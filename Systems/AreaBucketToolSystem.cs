@@ -4,6 +4,7 @@ using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
 using AreaBucket.Utils;
 using Colossal;
+using Colossal.Collections;
 using Colossal.Logging;
 using Colossal.Mathematics;
 using Game.Areas;
@@ -17,15 +18,14 @@ using Game.Simulation;
 using Game.Tools;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
+using Unity.Profiling;
 using UnityEngine.InputSystem;
-using UnityEngine.Rendering;
-using static Colossal.AssetPipeline.Diagnostic.Report;
+using UnityEngine.Profiling;
 
 namespace AreaBucket.Systems
 {
@@ -72,7 +72,7 @@ namespace AreaBucket.Systems
         /// <summary>
         /// the boundary for area filling tool
         /// </summary>
-        public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot;
+        public BoundaryMask BoundaryMask { get; set; } = BoundaryMask.Area | BoundaryMask.Net | BoundaryMask.Lot | BoundaryMask.NetLane;
 
 
         public bool UseExperimentalOptions => Mod.modSetting?.UseExperientalOption ?? false;
@@ -82,7 +82,7 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool CheckOcclusion { get; set; } = true;
 
-        public bool ExtraPoints { get; set; } = false;
+        public bool CheckBoundariesCrossing { get; set; } = false;
 
         public bool CheckIntersection { get; set; } = true;
 
@@ -135,7 +135,7 @@ namespace AreaBucket.Systems
         /// <summary>
         /// restrict the algorithm flooding depth in one loop
         /// </summary>
-        public int RecursiveFloodingDepth { get; set;} = 1;
+        public int RecursiveFloodingDepth { get; set; } = 1;
 
         /// <summary>
         /// restrict the flooding max times
@@ -147,10 +147,19 @@ namespace AreaBucket.Systems
         /// </summary>
         public bool RecursiveFlooding { get; set; } = true;
 
-        public bool UseNewNetLaneCollect { get; set; } = true;
+        public bool PreviewSurface
+        {
+            get => Mod.modSetting?.PreviewSurface ?? false;
+            set 
+            {
+                if (Mod.modSetting == null) return;
+                Mod.modSetting.PreviewSurface = value;
+            }
+        }
 
-        public bool PreviewSurface { get; set; } = false;
+        public bool OcclusionUseOldWay = false;
 
+        public float Curve2LineAngleLimit = 5f;
 
         private AudioManager _audioManager;
 
@@ -170,9 +179,13 @@ namespace AreaBucket.Systems
 
         private Game.Net.SearchSystem _netSearchSystem;
 
+        private Game.Areas.SearchSystem _areaSearchSystem;
+
         private int frameCount = 0;
 
         private System.Diagnostics.Stopwatch timer;
+
+        private int usedBoundariesCount = 0;
 
         protected override void OnCreate()
         {
@@ -187,6 +200,7 @@ namespace AreaBucket.Systems
             _toolOutputBarrier = World.GetOrCreateSystemManaged<ToolOutputBarrier>();
             _gizmosSystem = World.GetOrCreateSystemManaged<GizmosSystem>();
             _netSearchSystem = World.GetOrCreateSystemManaged<Game.Net.SearchSystem>();
+            _areaSearchSystem = World.GetOrCreateSystemManaged<Game.Areas.SearchSystem>();
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
@@ -194,7 +208,7 @@ namespace AreaBucket.Systems
             BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             timer = new System.Diagnostics.Stopwatch();
-            
+
 
             OnInitEntityQueries();
             CreateDebugPanel();
@@ -225,12 +239,6 @@ namespace AreaBucket.Systems
             AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
             if (Mod.modSetting?.DrawAreaOverlay == true) requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
 
-
-            if (_applyAction != null) // temporary use reflection to set it enabled
-            {
-                _applyAction.GetType().GetProperty(nameof(ProxyAction.enabled)).SetValue(_applyAction, true);
-            }
-
             applyMode = ApplyMode.Clear;
             if (!GetRaycastResult(out var raycastPoint))
             {
@@ -249,7 +257,15 @@ namespace AreaBucket.Systems
             }
 
             ClearJobTimeProfiles();
+            Stopwatch stopwatch = null;
+            if (WatchJobTime) stopwatch = Stopwatch.StartNew();
             var newHandle = StartAlgorithm(inputDeps, raycastPoint);
+            if (WatchJobTime && stopwatch != null)
+            {
+                newHandle.Complete();
+                AddJobTime("totalTimeCost", (float)stopwatch.Elapsed.TotalMilliseconds);
+            }
+
             //var newHandle = ApplyBucket(inputDeps, raycastPoint);
 
             return newHandle;
@@ -281,7 +297,7 @@ namespace AreaBucket.Systems
         {
             ToolEnabled = CanEnable(prefab);
             if (ToolEnabled) _selectedPrefab = prefab as AreaPrefab;
-            return ToolEnabled && Active; 
+            return ToolEnabled && Active;
         }
 
         /// <summary>
@@ -293,7 +309,7 @@ namespace AreaBucket.Systems
         {
             if (!(prefab is AreaPrefab)) return false; // if selected prefab is not area prefab, it will not be enabled
             // if prefab is District or Lot prefab, not enabled
-            if (prefab is DistrictPrefab) return false; 
+            if (prefab is DistrictPrefab) return false;
             if (prefab is LotPrefab) return false;
             return true;
         }
@@ -312,70 +328,81 @@ namespace AreaBucket.Systems
         /// <returns></returns>
         private JobHandle ScheduleDataCollection(JobHandle inputDeps, SingletonData singletonData)
         {
+            var profileJobTime = WatchJobTime;
             var jobHandle = inputDeps;
             if (BoundaryMask.Match(BoundaryMask.Net))
             {
-                var collectNetEdgesJob = default(CollectNetEdges).InitContext(singletonData, BoundaryMask);
-                collectNetEdgesJob.thEdgeGeo = SystemAPI.GetComponentTypeHandle<EdgeGeometry>();
-                collectNetEdgesJob.thStartNodeGeometry = SystemAPI.GetComponentTypeHandle<StartNodeGeometry>();
-                collectNetEdgesJob.thEndNodeGeometry = SystemAPI.GetComponentTypeHandle<EndNodeGeometry>();
-                collectNetEdgesJob.thComposition = SystemAPI.GetComponentTypeHandle<Composition>();
-                collectNetEdgesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
+                var netSearchTree = _netSearchSystem.GetNetSearchTree(readOnly: true, out var netSearchDeps);
+                jobHandle = JobHandle.CombineDependencies(jobHandle, netSearchDeps);
+                var collectNetEdgesJob = default(CollectNetEdges).InitContext(singletonData, BoundaryMask, netSearchTree);
+                collectNetEdgesJob.luEdgeGeo = SystemAPI.GetComponentLookup<EdgeGeometry>();
+                collectNetEdgesJob.luStartNodeGeometry = SystemAPI.GetComponentLookup<StartNodeGeometry>();
+                collectNetEdgesJob.luEndNodeGeometry = SystemAPI.GetComponentLookup<EndNodeGeometry>();
+                collectNetEdgesJob.luComposition = SystemAPI.GetComponentLookup<Composition>();
+                collectNetEdgesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
                 collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
                 // subnet mask is experimental (for performance issue)
                 if (collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
                 // if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
-                jobHandle = Schedule(collectNetEdgesJob, netEntityQuery, jobHandle);
+                jobHandle = Schedule(collectNetEdgesJob, jobHandle);
             }
             if (BoundaryMask.Match(BoundaryMask.Area))
             {
-                var collectAreaLinesJob = default(CollectAreaLines).InitContext(singletonData);
-                collectAreaLinesJob.bthNode = SystemAPI.GetBufferTypeHandle<Game.Areas.Node>();
-                collectAreaLinesJob.bthTriangle = SystemAPI.GetBufferTypeHandle<Triangle>();
-                collectAreaLinesJob.cthArea = SystemAPI.GetComponentTypeHandle<Area>();
-                jobHandle = Schedule(collectAreaLinesJob, areaEntityQuery, jobHandle);
+                var areaSearchTree = _areaSearchSystem.GetSearchTree(readOnly: true, out var areaSearchDeps);
+                jobHandle = JobHandle.CombineDependencies(jobHandle, areaSearchDeps);
+                var collectAreaLinesJob = default(CollectAreaLines).InitContext(singletonData, areaSearchTree);
+                collectAreaLinesJob.bluNode = SystemAPI.GetBufferLookup<Game.Areas.Node>();
+                collectAreaLinesJob.bluTriangle = SystemAPI.GetBufferLookup<Triangle>();
+                collectAreaLinesJob.cluArea = SystemAPI.GetComponentLookup<Area>();
+                collectAreaLinesJob.cluDistrict = SystemAPI.GetComponentLookup<District>();
+                collectAreaLinesJob.cluMapTile = SystemAPI.GetComponentLookup<MapTile>();
+                collectAreaLinesJob.cluSurfacePreviewMarker = SystemAPI.GetComponentLookup<SurfacePreviewMarker>();
+                jobHandle = Schedule(collectAreaLinesJob, jobHandle);
             }
             if (BoundaryMask.Match(BoundaryMask.Lot))
             {
-                var collectLotLines = default(CollectLotLines).InitContext(singletonData);
+                Stopwatch collectLotLineStopwatch = null;
+                if (profileJobTime) collectLotLineStopwatch = Stopwatch.StartNew();
+                var lotLineQueue = new NativeQueue<Line2>(Allocator.TempJob);
+                var collectLotLines = default(CollectLotLines).InitContext(singletonData, lotLineQueue);
                 collectLotLines.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
                 collectLotLines.thTransform = SystemAPI.GetComponentTypeHandle<Game.Objects.Transform>();
                 collectLotLines.thBuilding = SystemAPI.GetComponentTypeHandle<Building>();
                 collectLotLines.luBuildingData = SystemAPI.GetComponentLookup<BuildingData>();
                 collectLotLines.luObjectGeoData = SystemAPI.GetComponentLookup<ObjectGeometryData>();
-                jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
+                var collectLotLinesDeps = jobHandle;
+                jobHandle = collectLotLines.ScheduleParallel(lotEntityQuery, collectLotLinesDeps);
+                // jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
+                var collectLotLinesDeps2 = jobHandle;
+                jobHandle = Job.WithCode(() => {
+                    while (!lotLineQueue.IsEmpty())
+                    {
+                        singletonData.totalBoundaryLines.Add(lotLineQueue.Dequeue());
+                    }
+                }).WithBurst().Schedule(collectLotLinesDeps2);
+                lotLineQueue.Dispose(jobHandle);
+
+                if (profileJobTime)
+                {
+                    jobHandle.Complete();
+                    AddJobTime(nameof(CollectLotLines), collectLotLineStopwatch.ElapsedMilliseconds);
+                }
+
             }
             if (BoundaryMask.Match(BoundaryMask.NetLane))
             {
-                if (!UseNewNetLaneCollect)
-                {
-                    var collectNetLanesJob = default(CollectNetLaneCurves).InitContext(singletonData);
-                    collectNetLanesJob.thCurve = SystemAPI.GetComponentTypeHandle<Curve>();
-                    collectNetLanesJob.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
-                    collectNetLanesJob.thOwner = SystemAPI.GetComponentTypeHandle<Owner>();
-                    collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
-                    collectNetLanesJob.luSubLane = SystemAPI.GetBufferLookup<Game.Net.SubLane>();
-                    collectNetLanesJob.luRoad = SystemAPI.GetComponentLookup<Road>();
-                    collectNetLanesJob.luBuilding = SystemAPI.GetComponentLookup<Building>();
-                    collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
-                    jobHandle = Schedule(collectNetLanesJob, netLaneQuery, jobHandle);
-                }
-                else
-                {
-                    var searchTree = _netSearchSystem.GetLaneSearchTree(true, out var searchDeps);
-                    jobHandle = JobHandle.CombineDependencies(jobHandle, searchDeps);
-                    var collectNetLanesJob = default(CollectNetLaneCurves2).Init(singletonData, searchTree);
-                    collectNetLanesJob.luCurve = SystemAPI.GetComponentLookup<Curve>();
-                    collectNetLanesJob.luPrefabRef = SystemAPI.GetComponentLookup<PrefabRef>();
-                    collectNetLanesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
-                    collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
-                    collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
-                    jobHandle = Schedule(collectNetLanesJob, jobHandle);
-                }
-
+                var searchTree = _netSearchSystem.GetLaneSearchTree(true, out var searchDeps);
+                jobHandle = JobHandle.CombineDependencies(jobHandle, searchDeps);
+                var collectNetLanesJob = default(CollectNetLaneCurves).Init(singletonData, searchTree);
+                collectNetLanesJob.luCurve = SystemAPI.GetComponentLookup<Curve>();
+                collectNetLanesJob.luPrefabRef = SystemAPI.GetComponentLookup<PrefabRef>();
+                collectNetLanesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
+                collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
+                collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
+                jobHandle = Schedule(collectNetLanesJob, jobHandle);
             }
 
-            var curve2LinesJob = default(Curve2Lines).Init(singletonData, 8);
+            var curve2LinesJob = default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit);
             jobHandle = Schedule(curve2LinesJob, jobHandle);
 
             return jobHandle;
@@ -405,25 +432,16 @@ namespace AreaBucket.Systems
 
         private JobHandle Schedule(Func<JobHandle> scheduleFunc, string name)
         {
-            var missingDebugField = !jobTimeProfile.ContainsKey(name);
-            if (missingDebugField)
-            {
-                AppendJobTimeProfileView(name);
-                jobTimeProfile[name] = 0;
-            }
-
-
+            Stopwatch stopwatch = null;
             if (WatchJobTime)
             {
-                timer.Reset();
-                timer.Start();
+                stopwatch = Stopwatch.StartNew();
             }
             var jobHandle = scheduleFunc();
             if (WatchJobTime)
             {
                 jobHandle.Complete();
-                timer.Stop();
-                jobTimeProfile[name] += timer.ElapsedMilliseconds;
+                AddJobTime(name, (float)stopwatch.Elapsed.TotalMilliseconds);
             }
             return jobHandle;
         }
@@ -439,13 +457,13 @@ namespace AreaBucket.Systems
                 $"\tmin edge length: {MinEdgeLength}\n" +
                 $"\tuse experimental: {UseExperimentalOptions}\n" +
                 $"\tcheck occlusions: {CheckOcclusion}\n" +
-                $"\textra points: {ExtraPoints}\n" +
+                $"\textra points: {CheckBoundariesCrossing}\n" +
                 $"\tcheck intersection: {CheckIntersection}\n" +
                 $"\tprofile job time: {WatchJobTime}\n";
             logger.Info(msg);
         }
 
-        
+
     }
 
     public enum BoundaryMask
@@ -465,5 +483,4 @@ namespace AreaBucket.Systems
             return (mask & targetMask) != 0;
         }
     }
-
 }

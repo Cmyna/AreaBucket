@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Buildings;
 using Game.Objects;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
@@ -19,6 +21,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     /// <summary>
     /// convert building lots to lines
     /// </summary>
+    [BurstCompile]
     public struct CollectLotLines : IJobChunk
     {
 
@@ -38,12 +41,21 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         //public CommonContext context;
 
-        public SingletonData signletonData;
+        //public SingletonData singletonData;
 
-        public CollectLotLines InitContext(SingletonData signletonData)
+        private NativeQueue<Line2>.ParallelWriter lotLinesWriter;
+
+        private float2 playerHitPos;
+
+        private float fillingRange;
+
+        public CollectLotLines InitContext(SingletonData singletonData, NativeQueue<Line2> lotLinesCollectorQueue)
         {
             //this.context = context;
-            this.signletonData = signletonData;
+            //this.singletonData = singletonData;
+            playerHitPos = singletonData.playerHitPos;
+            fillingRange = singletonData.fillingRange;
+            lotLinesWriter = lotLinesCollectorQueue.AsParallelWriter();
             return this;
         }
 
@@ -125,8 +137,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var max = math.max(p1, p2); max = math.max(max, p3); max = math.max(max, p4);
             var bounds = new Bounds2(min.xz, max.xz);
 
-            var hitPos = signletonData.playerHitPos;
-            var filterRange = signletonData.fillingRange;
+            var hitPos = playerHitPos;
+            var filterRange = fillingRange;
             var dist = MathUtils.Distance(bounds, hitPos);
             if (dist > filterRange) return;
 
@@ -140,10 +152,15 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var l3 = new Line2(p3.xz, p4.xz);
             var l4 = new Line2(p4.xz, p1.xz);
 
-            signletonData.totalBoundaryLines.Add(l1); 
-            signletonData.totalBoundaryLines.Add(l2);
-            signletonData.totalBoundaryLines.Add(l3);
-            signletonData.totalBoundaryLines.Add(l4);
+
+            lotLinesWriter.Enqueue(l1);
+            lotLinesWriter.Enqueue(l2);
+            lotLinesWriter.Enqueue(l3);
+            lotLinesWriter.Enqueue(l4);
+            /*singletonData.totalBoundaryLines.Add(l1); 
+            singletonData.totalBoundaryLines.Add(l2);
+            singletonData.totalBoundaryLines.Add(l3);
+            singletonData.totalBoundaryLines.Add(l4);*/
 
         }
 

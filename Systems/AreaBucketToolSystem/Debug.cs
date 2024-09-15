@@ -65,15 +65,19 @@ namespace AreaBucket.Systems
                     setter = (v) => CheckOcclusion = v,
                 },
 
-                // TEMP: for comparing old & new net lane collecting
                 new DebugUI.BoolField
                 {
-                    displayName = nameof(UseNewNetLaneCollect),
-                    getter = () => UseNewNetLaneCollect,
-                    setter = (v) => UseNewNetLaneCollect = v
+                    displayName = "Check Boundaries Crossing",
+                    getter = () => CheckBoundariesCrossing,
+                    setter = (v) => CheckBoundariesCrossing = v,
                 },
 
-
+                new DebugUI.BoolField
+                {
+                    displayName = nameof(OcclusionUseOldWay),
+                    getter = () => OcclusionUseOldWay,
+                    setter = (v) => OcclusionUseOldWay = v
+                },
 
                 new DebugUI.BoolField
                 {
@@ -103,6 +107,15 @@ namespace AreaBucket.Systems
                     incStep = 1,
                     getter = () => MaxFloodingTimes,
                     setter = (v) => MaxFloodingTimes = math.clamp(v, 1, 32)
+                },
+
+                new DebugUI.FloatField
+                {
+                    displayName = nameof(Curve2LineAngleLimit),
+                    incStep = 1f,
+                    min = () => 0f, max = () => 30f,
+                    getter = () => Curve2LineAngleLimit,
+                    setter = (v) => Curve2LineAngleLimit = v,
                 },
 
                 CreateVisualizeDebugUI(),
@@ -231,6 +244,17 @@ namespace AreaBucket.Systems
                     },
                 }
             );
+        }
+
+
+        private void AddJobTime(string jobName, float time)
+        {
+            if (!jobTimeProfile.ContainsKey(jobName))
+            {
+                AppendJobTimeProfileView(jobName);
+                jobTimeProfile[jobName] = 0;
+            }
+            jobTimeProfile[jobName] += time;
         }
 
 

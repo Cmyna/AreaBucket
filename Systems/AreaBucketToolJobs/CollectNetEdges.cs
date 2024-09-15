@@ -1,4 +1,6 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using AreaBucket.Utils;
+using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Common;
 using Game.Net;
@@ -16,47 +18,63 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 {
 
     [BurstCompile]
-    public struct CollectNetEdges: IJobChunk
+    public struct CollectNetEdges: IJob
     {
-        [ReadOnly] public ComponentTypeHandle<EdgeGeometry> thEdgeGeo;
+        [ReadOnly] public ComponentLookup<EdgeGeometry> luEdgeGeo;
 
-        [ReadOnly] public ComponentTypeHandle<StartNodeGeometry> thStartNodeGeometry;
+        [ReadOnly] public ComponentLookup<StartNodeGeometry> luStartNodeGeometry;
 
-        [ReadOnly] public ComponentTypeHandle<EndNodeGeometry> thEndNodeGeometry;
+        [ReadOnly] public ComponentLookup<EndNodeGeometry> luEndNodeGeometry;
 
-        [ReadOnly] public ComponentTypeHandle<Composition> thComposition;
+        [ReadOnly] public ComponentLookup<Composition> luComposition;
 
-        [ReadOnly] public ComponentTypeHandle<Owner> thOwner;
+        [ReadOnly] public ComponentLookup<Owner> luOwner;
+
+        [ReadOnly] public ComponentLookup<EdgeGeometry> luEdgeGeometry;
 
         [ReadOnly] public ComponentLookup<NetCompositionData> luCompositionData;
+
+        public NativeQuadTree<Entity, QuadTreeBoundsXZ> netSearchTree;
 
         public BoundaryMask mask;
 
         public SingletonData signletonData;
 
-        public CollectNetEdges InitContext(SingletonData signletonData, BoundaryMask mask)
+        public CollectNetEdges InitContext(
+            SingletonData signletonData, 
+            BoundaryMask mask, 
+            NativeQuadTree<Entity, QuadTreeBoundsXZ> netSearchTree
+            )
         {
             this.mask = mask;
             this.signletonData = signletonData;
+            this.netSearchTree = netSearchTree;
             return this;
         }
 
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        public void Execute()
         {
-            // check mask has subnet filter or not
-            var isSubnet = chunk.Has(ref thOwner);
-            var useSubNetAsBounds = (mask & BoundaryMask.SubNet) != 0;
-            if (isSubnet && !useSubNetAsBounds) return;
+            var candidateEntites = new NativeList<Entity>(Allocator.Temp);
+            var iterator = new In2DHitRangeEntitesIterator<Entity>();
+            iterator.items = candidateEntites;
+            iterator.hitPos = signletonData.playerHitPos;
+            iterator.range = signletonData.fillingRange;
+            netSearchTree.Iterate(ref iterator);
 
-            var geos = chunk.GetNativeArray(ref thEdgeGeo);
-            var startNodeGeos = chunk.GetNativeArray(ref thStartNodeGeometry);
-            var endNodeGeos = chunk.GetNativeArray(ref thEndNodeGeometry);
-            var compositions = chunk.GetNativeArray(ref thComposition);
-            for (var i = 0; i < geos.Length; i++)
+            for (int i = 0; i < candidateEntites.Length; i++)
             {
-                if (!IsBounds(luCompositionData[compositions[i].m_Edge])) continue;
-                var geo = geos[i];
-                
+                var entity = candidateEntites[i];
+                var isSubnet = luOwner.HasComponent(entity);
+                var useSubNetAsBounds = (mask & BoundaryMask.SubNet) != 0;
+                if (isSubnet && !useSubNetAsBounds) continue;
+
+                if (!luEdgeGeo.TryGetComponent(entity, out var geo)) continue;
+                if (!luStartNodeGeometry.TryGetComponent(entity, out var startNodeGeo)) continue;
+                if (!luEndNodeGeometry.TryGetComponent(entity, out var endNodeGeo)) continue;
+                if (!luComposition.TryGetComponent(entity, out var composition)) continue;
+
+                if (!IsBounds(luCompositionData[composition.m_Edge])) continue;
+
                 var distance = MathUtils.Distance(geo.m_Bounds.xz, signletonData.playerHitPos);
                 if (distance > signletonData.fillingRange) continue;
 
@@ -66,8 +84,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 signletonData.curves.Add(geo.m_End.m_Left);
                 signletonData.curves.Add(geo.m_End.m_Right);
 
-                TryAddNodeGeometry(startNodeGeos[i].m_Geometry);
-                TryAddNodeGeometry(endNodeGeos[i].m_Geometry);
+                TryAddNodeGeometry(startNodeGeo.m_Geometry);
+                TryAddNodeGeometry(endNodeGeo.m_Geometry);
             }
         }
 
@@ -120,13 +138,5 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         }
 
 
-        public void InitHandles(ref SystemState state)
-        {
-            thComposition.Update(ref state);
-            thEdgeGeo.Update(ref state);
-            thEndNodeGeometry.Update(ref state);
-            thEndNodeGeometry.Update(ref state);
-            luCompositionData.Update(ref state);
-        }
     }
 }

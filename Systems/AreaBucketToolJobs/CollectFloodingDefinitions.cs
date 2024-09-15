@@ -87,9 +87,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var vector = line.b - line.a;
             var middle = math.lerp(line.a, line.b, 0.5f);
             float2 xzUp = new float2(0, 1);
+            // TODO: while offset 'outside', some consequence is several final generated points almost collinear and break the polygon shape
+            // which happens on flooding depth > 1 and flooding start line collinear to other boundaries
+            // one way is move flooding inside and disable flooding candidate line's intersection checking
             // FIX: it is better to move "out side of" flooded polygons, it should be left hande side (counter clock wise) of line vector
             // well it seems should be right hand side / clockwise ...
-            var v = Utils.Math.PerpendicularClockwise(vector, 0.1f);
+            // var v = Utils.Math.PerpendicularClockwise(vector, 0.1f);
+            var v = Utils.Math.PerpendicularCounterClockwise(vector, 0.5f);
             var startPoint = middle + v;
 
             var r1 = Utils.Math.RadianInClock(xzUp, line.a - startPoint);

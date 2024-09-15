@@ -1,68 +1,74 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using AreaBucket.Utils;
+using Colossal.Collections;
 using Colossal.Mathematics;
-using Game.Buildings;
 using Game.Common;
 using Game.Net;
 using Game.Prefabs;
-using Game.Tools;
-using Unity.Burst.Intrinsics;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
-    public struct CollectNetLaneCurves : IJobChunk
+    [BurstCompile]
+    public struct CollectNetLaneCurves : IJob
     {
-        // public CommonContext context;
+        public NativeQuadTree<Entity, QuadTreeBoundsXZ> searchTree;
 
-        //[ReadOnly] public bool DropLaneOwnedByRoad;
+        public SingletonData singletonData;
 
-        //[ReadOnly] public bool DropLaneOwnedByBuilding;
-
-        [ReadOnly] public ComponentTypeHandle<Curve> thCurve;
-
-        [ReadOnly] public ComponentTypeHandle<PrefabRef> thPrefabRef;
-
-        [ReadOnly] public ComponentTypeHandle<Owner> thOwner;
+        [ReadOnly] public ComponentLookup<Owner> luOwner;
 
         [ReadOnly] public ComponentLookup<NetLaneGeometryData> luNetLaneGeoData;
 
-        [ReadOnly] public ComponentLookup<Road> luRoad;
+        [ReadOnly] public ComponentLookup<Curve> luCurve;
 
-        [ReadOnly] public ComponentLookup<Building> luBuilding;
+        [ReadOnly] public ComponentLookup<PrefabRef> luPrefabRef;
 
         [ReadOnly] public ComponentLookup<Game.Tools.EditorContainer> luEditorContainer;
 
-        [ReadOnly] public BufferLookup<Game.Net.SubLane> luSubLane;
-
-        public SingletonData singletonData;
-        public CollectNetLaneCurves InitContext(SingletonData singletonData)
+        public CollectNetLaneCurves Init(SingletonData singletonData, NativeQuadTree<Entity, QuadTreeBoundsXZ> searchTree)
         {
-            // this.context = context;
             this.singletonData = singletonData;
+            this.searchTree = searchTree;
             return this;
         }
 
-
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        public void Execute()
         {
-            var curves = chunk.GetNativeArray(ref thCurve);
-            var prefabRefs = chunk.GetNativeArray(ref thPrefabRef);
-            var hasOwner = chunk.Has(ref thOwner);
-            var owners = chunk.GetNativeArray(ref thOwner);
+            var candidateEntites = new NativeList<Entity>(Allocator.Temp);
+            var iterator = new In2DHitRangeEntitesIterator<Entity>();
+            iterator.items = candidateEntites;
+            iterator.hitPos = singletonData.playerHitPos;
+            iterator.range = singletonData.fillingRange;
+            searchTree.Iterate(ref iterator);
 
-            for (int i = 0; i < curves.Length; i++)
+            for (int i = 0; i < iterator.items.Length; i++)
             {
-                var prefabEntity = prefabRefs[i].m_Prefab;
+                var netLaneEntity = iterator.items[i];
+
+                // should have curve
+                if (!luCurve.TryGetComponent(netLaneEntity, out var curveComp)) continue;
+
+                // should have prefab ref
+                if (!luPrefabRef.TryGetComponent(netLaneEntity, out var prefabRef)) continue;
+                var prefabEntity = prefabRef.m_Prefab;
 
                 if (!luNetLaneGeoData.HasComponent(prefabEntity)) continue; // should have LaneGeometryData
 
-                // only collect net lanes created by dev tools / mods (assets from Find it/EDT etc.)
-                // the charactor is net lane entities owned by an entity with EditorContianer component
-                if (hasOwner && !OwnedByEditorContianer(owners[i])) continue;
+                if (!luOwner.TryGetComponent(netLaneEntity, out var owner)) continue; // should have owner
 
-                var curve = curves[i].m_Bezier;
+                var ownerEntity = owner.m_Owner;
+
+                // owner should be marked as EditorContainer
+                // so that will only collect one that is created by dev's panel/Find it/EDT tools
+                if (!luEditorContainer.HasComponent(ownerEntity)) continue;
+
+
+                var curve = curveComp.m_Bezier;
                 var bounds = MathUtils.Bounds(curve).xz;
                 var distance = MathUtils.Distance(bounds, singletonData.playerHitPos);
                 if (distance <= singletonData.fillingRange)
@@ -70,18 +76,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     singletonData.curves.Add(curve);
                 }
             }
+
+            candidateEntites.Dispose();
         }
-
-        /// <summary>
-        /// for net lanes drawed by dev tool/ EDT tools, its owner is entity with component EditorContainer
-        /// </summary>
-        /// <param name="owner"></param>
-        /// <returns></returns>
-        private bool OwnedByEditorContianer(Owner owner)
-        {
-            return luEditorContainer.HasComponent(owner.m_Owner);
-        }
-
-
     }
 }

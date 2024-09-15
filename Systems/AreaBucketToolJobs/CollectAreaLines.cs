@@ -1,50 +1,82 @@
 ﻿using AreaBucket.Components;
 using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using AreaBucket.Utils;
+using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Areas;
+using Game.Common;
 using Unity.Burst;
-using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
+
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
     [BurstCompile]
-    public struct CollectAreaLines : IJobChunk
+    public struct CollectAreaLines : IJob
     {
 
-        [ReadOnly] public BufferTypeHandle<Node> bthNode;
+        [ReadOnly] public BufferLookup<Node> bluNode;
 
-        [ReadOnly] public ComponentTypeHandle<Area> cthArea;
+        [ReadOnly] public BufferLookup<Triangle> bluTriangle;
 
-        [ReadOnly] public BufferTypeHandle<Triangle> bthTriangle;
+        [ReadOnly] public ComponentLookup<Area> cluArea;
+
+        [ReadOnly] public ComponentLookup<MapTile> cluMapTile;
+
+        [ReadOnly] public ComponentLookup<District> cluDistrict;
+
+        [ReadOnly] public ComponentLookup<SurfacePreviewMarker> cluSurfacePreviewMarker;
 
         public SingletonData signletonData;
 
-        public CollectAreaLines InitContext(SingletonData signletonData)
+        private NativeQuadTree<AreaSearchItem, QuadTreeBoundsXZ> areaSearchTree;
+
+        public CollectAreaLines InitContext(SingletonData signletonData, NativeQuadTree<AreaSearchItem, QuadTreeBoundsXZ> areaSearchTree)
         {
             this.signletonData = signletonData;
+            this.areaSearchTree = areaSearchTree;
             return this;
         }
 
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        public void Execute()
         {
-            if (!chunk.Has(ref bthTriangle)) return;
-            var triangleAccessor = chunk.GetBufferAccessor(ref bthTriangle);
-            var nodesAccessor = chunk.GetBufferAccessor(ref bthNode);
-            var areas = chunk.GetNativeArray(ref cthArea);
-            for (var i = 0; i < nodesAccessor.Length; i++)
+            var items = new NativeList<AreaSearchItem>(Allocator.Temp);
+            var iterator = new In2DHitRangeEntitesIterator<AreaSearchItem>();
+            iterator.items = items;
+            iterator.hitPos = signletonData.playerHitPos;
+            iterator.range = signletonData.fillingRange;
+            areaSearchTree.Iterate(ref iterator);
+
+            var entitySet = new NativeHashSet<Entity>(100, Allocator.Temp);
+
+            for (int i = 0; i < items.Length; i++) entitySet.Add(items[i].m_Area);
+
+            var entities = entitySet.ToNativeArray(Allocator.Temp);
+
+            for (int i = 0; i < entities.Length; i++)
             {
-                if ((areas[i].m_Flags & AreaFlags.Complete) == 0) continue;
-                var buffer = nodesAccessor[i];
-                var triangleBuffer = triangleAccessor[i];
+                var entity = entities[i];
+
+                if (cluSurfacePreviewMarker.HasComponent(entity)) continue;
+
+                if (!bluTriangle.TryGetBuffer(entity, out var triangles)) continue;
+                if (!bluNode.TryGetBuffer(entity, out var nodes)) continue;
+                if (!cluArea.TryGetComponent(entity, out var area)) continue;
+
+                if (cluMapTile.HasComponent(entity)) continue;
+                if (cluDistrict.HasComponent(entity)) continue;
+
+                if ((area.m_Flags & AreaFlags.Complete) == 0) continue;
+
                 // if no triangle, means it is an invalid area shape,
                 // this kinds of entities is generated from area entity that players insert/drag point on one edge to another edge
                 // the area entity just "invisible" because no more triangle, but still there
-                if (triangleBuffer.Length == 0) continue;
-                HandleBuffer(buffer);
+                if (triangles.Length == 0) continue;
+
+                HandleBuffer(nodes);
             }
         }
 
