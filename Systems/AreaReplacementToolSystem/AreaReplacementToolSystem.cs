@@ -123,7 +123,9 @@ namespace AreaBucket.Systems
             if (targetAreaEntity == Entity.Null) return inputDeps;
             lastTargetEntity = targetAreaEntity;
 
+
             var ecb = _toolOutputBarrier.CreateCommandBuffer();
+
 
             var bluNodes = SystemAPI.GetBufferLookup<Node>(isReadOnly: true);
             var bluLocalNodeCache = SystemAPI.GetBufferLookup<LocalNodeCache>(isReadOnly: true);
@@ -139,89 +141,48 @@ namespace AreaBucket.Systems
             _originalHasLocalNodeCache = bluLocalNodeCache.TryGetBuffer(targetAreaEntity, out var originalLocalNodeCache);
             _originalHasPrefabRef = cluPrefabRef.TryGetComponent(targetAreaEntity, out var prefabRef);
 
-            //_originalNodesCount = originalNodes.Length;
 
-            // var originalNodesCount = new NativeReference<int>();
-
-
-            /*jobHandle = Job.WithCode(() => 
-            {*/
-            /*originalHasNodes.Value = bluNodes.TryGetBuffer(targetAreaEntity, out var originalNodes);
-            originalHasTriangles.Value = bluTriangles.HasBuffer(targetAreaEntity);
-            originalHasOwner.Value = cluOwner.TryGetComponent(targetAreaEntity, out var owner);
-            originalHasLocalNodeCache.Value = bluLocalNodeCache.TryGetBuffer(targetAreaEntity, out var originalLocalNodeCache);*/
-            
-
-            if (!_originalHasNodes || !_originalHasTriangles || !_originalHasPrefabRef) return jobHandle;
-
-            _originalNodesCount = originalNodes.Length;
-
-
-            /* var creationDefinition = default(CreationDefinition);
-            // creationDefinition.m_Original = targetAreaEntity;
+            // create a new one
+            var newReplacedEntity = ecb.CreateEntity();
+            var creationDefinition = default(CreationDefinition);
             creationDefinition.m_Prefab = prefabEntity;
-            // creationDefinition.m_Flags = CreationFlags.C;
-            if (_originalHasOwner)
+            ecb.AddComponent(newReplacedEntity, creationDefinition);
+            if (_originalHasOwner) creationDefinition.m_Owner = owner.m_Owner;
+            if (_originalHasNodes)
             {
-                creationDefinition.m_Owner = owner.m_Owner;
+                var newNodesBuffer = ecb.AddBuffer<Node>(newReplacedEntity);
+                newNodesBuffer.ResizeUninitialized(originalNodes.Length + 1);
+                for (int i = 0; i < originalNodes.Length; i++) newNodesBuffer[i] = originalNodes[i];
+                newNodesBuffer[originalNodes.Length] = newNodesBuffer[0];
+            }
+            if (_originalHasLocalNodeCache)
+            {
+                var newCacheBuffer = ecb.AddBuffer<LocalNodeCache>(newReplacedEntity);
+                newCacheBuffer.ResizeUninitialized(originalLocalNodeCache.Length + 1);
+                for (int i = 0; i < originalNodes.Length; i++) newCacheBuffer[i] = originalLocalNodeCache[i];
+                newCacheBuffer[originalLocalNodeCache.Length] = newCacheBuffer[0];
+            }
+            ecb.AddComponent(newReplacedEntity, default(Updated));
+
+
+            // send to Modifications phases that tend to delete old one
+            var deleteRequestEntity = ecb.CreateEntity();
+            var deleteDefition = default(CreationDefinition);
+            deleteDefition.m_Original = targetAreaEntity;
+            deleteDefition.m_Flags = CreationFlags.Delete;
+            if (_originalHasOwner) deleteDefition.m_Owner = owner.m_Owner;
+            // for general surface entities, it is necessary to append Nodes buffer in delete request
+            // (well it is really counterintuitive that why we need nodes info for a to be deleted entity?)
+            if (_originalHasNodes)
+            {
+                var nodeBuffer = ecb.AddBuffer<Node>(deleteRequestEntity);
+                nodeBuffer.ResizeUninitialized(originalNodes.Length + 1);
+                for (int i = 0; i < originalNodes.Length; i++) nodeBuffer[i] = originalNodes[i];
+                nodeBuffer[originalNodes.Length] = nodeBuffer[0];
             }
 
-            var updateDefEntity = ecb.CreateEntity();
-            ecb.AddComponent(updateDefEntity, creationDefinition);
-            ecb.AddComponent(updateDefEntity, default(Updated));
-
-            DynamicBuffer<Node> nodes = ecb.AddBuffer<Node>(updateDefEntity);
-            nodes.ResizeUninitialized(originalNodes.Length + 1);
-            for (int i = 0; i < originalNodes.Length; i++) nodes[i] = originalNodes[i];
-            nodes[originalNodes.Length] = nodes[0];*/
-
-            // Game.Tools.GenerateAreasSystem.CreateAreasJob CreateAreas methods:
-            // it will overwrite the creationDefinition.m_Prefab to fit original entity's prefab if found m_Original is not Entity.Null
-            // hence here we should add an new creation defintion just for original entity (to hide and to be deleted)
-
-
-            var originalUpdateDefEntity = ecb.CreateEntity();
-
-            ecb.AddComponent(originalUpdateDefEntity, new AreaHiddenDefinition
-            {
-                target = targetAreaEntity
-            });
-            ecb.AddComponent(originalUpdateDefEntity, default(Updated));
-
-            /*ecb.AddComponent(originalUpdateDefEntity, new CreationDefinition
-            {
-                m_Original = targetAreaEntity,
-                //m_Flags = CreationFlags.Select | CreationFlags.Delete,
-                m_Flags = CreationFlags.Recreate | CreationFlags.Select,
-                m_Prefab = prefabEntity,
-            });*/
-            //ecb.AddComponent(originalUpdateDefEntity, default(Updated));
-            //var updatedNodeBuffer = ecb.AddBuffer<Node>(originalUpdateDefEntity);
-            //CreateSurfaceUtils.Scene2Drawing(originalNodes, updatedNodeBuffer);
-
-            /*}).Schedule(jobHandle);
-
-
-            jobHandle.Complete();
-            /*_originalHasNodes = originalHasNodes.Value;
-            _originalHasOwner = originalHasOwner.Value;
-            _originalHasTriangles = originalHasTriangles.Value;
-            _originalHasLocalNodeCache = originalHasLocalNodeCache.Value;
-            _originalNodesCount = originalNodesCount.Value;
-
-            originalHasOwner.Dispose(jobHandle);
-            originalHasNodes.Dispose(jobHandle);
-            originalHasTriangles.Dispose(jobHandle);
-            originalHasLocalNodeCache.Dispose(jobHandle);
-            originalNodesCount.Dispose(jobHandle);*/
-
-
-            /*if (hasLocalNodeCache)
-            {
-                var localNodes = ecb.AddBuffer<LocalNodeCache>(updateDefEntity);
-                localNodes.ResizeUninitialized(originalLocalNodeCache.Length);
-                for (int i = 0; i < originalLocalNodeCache.Length; i++) localNodes[i] = originalLocalNodeCache[i];
-            }*/
+            ecb.AddComponent(deleteRequestEntity, deleteDefition);
+            ecb.AddComponent(deleteRequestEntity, default(Updated));
 
 
             return jobHandle;
@@ -305,12 +266,13 @@ namespace AreaBucket.Systems
                     {
                         Active = v;
                         ReActivateTool();
-                    },
+                    }
                 },
                 new DebugUI.Value
                 {
                     displayName = nameof(ToolEnabled),
                     getter = () => ToolEnabled,
+                    
                 },
                 new DebugUI.Value
                 {
@@ -353,9 +315,6 @@ namespace AreaBucket.Systems
             m_ToolSystem.ActivatePrefabTool(activePrefab);
         }
 
-        private void NewKey()
-        {
-            key = new Random().Next();
-        }
+
     }
 }
