@@ -20,8 +20,7 @@ press to active it and more tool's options will be shown.
 New tool "Area Replacement Tool" is added into mod, you can see the activation button just next to original AreaBucket tool button.
 (use vanilla road replacement icon)
 
-New tool allows you to quickly replace any existing surfaces/spaces. But for this tool two things to node:
-* if surfaces overlaps together, tool will only replace the one been placed at first (behaves like bulldozer tool)
+New tool allows you to quickly replace any existing surfaces/spaces. But for this tool one thing to note:
 * if the surfaces/spaces belongs to any buildings, replacement will break original owning relationship 
 (for example, delete building will not remove surfaces been replaced)
 
@@ -66,12 +65,11 @@ You can active Anarchy in tool options panel to hide the warning.
 ### Features
 * Add Area Replacement Tool into mod, that allows too replace an existing surface to another one.
 
-Several things to note:
-* if surfaces overlaps together, tool will only replace the one been placed at first (behaves like bulldozer tool)
+Thing to note:
 * if the surfaces/spaces belongs to any buildings, replacement will break original owning relationship 
 (for example, delete building will not remove surfaces been replaced)
 
-Both these two issues planed to be optimized. For the first one, it could based on render priority (replace the surface on the top) 
+This issue planed to be optimized. For the first one, it could based on render priority (replace the surface on the top) 
 or replace all overlapping surfaces. For the second one, will may requires more modifications for vanilla area creating systems.
 
   </ChangeLog>
