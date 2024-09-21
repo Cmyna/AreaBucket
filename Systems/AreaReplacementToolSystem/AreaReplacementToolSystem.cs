@@ -64,6 +64,8 @@ namespace AreaBucket.Systems
 
         private int key = new Random().Next();
 
+        private AreaTypeMask _selectedAreaTypeMask = AreaTypeMask.Surfaces;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -103,12 +105,18 @@ namespace AreaBucket.Systems
 
             applyMode = ApplyMode.Clear;
 
+            // update requireAreas mask based on selected prefab
+            AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
+            if (Mod.modSetting?.DrawAreaOverlay??false) requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
+
             if (_applyAction.WasPressedThisFrame())
             {
                 _audioManager.PlayUISound(_soundQuery.GetSingleton<ToolUXSoundSettingsData>().m_PlacePropSound);
                 applyMode = ApplyMode.Apply;
                 return inputDeps;
             }
+
+
 
             lastControlPoint = controlPoint;
             var targetAreaEntity = controlPoint.m_OriginalEntity;
@@ -140,7 +148,8 @@ namespace AreaBucket.Systems
             var creationDefinition = default(CreationDefinition);
             creationDefinition.m_Prefab = prefabEntity;
             ecb.AddComponent(newReplacedEntity, creationDefinition);
-            if (_originalHasOwner) creationDefinition.m_Owner = owner.m_Owner;
+            // TODO: it actually not work if just specifiying owner entity in creation defition
+            // if (_originalHasOwner) creationDefinition.m_Owner = owner.m_Owner;
             if (_originalHasNodes)
             {
                 var newNodesBuffer = ecb.AddBuffer<Node>(newReplacedEntity);
@@ -235,7 +244,7 @@ namespace AreaBucket.Systems
             base.InitializeRaycast();
             m_ToolRaycastSystem.typeMask = TypeMask.Areas | TypeMask.Terrain;
             m_ToolRaycastSystem.raycastFlags |= RaycastFlags.SubElements;
-            m_ToolRaycastSystem.areaTypeMask = AreaTypeMask.Surfaces;
+            m_ToolRaycastSystem.areaTypeMask = _selectedAreaTypeMask;
         }
 
         /// <summary>
@@ -246,9 +255,12 @@ namespace AreaBucket.Systems
         private bool CanEnable(PrefabBase prefab)
         {
             if (!(prefab is AreaPrefab)) return false; // if selected prefab is not area prefab, it will not be enabled
-            // if prefab is District or Lot prefab, not enabled
+            // if prefab is District, Lot or Space prefab, not enabled
             if (prefab is DistrictPrefab) return false;
             if (prefab is LotPrefab) return false;
+
+            if (prefab is SpacePrefab) _selectedAreaTypeMask = AreaTypeMask.Spaces;
+            else if (prefab is SurfacePrefab) _selectedAreaTypeMask = AreaTypeMask.Surfaces;
             return true;
         }
 
