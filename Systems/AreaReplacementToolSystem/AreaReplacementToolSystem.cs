@@ -22,21 +22,9 @@ namespace AreaBucket.Systems
     {
         public override string toolID => "Area Tool";
 
-        public bool ToolEnabled = false;
 
-        /// <summary>
-        /// if it is true, the tool is active and changing the game/scene
-        /// </summary>
-        public bool Active {
-            get => _active;
-            set
-            {
-                _active = value;
-                ReActivateTool();
-            }
-        }
+        private bool Active { get => Mod.modActiveTool == ModActiveTool.AreaReplacement; }
 
-        private bool _active = false;
 
         private AreaPrefab _selectedPrefab;
 
@@ -92,19 +80,24 @@ namespace AreaBucket.Systems
             BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             _nativeRenderedAreas = new NativeList<NativeRenderedArea>(Allocator.Persistent);
+#if DEBUG
             CreateDebugUI();
+#endif
         }
 
 
         protected override void OnStartRunning()
         {
             base.OnStartRunning();
+#if DEBUG
+            Mod.Logger.Info("AreaReplacementToolSystem Start Running");
+#endif
             _applyAction.shouldBeEnabled = true;
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            if (_selectedPrefab == null || !Active || !ToolEnabled) return inputDeps;
+            if (_selectedPrefab == null || !Active || !Mod.areaToolEnabled) return inputDeps;
             if (!_prefabSystem.TryGetEntity(_selectedPrefab, out var prefabEntity)) return inputDeps;
             if (!GetRaycastResult(out var controlPoint)) return inputDeps;
 
@@ -208,7 +201,14 @@ namespace AreaBucket.Systems
         protected override void OnStopRunning()
         {
             base.OnStopRunning();
-            _applyAction.shouldBeEnabled = false;
+#if DEBUG
+            Mod.Logger.Info("AreaReplacementToolSystem Stop Running");
+#endif
+            // FIX: I dont know it is bug from me or the tool system,
+            // if one custom tool de-activated (stop running) and other custom tool activated, the apply action will be disabled
+            // although they both have `_applyAction.shouldBeEnabled = true` in OnStartRunning()
+            // while switching tools between vanilla tool and custom tools does not have this issue
+            // _applyAction.shouldBeEnabled = false;
         }
 
 
@@ -225,9 +225,9 @@ namespace AreaBucket.Systems
 
         public override bool TrySetPrefab(PrefabBase prefab)
         {
-            ToolEnabled = CanEnable(prefab); // set ComponentSystemBase.Enabled to true so it starts running OnUpdate method
-            if (ToolEnabled) _selectedPrefab = prefab as AreaPrefab;
-            return ToolEnabled && Active;
+            Mod.areaToolEnabled = CanEnable(prefab); // set ComponentSystemBase.Enabled to true so it starts running OnUpdate method
+            if (Mod.areaToolEnabled) _selectedPrefab = prefab as AreaPrefab;
+            return Mod.areaToolEnabled && Active;
         }
 
         public override void InitializeRaycast()
@@ -264,16 +264,16 @@ namespace AreaBucket.Systems
                     getter = () => Active,
                     setter = (v) =>
                     {
-                        Active = v;
+                        Mod.modActiveTool = ModActiveTool.AreaReplacement;
                         ReActivateTool();
                     }
                 },
                 new DebugUI.Value
                 {
-                    displayName = nameof(ToolEnabled),
-                    getter = () => ToolEnabled,
-                    
+                    displayName = nameof(Mod.areaToolEnabled),
+                    getter = () => Mod.areaToolEnabled,
                 },
+                new DebugUI.Value { displayName = "apply action enabled", getter = () => _applyAction?.enabled ?? false },
                 new DebugUI.Value
                 {
                     displayName = nameof(_selectedPrefab),

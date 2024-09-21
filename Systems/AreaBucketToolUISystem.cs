@@ -19,6 +19,8 @@ namespace AreaBucket.Systems
 
         private AreaBucketToolSystem _bucketToolSystem;
 
+        private AreaReplacementToolSystem _areaReplacementToolSystem;
+
         private ToolSystem _toolSystem;
 
         protected override void OnCreate()
@@ -27,14 +29,26 @@ namespace AreaBucket.Systems
 
             _toolSystem = World.GetOrCreateSystemManaged<ToolSystem>();
             _bucketToolSystem = World.GetOrCreateSystemManaged<AreaBucketToolSystem>();
-            
+            _areaReplacementToolSystem = World.GetOrCreateSystemManaged<AreaReplacementToolSystem>();
 
-            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "ToolEnabled", () => _bucketToolSystem.ToolEnabled));
+
+            // for front-end to determine showing tools Active UI or not
+            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "AreaToolEnabled", () => Mod.areaToolEnabled));
+
+            AddUpdateBinding(new GetterValueBinding<string>(Mod.ToolId, "ModActiveTool", () => Mod.modActiveTool.ToString() ));
+            AddBinding(new TriggerBinding<string>(Mod.ToolId, "SetModActiveTool", (v) =>
+            {
+                if (v == ModActiveTool.AreaBucket.ToString()) Mod.modActiveTool = ModActiveTool.AreaBucket;
+                else if (v == ModActiveTool.AreaReplacement.ToString()) Mod.modActiveTool = ModActiveTool.AreaReplacement;
+                else Mod.modActiveTool = ModActiveTool.None;
+                ReActivateTool();
+            }));
 
             AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "Active", () => _bucketToolSystem.Active));
             AddBinding(new TriggerBinding<bool>(Mod.ToolId, "SetActive", (v) =>
             {
-                _bucketToolSystem.Active = v;
+                if (v) Mod.modActiveTool = ModActiveTool.AreaBucket;
+                else Mod.modActiveTool = ModActiveTool.None;
                 ReActivateTool();
             }));
 

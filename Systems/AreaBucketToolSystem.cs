@@ -44,7 +44,7 @@ namespace AreaBucket.Systems
         /// <summary>
         /// this property control the tool can be shown by player or not, it is determined by the selected prefab
         /// </summary>
-        public bool ToolEnabled { get; set; } = false;
+        // public bool ToolEnabled { get; set; } = false;
 
         /// <summary>
         /// set the tool is active or not. if it is ToolEnabled and active, 
@@ -52,7 +52,7 @@ namespace AreaBucket.Systems
         /// 
         /// active state is controlled by user switch
         /// </summary>
-        public bool Active { get; set; } = false;
+        public bool Active { get => Mod.modActiveTool == ModActiveTool.AreaBucket; }
 
         /// <summary>
         /// bucket tool filling range
@@ -219,9 +219,10 @@ namespace AreaBucket.Systems
         protected override void OnStartRunning()
         {
             base.OnStartRunning();
-
+#if DEBUG
+            Mod.Logger.Info("AreaBucketToolSystem Start Running");
+#endif
             _applyAction.shouldBeEnabled = true;
-            //_secondaryApplyAction.shouldBeEnabled = true;
 
             applyMode = ApplyMode.Clear;
         }
@@ -233,7 +234,7 @@ namespace AreaBucket.Systems
             frameCount++;
             if (frameCount >= 10) frameCount = 0;
             // if not active, do nothing
-            if (_selectedPrefab == null || !ToolEnabled || !Active) return inputDeps;
+            if (_selectedPrefab == null || !Mod.areaToolEnabled || !Active) return inputDeps;
 
             // update requireAreas mask based on selected prefab
             AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
@@ -275,10 +276,16 @@ namespace AreaBucket.Systems
         protected override void OnStopRunning()
         {
             base.OnStopRunning();
+#if DEBUG
+            Mod.Logger.Info("AreaBucketToolSystem Stop Running");
+#endif
+            // FIX: I dont know it is bug from me or the tool system,
+            // if one custom tool de-activated (stop running) and other custom tool activated, the apply action will be disabled
+            // although they both have `_applyAction.shouldBeEnabled` = true in OnStartRunning()
+            // while switching tools between vanilla tool and custom tools does not have this issue
 
-            _applyAction.shouldBeEnabled = false;
-            //_secondaryApplyAction.shouldBeEnabled = false;
-            if (_applyAction != null) _applyAction.shouldBeEnabled = false;
+            // _applyAction.shouldBeEnabled = false;
+            // if (_applyAction != null) _applyAction.shouldBeEnabled = false;
         }
 
         protected override void OnDestroy()
@@ -295,9 +302,9 @@ namespace AreaBucket.Systems
 
         public override bool TrySetPrefab(PrefabBase prefab)
         {
-            ToolEnabled = CanEnable(prefab);
-            if (ToolEnabled) _selectedPrefab = prefab as AreaPrefab;
-            return ToolEnabled && Active;
+            Mod.areaToolEnabled = CanEnable(prefab);
+            if (Mod.areaToolEnabled) _selectedPrefab = prefab as AreaPrefab;
+            return Mod.areaToolEnabled && Active;
         }
 
         /// <summary>
@@ -450,7 +457,7 @@ namespace AreaBucket.Systems
         {
             var msg = $"{headMsg}\n" +
                 $"\ttool ID: {toolID}\n" +
-                $"\ttool enabled: {ToolEnabled}\n" +
+                $"\ttool enabled: {Mod.areaToolEnabled}\n" +
                 $"\ttool active: {Active}\n" +
                 $"\tfill range: {FillRange}\n" +
                 $"\tmax fill range: {MaxFillingRange}\n" +

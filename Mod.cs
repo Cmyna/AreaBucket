@@ -27,6 +27,16 @@ namespace AreaBucket
 
         internal static DebugUI.Panel AreaBucketDebugUI;
 
+        /// <summary>
+        /// determine any mod area tool enable to active/use or not
+        /// </summary>
+        internal static bool areaToolEnabled = false;
+
+        /// <summary>
+        /// controls multiple mod tool systems which tool is active
+        /// </summary>
+        internal static ModActiveTool modActiveTool = ModActiveTool.None;
+
         // Mod assembly path cache.
         private string s_assemblyPath = null;
 

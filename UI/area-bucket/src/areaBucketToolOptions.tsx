@@ -5,12 +5,13 @@ import { useLocalization } from "cs2/l10n"
 import { ModuleRegistry } from "cs2/modding"
 import { Tooltip } from "cs2/ui";
 import { useBindings as useBindings, simple2WayBinding, toggleSwitch, Active2WayBinding } from "bindings"
+import { ModToolSwitchKeys } from "../types/areabucket-types"
 
 const couiStandard = "coui://uil/Standard/"
 const areabucketUi = "coui://areabucket/"
 
 
-const enable$ = bindValue(toolId, "ToolEnabled")
+const enable$ = bindValue(toolId, "AreaToolEnabled")
 const useExperimentalOptions$ = bindValue<boolean>(toolId, "UseExperimentalOptions")
 
 
@@ -19,12 +20,14 @@ const useExperimentalOptions$ = bindValue<boolean>(toolId, "UseExperimentalOptio
 const simple2WayBindings = {
     //showDebug: simple2WayBinding<boolean>("ShowDebugOptions"),
     //log4Debug: simple2WayBinding<boolean>("Log4Debug"),
+    toolActiveSwitch: simple2WayBinding<ModToolSwitchKeys>("ModActiveTool"),
     active: simple2WayBinding<boolean>("Active"),
     fillRange: simple2WayBinding<number>("FillRange"),
     boundaryMask: simple2WayBinding<number>("BoundaryMask"),
     
     extraPoints: simple2WayBinding<boolean>("CheckBoundariesCrossing"),
     floodingDepth: simple2WayBinding<number>("RecursiveFloodingDepth")
+
 }
 
 
@@ -83,7 +86,8 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
         )
         
 
-        if (!activeBindings.active.value) return result // shows tool options iff it is active
+        if (activeBindings.toolActiveSwitch.value !== "AreaBucket") return result
+        // if (!activeBindings.active.value) return result // shows tool options iff it is active
 
         if (useExpOptions) result.props.children?.push(
         <Radio title={translateTool("DetectCrossing")}
