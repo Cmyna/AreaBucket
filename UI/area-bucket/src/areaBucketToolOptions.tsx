@@ -4,24 +4,20 @@ import { tool } from "cs2/bindings"
 import { useLocalization } from "cs2/l10n"
 import { ModuleRegistry } from "cs2/modding"
 import { Tooltip } from "cs2/ui";
-import { useBindings as useBindings, simple2WayBinding, toggleSwitch, Active2WayBinding } from "bindings"
+import { useBindings as useBindings, simple2WayBinding, toggleSwitch, Active2WayBinding, useBinding } from "bindings"
 import { ModToolSwitchKeys } from "../types/areabucket-types"
 
-const couiStandard = "coui://uil/Standard/"
+const couilStandard = "coui://uil/Standard/"
 const areabucketUi = "coui://areabucket/"
 
 
 const enable$ = bindValue(toolId, "AreaToolEnabled")
 const useExperimentalOptions$ = bindValue<boolean>(toolId, "UseExperimentalOptions")
 
-
-
+const toolActiveSwitch$ = simple2WayBinding<ModToolSwitchKeys>("ModActiveTool")
 
 const simple2WayBindings = {
-    //showDebug: simple2WayBinding<boolean>("ShowDebugOptions"),
-    //log4Debug: simple2WayBinding<boolean>("Log4Debug"),
-    toolActiveSwitch: simple2WayBinding<ModToolSwitchKeys>("ModActiveTool"),
-    active: simple2WayBinding<boolean>("Active"),
+    // toolActiveSwitch: simple2WayBinding<ModToolSwitchKeys>("ModActiveTool"),
     fillRange: simple2WayBinding<number>("FillRange"),
     boundaryMask: simple2WayBinding<number>("BoundaryMask"),
     
@@ -31,11 +27,15 @@ const simple2WayBindings = {
 }
 
 
+
+
+
 export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Component: any) => {
     // const { children, ...otherProps } = props || {};
 
+    
     const ctx = {
-        translate: undefined as any, translateTool: undefined as any, translateToolDesc: undefined as any,
+        // translate: undefined as any, translateTool: undefined as any, translateToolDesc: undefined as any,
         ...getComponents(moduleRegistry)
     }
 
@@ -46,61 +46,34 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
         
     } = ctx
 
+    
+
     const FocusDisabled = focusKey?.FOCUS_DISABLED
 
-    return (props: any) => {
+    const AreaBucketToolOptions = () => {
+
 
         const { translate } = useLocalization()
         const translateTool = (optionKey: string) => translate(toolLocaleKey + "." + optionKey)
         const translateToolDesc = (optionKey: string) => translate(toolLocaleKey + ".DESC." + optionKey)
-        ctx.translate = translate; ctx.translateTool = translateTool; ctx.translateToolDesc = translateToolDesc
-        const { children, ...otherProps } = props || {}
+        // ctx.translate = translate; ctx.translateTool = translateTool; ctx.translateToolDesc = translateToolDesc
 
-        const enable = useValue(enable$)
         const useExpOptions = useValue(useExperimentalOptions$)
-
-        
         const activeBindings = useBindings(simple2WayBindings)
 
 
-        const TitledTooltip = (titleKey: string, descKey: string): JSX.Element => {
-            return <>
-                <div className={descTooltipTheme.title}>{translate(titleKey)}</div>
-                <div className={descTooltipTheme.content}>{translate(descKey)}</div>
-            </>
-        }
-
-
-        var result = Component()
-        
-        if (!enable) return result // shows switch button iff tool is enable
-        
-
-        // switch button
-        result.props.children?.push(
-            <Radio title={translateTool("Active")}
-                src="Media/Tools/Zone Tool/FloodFill.svg"
-                binding={activeBindings.active}
-                {...ctx}
-            />
-        )
-        
-
-        if (activeBindings.toolActiveSwitch.value !== "AreaBucket") return result
-        // if (!activeBindings.active.value) return result // shows tool options iff it is active
-
-        if (useExpOptions) result.props.children?.push(
-        <Radio title={translateTool("DetectCrossing")}
-            src={couiStandard + "Jackhammer.svg"}
-            binding={activeBindings.extraPoints}
-            tooltip={translateToolDesc("DetectCrossing")}
-            {...ctx}
-        />)
-
-
-        // tool control filling range
         const fillRange = activeBindings.fillRange.value
-        result.props.children?.push(<>
+
+        return (<>
+            {
+                useExpOptions &&
+                <SingleRadio title={translateTool("DetectCrossing")}
+                    src={couilStandard + "Jackhammer.svg"}
+                    binding={activeBindings.extraPoints}
+                    tooltip={translateToolDesc("DetectCrossing")}
+                    {...ctx}
+                />
+            }
             <UpDown 
                 title={translateTool("FillRange")}
                 textValue= {fillRange + "m"}
@@ -125,62 +98,112 @@ export const AreaToolOptionsComponent = (moduleRegistry: ModuleRegistry) => (Com
                 {...ctx}
                 />
             }
+            <Section title={translateTool("BoundaryMask")}>
+                <MaskCheckBox 
+                    src={"Media/Tools/Net Tool/SimpleCurve.svg"}
+                    binding={activeBindings.boundaryMask}
+                    targetMask={boundMask.net}
+                    tooltip={translateTool("MaskNet")}
+                    {...ctx}
+                />
+                <MaskCheckBox 
+                    src={couilStandard + "House.svg"}
+                    binding={activeBindings.boundaryMask}
+                    targetMask={boundMask.lot}
+                    tooltip={translateTool("MaskLot")}
+                    {...ctx}
+                />
+                <MaskCheckBox 
+                    src={couilStandard + "Decals.svg"}
+                    binding={activeBindings.boundaryMask}
+                    targetMask={boundMask.area}
+                    tooltip={translateTool("MaskArea")}
+                    {...ctx}
+                />
+                <MaskCheckBox 
+                    src={couilStandard + "Network.svg"}
+                    binding={activeBindings.boundaryMask}
+                    targetMask={boundMask.netlane}
+                    tooltip={translateTool("MaskNetLane")}
+                    {...ctx}
+                />
+                <MaskCheckBox
+                    src={couilStandard + "DottedLinesMarkers.svg"}
+                    binding={activeBindings.boundaryMask}
+                    targetMask={boundMask.subnet}
+                    tooltip={translateTool("MaskSubNet")}
+                    {...ctx}
+                />
+            </Section>
         </>)
+    }
+
+    return (props: any) => {
+
+        const { translate } = useLocalization()
+        const translateTool = (optionKey: string) => translate(toolLocaleKey + "." + optionKey)
+        const translateToolDesc = (optionKey: string) => translate(toolLocaleKey + ".DESC." + optionKey)
+        // ctx.translate = translate; ctx.translateTool = translateTool; ctx.translateToolDesc = translateToolDesc
+        
+        const { children, ...otherProps } = props || {}
+
+        const enable = useValue(enable$)
 
 
-        // tool control boundary mask
-        // const boundaryMask = activeBindings.boundaryMask.value
-        result.props.children?.push(<Section title={translateTool("BoundaryMask")}>
-            <MaskCheckBox 
-                src={"Media/Tools/Net Tool/SimpleCurve.svg"}
-                binding={activeBindings.boundaryMask}
-                targetMask={boundMask.net}
-                tooltip={translateTool("MaskNet")}
-                {...ctx}
-            />
-            <MaskCheckBox 
-                src={couiStandard + "House.svg"}
-                binding={activeBindings.boundaryMask}
-                targetMask={boundMask.lot}
-                tooltip={translateTool("MaskLot")}
-                {...ctx}
-            />
-            <MaskCheckBox 
-                src={couiStandard + "Decals.svg"}
-                binding={activeBindings.boundaryMask}
-                targetMask={boundMask.area}
-                tooltip={translateTool("MaskArea")}
-                {...ctx}
-            />
+        // const TitledTooltip = (titleKey: string, descKey: string): JSX.Element => {
+        //     return <>
+        //         <div className={descTooltipTheme.title}>{translate(titleKey)}</div>
+        //         <div className={descTooltipTheme.content}>{translate(descKey)}</div>
+        //     </>
+        // }
 
-            {
-                //useExpOptions && 
-                (<>
-                    <MaskCheckBox 
-                        src={couiStandard + "Network.svg"}
-                        binding={activeBindings.boundaryMask}
-                        targetMask={boundMask.netlane}
-                        tooltip={translateTool("MaskNetLane")}
-                        {...ctx}
-                    />
-                    <MaskCheckBox
-                        src={couiStandard + "DottedLinesMarkers.svg"}
-                        binding={activeBindings.boundaryMask}
-                        targetMask={boundMask.subnet}
-                        tooltip={translateTool("MaskSubNet")}
-                        {...ctx}
-                    />
-                </>)
-            }
-        </Section>)
+
+        var result = Component()
+        const toolActiveSwitch = useBinding(toolActiveSwitch$)
+        const isAreaBucketToolActivated = toolActiveSwitch.value === "AreaBucket"
+        // if (!enable) return result // shows tool active radio buttons iff tool is enable
+        
+
+        // tool activation radio buttons
+        // tool selection section title keeps original translation id "Active"
+        if (enable) result.props.children?.push( 
+            <Section title={translateTool("Active")}> 
+                <MultiRadio 
+                    title={translateTool("ActiveAreaBucket")}
+                    src="Media/Tools/Zone Tool/FloodFill.svg"
+                    binding={toolActiveSwitch}
+                    defaultValue="Default"
+                    targetValue="AreaBucket"
+                    tooltip={translateToolDesc("ActiveAreaBucket")}
+                    {...ctx}
+                />
+                <MultiRadio 
+                    title={translateTool("ActiveAreaReplacement")}
+                    src="Media/Tools/Net Tool/Replace.svg"
+                    binding={toolActiveSwitch}
+                    defaultValue="Default"
+                    targetValue="AreaReplacement"
+                    tooltip={translateToolDesc("ActiveAreaReplacement")}
+                    {...ctx}
+                />
+            </Section>
+        )
+
+        result.props.children?.push(<>
+            {enable && isAreaBucketToolActivated && <AreaBucketToolOptions/>}
+        </>)
 
 
         return result
     }
+
+    
 }
 
 
-const Radio = (props: any) => {
+
+
+const SingleRadio = (props: any) => {
     const { Section, ToolButton } = props.components
     const { toolButtonTheme } = props.themes
     const { focusKey } = props.others
@@ -201,6 +224,34 @@ const Radio = (props: any) => {
                 tooltip={props.tooltip}
             />
         </Section>
+    )
+}
+
+
+const MultiRadio = (props: any) => {
+    const { ToolButton } = props.components
+    const { toolButtonTheme } = props.themes
+    const { focusKey } = props.others
+
+    const FocusDisabled = focusKey?.FOCUS_DISABLED
+
+    const valueBinding = props.binding as Active2WayBinding<any>
+    const targetValue = props.targetValue
+    const defaultValue = props.defaultValue
+
+    return (
+        <ToolButton 
+            className={toolButtonTheme.button}
+            src={props.src}
+            selected={valueBinding.value == targetValue}
+            onSelect={() => {
+                valueBinding.trigger(valueBinding.value === targetValue ? defaultValue : targetValue)
+            }}
+            multiSelect={false}
+            focusKey={FocusDisabled}
+            disabled={false}
+            tooltip={props.tooltip}
+        />
     )
 }
 
@@ -247,7 +298,7 @@ const UpDown = (props: any) => {
     return (<Section title={props.title}>
         <ToolButton 
             className={mouseToolTheme.startButton}
-            src={couiStandard + "ArrowDownThickStroke.svg"}
+            src={couilStandard + "ArrowDownThickStroke.svg"}
             selected={false}
             onSelect={() => triggerProxy(-1)}
             multiSelect={false}
@@ -259,7 +310,7 @@ const UpDown = (props: any) => {
         </Tooltip>
         <ToolButton 
             className={mouseToolTheme.startButton}
-            src={couiStandard + "ArrowUpThickStroke.svg"}
+            src={couilStandard + "ArrowUpThickStroke.svg"}
             selected={false}
             onSelect={() => triggerProxy(1)}
             multiSelect={false}
@@ -268,6 +319,7 @@ const UpDown = (props: any) => {
         />
     </Section>)
 }
+
 
 
 const getComponents = (registry: ModuleRegistry) => {

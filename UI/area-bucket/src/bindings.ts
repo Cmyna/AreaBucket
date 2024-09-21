@@ -8,7 +8,7 @@ type ExtractBindingType<T> = T extends TwoWayBindingDef<infer V> ? Active2WayBin
 
 
 export type TwoWayBindingDef<V> = {
-    use: () => void,
+    use: () => V,
     trigger: (v: V) => void
 }
 
@@ -21,16 +21,25 @@ export type Active2WayBinding<V> = {
 /**
  * init a simple 2 ways binding definition
  * @param propertyName the binding target, 
+ * @param triggerBindingPrefix set trigger binding's name to `triggerBindingPrefix + propertyName`
  * @returns a binding defintion, `use()` function in returned object behaves same as `useValue(propertyName)`, \
- * and trigger(value) invokes the game trigger binding `trigger(toolId, "Set" + propertyName, value)`
+ * and trigger(value) invokes the game trigger binding `trigger(toolId, triggerBindingPrefix + propertyName, value)`
  */
-export const simple2WayBinding = <V>(propertyName: string): TwoWayBindingDef<V> => {
+export const simple2WayBinding = <V>(propertyName: string, triggerBindingPrefix: string = "Set"): TwoWayBindingDef<V> => {
     const valueBinding = bindValue<V>(toolId, propertyName)
     const res = {
         use: () => useValue(valueBinding),
-        trigger: (v: any) => trigger(toolId, "Set" + propertyName, v)
+        trigger: (v: any) => trigger(toolId, triggerBindingPrefix + propertyName, v)
     } as TwoWayBindingDef<V>
     return res
+}
+
+
+export const useBinding = <V>(bindingDef: TwoWayBindingDef<V>): Active2WayBinding<V> => {
+    return {
+        value: bindingDef.use(),
+        trigger: bindingDef.trigger
+    }
 }
 
 
@@ -51,6 +60,8 @@ export const useBindings = <T extends {[k: string]: TwoWayBindingDef<any>}>(bind
     })
     return res as any
 }
+
+
 
 /**
  * helper function just for boolean value 2-ways data binding

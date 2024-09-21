@@ -1,10 +1,6 @@
 ﻿using Colossal;
-using Colossal.IO.AssetDatabase.Internal;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace AreaBucket
 {
@@ -24,7 +20,13 @@ namespace AreaBucket
             {
 
                 { ToolOptionKey("Active"), "Area Bucket" },
-                { ToolOptionDescKey("Active"), "Enable/Disable Area Bucket Tool" },
+                { ToolOptionDescKey("Active"), "Switch Area Bucket Tools" },
+
+                { ToolOptionKey("ActiveAreaBucket"), "Area Bucket" },
+                { ToolOptionDescKey("ActiveAreaBucket"), "Enable/Disable Area Bucket Tool" },
+
+                { ToolOptionKey("ActiveAreaReplacement"), "Area Replacement" },
+                { ToolOptionDescKey("ActiveAreaReplacement"), "Enable/Disable Area Replacement Tool" },
 
                 { ToolOptionKey("DetectCrossing"), "Detect Boundaries Crossing" },
                 { ToolOptionDescKey("DetectCrossing"), "Detect boundaries crossing and fix some filling gaps (performance issue)" },

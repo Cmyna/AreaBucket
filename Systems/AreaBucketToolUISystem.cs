@@ -44,13 +44,13 @@ namespace AreaBucket.Systems
                 ReActivateTool();
             }));
 
-            AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "Active", () => _bucketToolSystem.Active));
+            /*AddUpdateBinding(new GetterValueBinding<bool>(Mod.ToolId, "Active", () => _bucketToolSystem.Active));
             AddBinding(new TriggerBinding<bool>(Mod.ToolId, "SetActive", (v) =>
             {
                 if (v) Mod.modActiveTool = ModActiveTool.AreaBucket;
                 else Mod.modActiveTool = ModActiveTool.None;
                 ReActivateTool();
-            }));
+            }));*/
 
 
             //Add2WayBinding<float>(_bucketToolSystem, nameof(AreaBucketToolSystem.FillMaxRange));
