@@ -48,6 +48,7 @@ namespace AreaBucket
 
 
         [SettingsUIHidden]
+        [SettingsUIBindingMimic(InputManager.kToolMap, "Apply")]
         [SettingsUIMouseBinding(Mod.kModAreaToolApply)]
         public ProxyBinding AreaBucketToolApply { get; set; }
 

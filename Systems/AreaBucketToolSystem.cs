@@ -205,7 +205,7 @@ namespace AreaBucket.Systems
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
             _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
-            BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
+            //BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             timer = new System.Diagnostics.Stopwatch();
 

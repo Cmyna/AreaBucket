@@ -79,7 +79,7 @@ namespace AreaBucket.Systems
             _prefabSystem = World.GetOrCreateSystemManaged<PrefabSystem>();
 
             _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
-            BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
+            // BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             _nativeRenderedAreas = new NativeList<NativeRenderedArea>(Allocator.Persistent);
 #if DEBUG
