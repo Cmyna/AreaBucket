@@ -82,9 +82,8 @@ namespace AreaBucket.Systems
             // BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             _nativeRenderedAreas = new NativeList<NativeRenderedArea>(Allocator.Persistent);
-#if DEBUG
+
             CreateDebugUI();
-#endif
         }
 
 
