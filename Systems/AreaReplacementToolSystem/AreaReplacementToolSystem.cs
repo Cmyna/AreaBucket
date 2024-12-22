@@ -267,8 +267,7 @@ namespace AreaBucket.Systems
 
         private void CreateDebugUI()
         {
-            var panel = DebugManager.instance.GetPanel("Area Replacement Tool", createIfNull: true, groupIndex: 0, overrideIfExist: true);
-            List<DebugUI.Widget> list = new List<DebugUI.Widget>
+            ObservableList<DebugUI.Widget> list = new ObservableList<DebugUI.Widget>
             {
                 new DebugUI.BoolField
                 {
@@ -316,9 +315,10 @@ namespace AreaBucket.Systems
 
                 new DebugUI.Value { displayName = nameof(_originalNodesCount),  getter = () => _originalNodesCount, },
 
-            }; 
-            panel.children.Clear();
-            panel.children.Add(list);
+            };
+
+            var debugUIFoldout = new DebugUI.Foldout("Area Replacement Tool", list);
+            Mod.AreaBucketDebugUI.children.Add(debugUIFoldout);
         }
 
         private void ReActivateTool()

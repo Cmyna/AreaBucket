@@ -36,8 +36,11 @@ namespace AreaBucket.Systems
                 getter = () => WatchJobTime,
                 setter = (v) => WatchJobTime = v
             });
-            var panel = DebugManager.instance.GetPanel("Area Bucket Tool", createIfNull: true, groupIndex: 0, overrideIfExist: true);
-            List<DebugUI.Widget> list = new List<DebugUI.Widget>
+
+            
+
+            // var panel = DebugManager.instance.GetPanel("Area Bucket Tool", createIfNull: true, groupIndex: 0, overrideIfExist: true);
+            ObservableList<DebugUI.Widget> list = new ObservableList<DebugUI.Widget>
             {
                 new DebugUI.Value
                 {
@@ -154,8 +157,8 @@ namespace AreaBucket.Systems
                 // OtherProfiles(),
 
             };
-            panel.children.Clear();
-            panel.children.Add(list);
+            var debugUIFoldout = new DebugUI.Foldout("Area Bucket Tool System", list);
+            Mod.AreaBucketDebugUI.children.Add(debugUIFoldout);
         }
 
         private DebugUI.Container CreateMergePointsDebugUI()

@@ -73,7 +73,7 @@ namespace AreaBucket
         {
             Logger.Info(nameof(OnLoad));
 
-            AreaBucketDebugUI = DebugManager.instance.GetPanel("Area Bucket Tool 2", createIfNull: true, groupIndex: 0, overrideIfExist: true);
+            AreaBucketDebugUI = DebugManager.instance.GetPanel("Area Bucket", createIfNull: true, groupIndex: 0, overrideIfExist: true);
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {

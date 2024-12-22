@@ -97,8 +97,6 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
         private int lastDefsCount { get; set; } = -1;
 
-        private DebugUI.Container _debugUIContainer;
-
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -185,7 +183,7 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
         private void CreateDebugUI()
         {
-            _debugUIContainer = new DebugUI.Container(
+            var debugUIFoldout = new DebugUI.Foldout(
                 "Surface Preview System",
                 new ObservableList<DebugUI.Widget>
                 {
@@ -193,7 +191,7 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
                     new DebugUI.Value { displayName = nameof(lastDefsCount), getter = () => lastDefsCount },
                 }
                 );
-            Mod.AreaBucketDebugUI.children.Add(_debugUIContainer);
+            Mod.AreaBucketDebugUI.children.Add(debugUIFoldout);
         }
 
         
