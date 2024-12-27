@@ -18,7 +18,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 {
 
     [BurstCompile]
-    public struct CollectNetEdges: IJob
+    public struct CollectNetEdges: IJob, IHandleUpdatable
     {
         [ReadOnly] public ComponentLookup<EdgeGeometry> luEdgeGeo;
 
@@ -29,8 +29,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         [ReadOnly] public ComponentLookup<Composition> luComposition;
 
         [ReadOnly] public ComponentLookup<Owner> luOwner;
-
-        [ReadOnly] public ComponentLookup<EdgeGeometry> luEdgeGeometry;
 
         [ReadOnly] public ComponentLookup<NetCompositionData> luCompositionData;
 
@@ -137,6 +135,25 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             return math.lengthsq(@float + float2 + float3 + float4) > 1E-06f;
         }
 
+        public void AssignHandle(ref SystemState state)
+        {
 
+            this.luComposition = state.GetComponentLookup<Composition>(isReadOnly: true);
+            this.luCompositionData = state.GetComponentLookup<NetCompositionData>(isReadOnly: true);
+            this.luEdgeGeo = state.GetComponentLookup<EdgeGeometry>(isReadOnly: true);
+            this.luEndNodeGeometry = state.GetComponentLookup<EndNodeGeometry>(isReadOnly: true);
+            this.luOwner = state.GetComponentLookup<Owner>(isReadOnly: true);
+            this.luStartNodeGeometry = state.GetComponentLookup<StartNodeGeometry>(isReadOnly: true);
+        }
+
+        public void UpdateHandle(ref SystemState state)
+        {
+            this.luComposition.Update(ref state);
+            this.luCompositionData.Update(ref state);
+            this.luEdgeGeo.Update(ref state);
+            this.luEndNodeGeometry.Update(ref state);
+            this.luOwner.Update(ref state);
+            this.luStartNodeGeometry.Update(ref state);
+        }
     }
 }

@@ -121,6 +121,7 @@
 
   <ItemGroup>
     <Folder Include="Utils\Job\Profiling\" />
+    <Folder Include="Snippets\" />
   </ItemGroup>
 
   <Target Name="CopyIcons" AfterTargets="AfterBuild">

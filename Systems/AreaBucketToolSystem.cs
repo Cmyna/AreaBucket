@@ -187,6 +187,14 @@ namespace AreaBucket.Systems
 
         private int usedBoundariesCount = 0;
 
+        private CollectAreaLines collectAreaLinesJob;
+
+        private CollectNetEdges collectNetEdgesJob;
+
+        private CollectLotLines collectLotLinesJob;
+
+        private CollectNetLaneCurves collectNetLaneCurvesJob;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -212,6 +220,12 @@ namespace AreaBucket.Systems
 
             OnInitEntityQueries();
             CreateDebugPanel();
+
+
+            collectAreaLinesJob.AssignHandle(ref base.CheckedStateRef);
+            collectNetEdgesJob.AssignHandle(ref base.CheckedStateRef);
+            collectNetLaneCurvesJob.AssignHandle(ref base.CheckedStateRef);
+            collectLotLinesJob.AssignHandle(ref base.CheckedStateRef);
 
             LogToolState(Mod.Logger, "Initial Area Bucket Tool States: ");
         }
@@ -341,13 +355,7 @@ namespace AreaBucket.Systems
             {
                 var netSearchTree = _netSearchSystem.GetNetSearchTree(readOnly: true, out var netSearchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, netSearchDeps);
-                var collectNetEdgesJob = default(CollectNetEdges).InitContext(singletonData, BoundaryMask, netSearchTree);
-                collectNetEdgesJob.luEdgeGeo = SystemAPI.GetComponentLookup<EdgeGeometry>();
-                collectNetEdgesJob.luStartNodeGeometry = SystemAPI.GetComponentLookup<StartNodeGeometry>();
-                collectNetEdgesJob.luEndNodeGeometry = SystemAPI.GetComponentLookup<EndNodeGeometry>();
-                collectNetEdgesJob.luComposition = SystemAPI.GetComponentLookup<Composition>();
-                collectNetEdgesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
-                collectNetEdgesJob.luCompositionData = SystemAPI.GetComponentLookup<NetCompositionData>();
+                collectNetEdgesJob.InitContext(singletonData, BoundaryMask, netSearchTree).AssignHandle(ref base.CheckedStateRef);
                 // subnet mask is experimental (for performance issue)
                 if (collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
                 // if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
@@ -357,28 +365,18 @@ namespace AreaBucket.Systems
             {
                 var areaSearchTree = _areaSearchSystem.GetSearchTree(readOnly: true, out var areaSearchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, areaSearchDeps);
-                var collectAreaLinesJob = default(CollectAreaLines).InitContext(singletonData, areaSearchTree);
-                collectAreaLinesJob.bluNode = SystemAPI.GetBufferLookup<Game.Areas.Node>();
-                collectAreaLinesJob.bluTriangle = SystemAPI.GetBufferLookup<Triangle>();
-                collectAreaLinesJob.cluArea = SystemAPI.GetComponentLookup<Area>();
-                collectAreaLinesJob.cluDistrict = SystemAPI.GetComponentLookup<District>();
-                collectAreaLinesJob.cluMapTile = SystemAPI.GetComponentLookup<MapTile>();
-                collectAreaLinesJob.cluSurfacePreviewMarker = SystemAPI.GetComponentLookup<SurfacePreviewMarker>();
+                collectAreaLinesJob.InitContext(singletonData, areaSearchTree).UpdateHandle(ref base.CheckedStateRef);
                 jobHandle = Schedule(collectAreaLinesJob, jobHandle);
             }
+
             if (BoundaryMask.Match(BoundaryMask.Lot))
             {
                 Stopwatch collectLotLineStopwatch = null;
                 if (profileJobTime) collectLotLineStopwatch = Stopwatch.StartNew();
                 var lotLineQueue = new NativeQueue<Line2>(Allocator.TempJob);
-                var collectLotLines = default(CollectLotLines).InitContext(singletonData, lotLineQueue);
-                collectLotLines.thPrefabRef = SystemAPI.GetComponentTypeHandle<PrefabRef>();
-                collectLotLines.thTransform = SystemAPI.GetComponentTypeHandle<Game.Objects.Transform>();
-                collectLotLines.thBuilding = SystemAPI.GetComponentTypeHandle<Building>();
-                collectLotLines.luBuildingData = SystemAPI.GetComponentLookup<BuildingData>();
-                collectLotLines.luObjectGeoData = SystemAPI.GetComponentLookup<ObjectGeometryData>();
+                collectLotLinesJob.InitContext(singletonData, lotLineQueue).AssignHandle(ref base.CheckedStateRef);
                 var collectLotLinesDeps = jobHandle;
-                jobHandle = collectLotLines.ScheduleParallel(lotEntityQuery, collectLotLinesDeps);
+                jobHandle = collectLotLinesJob.ScheduleParallel(lotEntityQuery, collectLotLinesDeps);
                 // jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
                 var collectLotLinesDeps2 = jobHandle;
                 jobHandle = Job.WithCode(() => {
@@ -400,13 +398,8 @@ namespace AreaBucket.Systems
             {
                 var searchTree = _netSearchSystem.GetLaneSearchTree(true, out var searchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, searchDeps);
-                var collectNetLanesJob = default(CollectNetLaneCurves).Init(singletonData, searchTree);
-                collectNetLanesJob.luCurve = SystemAPI.GetComponentLookup<Curve>();
-                collectNetLanesJob.luPrefabRef = SystemAPI.GetComponentLookup<PrefabRef>();
-                collectNetLanesJob.luOwner = SystemAPI.GetComponentLookup<Owner>();
-                collectNetLanesJob.luEditorContainer = SystemAPI.GetComponentLookup<Game.Tools.EditorContainer>();
-                collectNetLanesJob.luNetLaneGeoData = SystemAPI.GetComponentLookup<NetLaneGeometryData>();
-                jobHandle = Schedule(collectNetLanesJob, jobHandle);
+                collectNetLaneCurvesJob.Init(singletonData, searchTree).AssignHandle(ref base.CheckedStateRef);
+                jobHandle = Schedule(collectNetLaneCurvesJob, jobHandle);
             }
 
             var curve2LinesJob = default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit);
