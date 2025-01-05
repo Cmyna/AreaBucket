@@ -23,6 +23,8 @@
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" />
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
 
+  
+  
 	<ItemGroup>
 		<Reference Include="Colossal.AssetPipeline">
 		  <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.AssetPipeline.dll</HintPath>
@@ -102,6 +104,7 @@
 		</Reference>
 	</ItemGroup>
 
+
   <Target Name="InstallUI" AfterTargets="AfterBuild">
     <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)/UI/area-bucket" />
   </Target>
@@ -113,6 +116,15 @@
 
   <ItemGroup>
     <_Icons Include="$(ProjectDir)/Icons/*.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <Compile Remove="ABMathematic\**" />
+    <EmbeddedResource Remove="ABMathematic\**" />
+    <None Remove="ABMathematic\**" />
   </ItemGroup>
 
   <ItemGroup>
