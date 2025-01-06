@@ -162,7 +162,7 @@ namespace AreaBucket.Mathematics.NativeCollections
         public bool Kth(int k, out T value)
         {
             value = default;
-            if (Size(rootNode) < k) return false;
+            if (k <= 0 || k > Size(rootNode)) return false;
             var remainK = k;
             var current = rootNode;
             while (true)
@@ -266,7 +266,7 @@ namespace AreaBucket.Mathematics.NativeCollections
             Splay(cursor);
             cursor++;
 
-            return Size(Child(cursor, 0)) + 1;
+            return Size(Child(rootNode, 0)) + 1;
         }
 
         /// <summary>

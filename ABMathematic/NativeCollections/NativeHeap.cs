@@ -22,7 +22,7 @@ namespace AreaBucket.Mathematics.NativeCollections
         {
             this.count = 0;
             buffer = new NativeList<T>(initalCap + 1, allocator);
-            buffer.Resize(initalCap, NativeArrayOptions.ClearMemory);
+            buffer.Resize(initalCap + 1, NativeArrayOptions.ClearMemory);
             this.buffer[0] = default;
         }
 
