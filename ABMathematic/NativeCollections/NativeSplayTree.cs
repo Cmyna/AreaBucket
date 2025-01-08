@@ -72,12 +72,10 @@ namespace AreaBucket.Mathematics.NativeCollections
                 return builder.ToString();
             }
 
-            public int2 Search(T value)
+            public int4 Search(T value)
             {
-                var result = new int2(int.MinValue, int.MaxValue);
-                int startK = tree.Size(tree.Child(tree.rootNode, 0)) + 1;
-                tree.Search(value, new int2(tree.rootNode, tree.rootNode), new int2(startK, startK), ref result);
-                return result;
+                var kRange = tree.Search(value, out var indices);
+                return new int4(kRange.x, kRange.y, indices.x, indices.y);
             }
             
         }
@@ -251,64 +249,84 @@ namespace AreaBucket.Mathematics.NativeCollections
             throw new NotImplementedException();
         }
 
-
-        private void Search(T value, int2 currents, int2 currentsK, ref int2 matchedK)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="nodeIndices">
+        /// node indices of return's k, 
+        /// if return's k is invalid value then it is 0(NativeSplayTree.INVALID)
+        /// </param>
+        /// <returns></returns>
+        private int2 Search(T value, out int2 nodeIndices)
         {
-            // exit case
-            if (!IsValidNode(currents.x) && !IsValidNode(currents.y)) return;
+            nodeIndices = default;
+            int2 matchedK = new int2(int.MinValue, int.MaxValue);
+
+            int2 currents = new int2(rootNode, rootNode);
+            int2 currentsK = default;
+            currentsK.x = Size(Child(rootNode, 0)) + 1;
+            currentsK.y = currentsK.x;
 
             var nextCurrents = currents;
             var nextCurrentsK = currentsK;
 
-            if (IsValidNode(currents.x))
+            while (IsValidNode(currents.x) || IsValidNode(currents.y))
             {
-                var cp1 = comparer.Compare(value, values[currents.x]);
-                if (cp1 < 0)
+                if (IsValidNode(currents.x))
                 {
-                    matchedK.y = math.min(matchedK.y, currentsK.x - 1);
-                    nextCurrents.x = Child(currents.x, 0);
-                    nextCurrents.y = nextCurrents.x;
-                    nextCurrentsK.x = currentsK.x - Size(Child(nextCurrents.x, 1)) - 1;
-                    nextCurrentsK.y = nextCurrentsK.x;
+                    var cp1 = comparer.Compare(value, values[currents.x]);
+                    if (cp1 < 0)
+                    {
+                        matchedK.y = math.min(matchedK.y, currentsK.x - 1);
+                        nextCurrents.x = Child(currents.x, 0);
+                        nextCurrents.y = nextCurrents.x;
+                        nextCurrentsK.x = currentsK.x - Size(Child(nextCurrents.x, 1)) - 1;
+                        nextCurrentsK.y = nextCurrentsK.x;
+                    }
+                    else if (cp1 == 0)
+                    {
+                        nextCurrents.x = Child(currents.x, 0);
+                        nextCurrentsK.x = currentsK.x - Size(Child(nextCurrents.x, 1)) - 1;
+                        nodeIndices.x = currents.x;
+                    }
+                    else // cp1 > 0
+                    {
+                        matchedK.x = math.max(matchedK.x, currentsK.x + 1);
+                        nextCurrents.x = Child(currents.x, 1);
+                        nextCurrentsK.x = currentsK.x + Size(Child(nextCurrents.x, 0)) + 1;
+                    }
                 }
-                else if (cp1 == 0)
-                {
-                    nextCurrents.x = Child(currents.x, 0);
-                    nextCurrentsK.x = currentsK.x - Size(Child(nextCurrents.x, 1)) - 1;
-                }
-                else // cp1 > 0
-                {
-                    matchedK.x = math.max(matchedK.x, currentsK.x + 1);
-                    nextCurrents.x = Child(currents.x, 1);
-                    nextCurrentsK.x = currentsK.x + Size(Child(nextCurrents.x, 0)) + 1;
-                }
-            }
 
-            if (IsValidNode(currents.y))
-            {
-                var cp2 = comparer.Compare(value, values[currents.y]);
-                if (cp2 > 0)
+                if (IsValidNode(currents.y))
                 {
-                    matchedK.x = math.max(matchedK.x, currentsK.y + 1);
-                    nextCurrents.x = Child(currents.y, 1);
-                    nextCurrents.y = nextCurrents.x;
-                    nextCurrentsK.x = currentsK.y + Size(Child(nextCurrents.y, 0)) + 1;
-                    nextCurrentsK.y = nextCurrentsK.x;
+                    var cp2 = comparer.Compare(value, values[currents.y]);
+                    if (cp2 > 0)
+                    {
+                        matchedK.x = math.max(matchedK.x, currentsK.y + 1);
+                        nextCurrents.x = Child(currents.y, 1);
+                        nextCurrents.y = nextCurrents.x;
+                        nextCurrentsK.x = currentsK.y + Size(Child(nextCurrents.y, 0)) + 1;
+                        nextCurrentsK.y = nextCurrentsK.x;
+                    }
+                    else if (cp2 == 0)
+                    {
+                        nextCurrents.y = Child(currents.y, 1);
+                        nextCurrentsK.y = currentsK.y + Size(Child(nextCurrents.y, 0)) + 1;
+                        nodeIndices.y = currents.y;
+                    }
+                    else // cp2 < 0
+                    {
+                        matchedK.y = math.min(matchedK.y, currentsK.y - 1);
+                        nextCurrents.y = Child(currents.y, 0);
+                        nextCurrentsK.y = currentsK.y - Size(Child(nextCurrents.y, 1)) - 1;
+                    }
                 }
-                else if (cp2 == 0)
-                {
-                    nextCurrents.y = Child(currents.y, 1);
-                    nextCurrentsK.y = currentsK.y + Size(Child(nextCurrents.y, 0)) + 1;
-                }
-                else // cp2 < 0
-                {
-                    matchedK.y = math.min(matchedK.y, currentsK.y - 1);
-                    nextCurrents.y = Child(currents.y, 0);
-                    nextCurrentsK.y = currentsK.y - Size(Child(nextCurrents.y, 1)) - 1;
-                }
-            }
 
-            Search(value, nextCurrents, nextCurrentsK, ref matchedK);
+                currents = nextCurrents;
+                currentsK = nextCurrentsK;
+            }
+            return matchedK;
         }
 
 
