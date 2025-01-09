@@ -240,17 +240,7 @@ namespace AreaBucket.Mathematics.NativeCollections
         }
 
         /// <summary>
-        /// return range of k that compare equals to value
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public int2 RankRange(T value)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// 
+        /// search matched values without tree structural change
         /// </summary>
         /// <param name="value"></param>
         /// <param name="nodeIndices">
@@ -288,7 +278,8 @@ namespace AreaBucket.Mathematics.NativeCollections
                     {
                         nextCurrents.x = Child(currents.x, 0);
                         nextCurrentsK.x = currentsK.x - Size(Child(nextCurrents.x, 1)) - 1;
-                        nodeIndices.x = currents.x;
+                        
+                        nodeIndices.x = currents.x; // keep index points to newest (expanded match)
                     }
                     else // cp1 > 0
                     {
@@ -313,7 +304,8 @@ namespace AreaBucket.Mathematics.NativeCollections
                     {
                         nextCurrents.y = Child(currents.y, 1);
                         nextCurrentsK.y = currentsK.y + Size(Child(nextCurrents.y, 0)) + 1;
-                        nodeIndices.y = currents.y;
+
+                        nodeIndices.y = currents.y; // keep index points to newest (expanded match)
                     }
                     else // cp2 < 0
                     {
