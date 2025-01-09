@@ -126,13 +126,32 @@ namespace AreaBucket.Mathematics.NativeCollections
             return i != INVALID;
         }
 
-        public void DeleteNode(T value)
+        public bool DeleteNode(T value, out int k)
         {
-            Rank(value); // splay it to root node
+            k = Rank(value); // splay it to root node
             // if empty tree
-            if (!IsValidNode(rootNode)) return;
+            if (!IsValidNode(rootNode)) return false;
             // check again, the root value equals too value or not
-            if (comparer.Compare(value, values[rootNode]) != 0) return;
+            if (comparer.Compare(value, values[rootNode]) != 0) return false;
+
+            DeleteRootNode();
+            return true;
+        }
+
+
+        public bool DeleteNodeByRank(int k, out T value)
+        {
+            value = default;
+            if (k <= 0 || k > Size(rootNode)) return false;
+            Kth(k, out value);
+            DeleteRootNode();
+            return true;
+        }
+
+
+        private void DeleteRootNode()
+        {
+            if (!IsValidNode(rootNode)) return;
             var oldRootNode = rootNode;
             var rootLeftChild = Child(rootNode, 0);
             var rootRightChild = Child(rootNode, 1);
@@ -163,8 +182,6 @@ namespace AreaBucket.Mathematics.NativeCollections
             Clear(oldRootNode);
             MaintainSize(leftLargest);
         }
-
-
 
 
         public bool Kth(int k, out T value)
@@ -239,6 +256,36 @@ namespace AreaBucket.Mathematics.NativeCollections
             return res;
         }
 
+
+        public bool Rank2(T value, out int2 kRange)
+        {
+            kRange = Search(value, out var nodeIndices);
+            // restrict range
+            kRange.x = math.max(kRange.x, 1);
+            kRange.y = math.min(Size(rootNode), kRange.y);
+
+
+            // check kRange is valid or not
+            var validRange = kRange.x <= kRange.y;
+
+            // splay nearest
+            if (validRange)
+            {
+                var rootNodeK = Size(Child(rootNode, 0)) + 1;
+                if (math.abs(rootNodeK - kRange.x) < math.abs(rootNodeK - kRange.y))
+                {
+                    Splay(nodeIndices.x);
+                }
+                else
+                {
+                    Splay(nodeIndices.y);
+                }
+            }
+
+            return validRange;
+
+        }
+
         /// <summary>
         /// search matched values without tree structural change
         /// </summary>
@@ -247,7 +294,10 @@ namespace AreaBucket.Mathematics.NativeCollections
         /// node indices of return's k, 
         /// if return's k is invalid value then it is 0(NativeSplayTree.INVALID)
         /// </param>
-        /// <returns></returns>
+        /// <returns>
+        /// the k range (range may over actual range)
+        /// all valid k in range is matched k
+        /// </returns>
         private int2 Search(T value, out int2 nodeIndices)
         {
             nodeIndices = default;
