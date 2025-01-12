@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
+
 
 namespace AreaBucket.Mathematics.NativeCollections
 {
@@ -12,15 +8,33 @@ namespace AreaBucket.Mathematics.NativeCollections
     /// for item who has higher priority (more close to root node) than others, its CompareTo(others) should return value > 0
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public struct NativeHeap<T> where T : unmanaged, IComparable<T>
+    public struct NativeHeap<T>: IDisposable where T : unmanaged, IComparable<T>
     {
-        public int count;
-        public NativeList<T> buffer;
+
+        public class Debuger
+        {
+            private NativeHeap<T> heap;
+
+            public NativeList<T> Buffer { get => heap.buffer; }
+            public Debuger(NativeHeap<T> heap)
+            {
+                this.heap = heap;
+            }
+
+
+        }
+
+        // to prevent inconsitency from struct copy, all dynamic data should be stored as reference or pointer
+
+        private NativeReference<int> count;
+        private NativeList<T> buffer;
+
+        public int Count { get => count.Value; private set => count.Value = value; }
 
 
         public NativeHeap(int initalCap, Allocator allocator = Allocator.Temp)
         {
-            this.count = 0;
+            this.count = new NativeReference<int>(allocator);
             buffer = new NativeList<T>(initalCap + 1, allocator);
             buffer.Resize(initalCap + 1, NativeArrayOptions.ClearMemory);
             this.buffer[0] = default;
@@ -29,10 +43,10 @@ namespace AreaBucket.Mathematics.NativeCollections
 
         public bool Push(T item)
         {
-            if (buffer.Length < count + 1) return false;
-            count++;
-            SetValue(count, item);
-            ShiftUp(count);
+            if (buffer.Length < Count + 1) return false;
+            Count++;
+            SetValue(Count, item);
+            ShiftUp(Count);
             return true;
         }
 
@@ -40,10 +54,10 @@ namespace AreaBucket.Mathematics.NativeCollections
         public bool Pop(out T result)
         {
             result = default;
-            if (count == 0) return false;
+            if (Count == 0) return false;
             result = buffer[1];
-            buffer[1] = buffer[count];
-            count--;
+            buffer[1] = buffer[Count];
+            Count--;
             ShiftDown(1);
             return true;
         }
@@ -71,7 +85,7 @@ namespace AreaBucket.Mathematics.NativeCollections
         private void ShiftDown(int index1Based)
         {
             var leftChildIndex1Based = index1Based * 2;
-            if (leftChildIndex1Based > count) return;
+            if (leftChildIndex1Based > Count) return;
 
             var current = buffer[index1Based];
 
@@ -81,7 +95,7 @@ namespace AreaBucket.Mathematics.NativeCollections
 
             var shiftTargetIndex1Based = leftChildIndex1Based;
 
-            if (rightChildIndex1Based <= count && (buffer[rightChildIndex1Based].CompareTo(leftChild) > 0))
+            if (rightChildIndex1Based <= Count && (buffer[rightChildIndex1Based].CompareTo(leftChild) > 0))
             {
                 shiftTargetIndex1Based = rightChildIndex1Based;
             }
@@ -104,6 +118,12 @@ namespace AreaBucket.Mathematics.NativeCollections
                 return;
             }
             buffer.Add(value);
+        }
+
+        public void Dispose()
+        {
+            if (count.IsCreated) count.Dispose();
+            if (buffer.IsCreated) buffer.Dispose();
         }
     }
 }

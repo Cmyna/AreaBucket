@@ -45,10 +45,10 @@ namespace AreaBucket.Mathematics.NativeCollections
                 var builder = new StringBuilder();
                 builder.AppendLine("Tree: ");
                 builder.AppendLine($"buffer length: {tree.values.Length}");
-                builder.AppendLine($"rootNode: {tree.rootNode}");
-                builder.AppendLine($"cursor: {tree.cursor}");
+                builder.AppendLine($"rootNode: {tree.RootNode}");
+                builder.AppendLine($"cursor: {tree.Cursor}");
                 builder.AppendLine("nodes info: ");
-                NodeInfo(tree.rootNode, "", builder);
+                NodeInfo(tree.RootNode, "", builder);
                 return builder.ToString();
             }
 
@@ -77,9 +77,22 @@ namespace AreaBucket.Mathematics.NativeCollections
                 var kRange = tree.Search(value, out var indices);
                 return new int4(kRange.x, kRange.y, indices.x, indices.y);
             }
+
+            /// <summary>
+            /// get kth value without tree structure change
+            /// </summary>
+            /// <param name="k"></param>
+            /// <returns></returns>
+            /// <exception cref="NotImplementedException"></exception>
+            public (bool, int, T) Kth(int k)
+            {
+                var found = tree.Kth(k, out var value, out var index);
+                return (found, index, value);
+            }
             
         }
 
+        // to prevent inconsitency from struct copy, all dynamic data should be stored as reference or pointer
 
         /// <summary>
         /// invalid node index
@@ -87,17 +100,35 @@ namespace AreaBucket.Mathematics.NativeCollections
         public const int INVALID = 0;
         public const int BRANCH_INVALID = -1;
 
-        private int rootNode;
-        private int cursor;
+        private NativeReference<int> m_rootNode;
+        private int RootNode {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => m_rootNode.Value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => m_rootNode.Value = value; 
+        }
+
+        private NativeReference<int> m_cursor;
+
+        private int Cursor {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => m_cursor.Value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => m_cursor.Value = value; 
+        }
+
         private NativeList<T> values;
+
         private NativeList<SplayNode> nodes;
+
         private C comparer;
 
 
         public NativeSplayTree(C comparer, int initialCap, Allocator allocator = Allocator.Temp)
         {
-            rootNode = INVALID;
-            cursor = 1;
+            m_rootNode = new NativeReference<int>(allocator);
+            m_cursor = new NativeReference<int>(allocator);
+            m_cursor.Value = 1;
             this.comparer = comparer;
             values = new NativeList<T>(initialCap + 1, allocator);
             nodes = new NativeList<SplayNode>(initialCap + 1, allocator);
@@ -108,7 +139,7 @@ namespace AreaBucket.Mathematics.NativeCollections
 
         public int Count()
         {
-            return Size(rootNode);
+            return Size(RootNode);
         }
 
         public bool PreValue(out T result)
@@ -128,12 +159,13 @@ namespace AreaBucket.Mathematics.NativeCollections
 
         public bool DeleteNode(T value, out int k)
         {
-            k = Rank(value); // splay it to root node
+            var anyMatch = Rank2(value, out var kRange);
+            k = kRange.x;
             // if empty tree
-            if (!IsValidNode(rootNode)) return false;
-            // check again, the root value equals too value or not
-            if (comparer.Compare(value, values[rootNode]) != 0) return false;
+            if (!IsValidNode(RootNode) || !anyMatch) return false;
 
+            // delete heighest
+            Kth(kRange.y, out _);
             DeleteRootNode();
             return true;
         }
@@ -142,7 +174,7 @@ namespace AreaBucket.Mathematics.NativeCollections
         public bool DeleteNodeByRank(int k, out T value)
         {
             value = default;
-            if (k <= 0 || k > Size(rootNode)) return false;
+            if (k <= 0 || k > Size(RootNode)) return false;
             Kth(k, out value);
             DeleteRootNode();
             return true;
@@ -151,16 +183,16 @@ namespace AreaBucket.Mathematics.NativeCollections
 
         private void DeleteRootNode()
         {
-            if (!IsValidNode(rootNode)) return;
-            var oldRootNode = rootNode;
-            var rootLeftChild = Child(rootNode, 0);
-            var rootRightChild = Child(rootNode, 1);
+            if (!IsValidNode(RootNode)) return;
+            var oldRootNode = RootNode;
+            var rootLeftChild = Child(RootNode, 0);
+            var rootRightChild = Child(RootNode, 1);
 
             // only root node
             if (!IsValidNode(rootLeftChild) && !IsValidNode(rootRightChild))
             {
-                Clear(rootNode);
-                rootNode = INVALID;
+                Clear(RootNode);
+                RootNode = INVALID;
                 return;
             }
 
@@ -169,7 +201,7 @@ namespace AreaBucket.Mathematics.NativeCollections
             {
                 var newRootNodeIndex = IsValidNode(rootLeftChild) ? rootLeftChild : rootRightChild;
                 SetFarther(newRootNodeIndex, INVALID);
-                rootNode = newRootNodeIndex;
+                RootNode = newRootNodeIndex;
                 Clear(oldRootNode);
                 return;
             }
@@ -183,13 +215,32 @@ namespace AreaBucket.Mathematics.NativeCollections
             MaintainSize(leftLargest);
         }
 
-
+        /// <summary>
+        /// </summary>
+        /// <param name="k"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public bool Kth(int k, out T value)
         {
+            var hasValue = Kth(k, out value, out var targetIndex);
+            if (IsValidNode(targetIndex)) Splay(targetIndex);
+            return hasValue;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="k"></param>
+        /// <param name="value"></param>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        private bool Kth(int k, out T value, out int index)
+        {
             value = default;
-            if (k <= 0 || k > Size(rootNode)) return false;
+            index = INVALID;
+            if (k <= 0 || k > Size(RootNode)) return false;
             var remainK = k;
-            var current = rootNode;
+            var current = RootNode;
             while (true)
             {
                 var leftChildIndex = Child(current, 0);
@@ -206,6 +257,7 @@ namespace AreaBucket.Mathematics.NativeCollections
                     {
                         Splay(current);
                         value = values[current];
+                        index = current;
                         return true;
                     }
                     current = Child(current, 1);
@@ -214,72 +266,20 @@ namespace AreaBucket.Mathematics.NativeCollections
         }
 
 
-
-
-        /// <summary>
-        /// return the rank for value
-        /// for multiple equal values, expected to return the highest rank
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns>
-        /// 1 based rank value
-        /// if returns not in valid range (<= 0 or > Count) means the value not in the tree
-        /// if value is not in the tree, return rank of value just smaller than it
-        /// </returns>
-        public int Rank(T value)
-        {
-            var res = 0;
-            var current = rootNode;
-            int lastCompareResult = -1;
-            var farther = INVALID; var grand = INVALID;
-            while (IsValidNode(current))
-            {
-                lastCompareResult = comparer.Compare(value, values[current]);
-                if (lastCompareResult < 0)
-                {
-                    grand = farther;
-                    farther = current;
-                    current = Child(current, 0);
-                }
-                else // compareResult >= 0
-                {
-                    res += Size(Child(current, 0)) + 1;
-                    grand = farther;
-                    farther = current;
-                    current = Child(current, 1);
-                }
-            }
-            // lastCompareResult < 0: farther is larger than value, grand equal/smaller than value
-            if (lastCompareResult < 0 && IsValidNode(grand)) Splay(grand);
-            else if (lastCompareResult == 0 && IsValidNode(farther)) Splay(farther);
-            // if above two condition not satisfied, it means farther is rootNode or no farther, no need to splay
-            return res;
-        }
-
-
         public bool Rank2(T value, out int2 kRange)
         {
             kRange = Search(value, out var nodeIndices);
             // restrict range
             kRange.x = math.max(kRange.x, 1);
-            kRange.y = math.min(Size(rootNode), kRange.y);
+            kRange.y = math.min(Size(RootNode), kRange.y);
 
 
             // check kRange is valid or not
             var validRange = kRange.x <= kRange.y;
 
-            // splay nearest
             if (validRange)
             {
-                var rootNodeK = Size(Child(rootNode, 0)) + 1;
-                if (math.abs(rootNodeK - kRange.x) < math.abs(rootNodeK - kRange.y))
-                {
-                    Splay(nodeIndices.x);
-                }
-                else
-                {
-                    Splay(nodeIndices.y);
-                }
+                Splay(nodeIndices.y); // splay to heighest
             }
 
             return validRange;
@@ -303,9 +303,9 @@ namespace AreaBucket.Mathematics.NativeCollections
             nodeIndices = default;
             int2 matchedK = new int2(int.MinValue, int.MaxValue);
 
-            int2 currents = new int2(rootNode, rootNode);
+            int2 currents = new int2(RootNode, RootNode);
             int2 currentsK = default;
-            currentsK.x = Size(Child(rootNode, 0)) + 1;
+            currentsK.x = Size(Child(RootNode, 0)) + 1;
             currentsK.y = currentsK.x;
 
             var nextCurrents = currents;
@@ -379,16 +379,16 @@ namespace AreaBucket.Mathematics.NativeCollections
         /// <returns>the k-th</returns>
         public int InsertNode(T value)
         {
-            if (!IsValidNode(rootNode))
+            if (!IsValidNode(RootNode))
             {
-                SetValue(cursor, value);
-                rootNode = cursor;
-                cursor++;
-                MaintainSize(rootNode);
+                SetValue(Cursor, value);
+                RootNode = Cursor;
+                Cursor++;
+                MaintainSize(RootNode);
                 return 1;
             }
 
-            var current = rootNode;
+            var current = RootNode;
             var fartherIndex = INVALID;
             var childBranchIndex = INVALID;
             // bin search next empty node slot
@@ -400,15 +400,15 @@ namespace AreaBucket.Mathematics.NativeCollections
             }
 
             // do insert
-            SetValue(cursor, value);
-            SetFarther(cursor, fartherIndex);
-            SetChild(fartherIndex, childBranchIndex, cursor);
-            MaintainSize(cursor);
+            SetValue(Cursor, value);
+            SetFarther(Cursor, fartherIndex);
+            SetChild(fartherIndex, childBranchIndex, Cursor);
+            MaintainSize(Cursor);
             MaintainSize(fartherIndex);
-            Splay(cursor);
-            cursor++;
+            Splay(Cursor);
+            Cursor++;
 
-            return Size(Child(rootNode, 0)) + 1;
+            return Size(Child(RootNode, 0)) + 1;
         }
 
         /// <summary>
@@ -418,7 +418,7 @@ namespace AreaBucket.Mathematics.NativeCollections
         /// <returns></returns>
         private int Pre()
         {
-            var current = Child(rootNode, 0);
+            var current = Child(RootNode, 0);
             if (!IsValidNode(current)) return current;
             while (IsValidNode(Child(current, 1))) current = Child(current, 1);
             Splay(current);
@@ -431,7 +431,7 @@ namespace AreaBucket.Mathematics.NativeCollections
         /// <returns></returns>
         private int Next()
         {
-            var current = Child(rootNode, 1);
+            var current = Child(RootNode, 1);
             if (!IsValidNode(current)) return current;
             while (IsValidNode(Child(current, 0))) current = Child(current, 0);
             Splay(current);
@@ -455,7 +455,7 @@ namespace AreaBucket.Mathematics.NativeCollections
                 }
                 Rotate(i); // both zig-zig and zig-zag second op is rotate(i)
             }
-            rootNode = i;
+            RootNode = i;
         }
 
 
