@@ -2,6 +2,7 @@
 using Colossal.Mathematics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
@@ -10,7 +11,7 @@ using Index = System.Int32;
 
 namespace ABMathematics.LineSweeping
 {
-    public struct IntersectionJob : IJob
+    public struct IntersectionJob : IJob, IDisposable
     {
 
 
@@ -31,17 +32,56 @@ namespace ABMathematics.LineSweeping
             }
 
 
-            public bool CheckOrder(out string currentAbs, out string actualAbs)
+            public (int, SweepEvent)[] Query(int segmentIndex)
+            {
+                var result = new List<(int, SweepEvent)>();
+                for (var i = 0; i < history.Count; i++)
+                {
+                    var e = history[i];
+                    if (e.segmentPointers.x != segmentIndex && e.segmentPointers.y != segmentIndex) continue;
+                    result.Add((i, e));
+                }
+                return result.ToArray();
+            }
+
+            public bool CheckOrder(out string abs)
             {
                 var hasDiff = false;
                 var result1 = CurrentOrder();
                 var result2 = ActualOrder();
-                currentAbs = SegmentIndicesAbstract(result1);
-                actualAbs = SegmentIndicesAbstract(result2);
+
+                //currentAbs = SegmentIndicesAbstract(result1);
+                //actualAbs = SegmentIndicesAbstract(result2);
+                var diffStart = int.MaxValue;
+                var diffEnd = int.MinValue;
+
                 for (int i = 0; i < result1.Length; i++)
                 {
                     hasDiff |= result1[i] != result2[i];
+                    if (result1[i] != result2[i])
+                    {
+                        diffStart = math.min(i, diffStart);
+                        diffEnd = math.max(i, diffEnd);
+                    }
                 }
+
+                // expand range
+                var i1 = math.max(0, diffStart - 2);
+                var i2 = math.min(result1.Length - 1, diffEnd + 2);
+
+                abs = "order check pass";
+                if (i1 < result1.Length && i2 >= 0)
+                {
+                    var diffData = new Index[i2 - i1 + 1];
+
+                    abs = $"difference between [{diffStart}, {diffEnd}]\n";
+                    Array.Copy(result1, i1, diffData, 0, i2 - i1 + 1);
+                    abs += $"current order: {SegmentIndicesAbstract(diffData)}\n";
+                    Array.Copy(result2, i1, diffData, 0, i2 - i1 + 1);
+                    abs += $"actual order: {SegmentIndicesAbstract(diffData)}\n";
+                }
+
+
                 return !hasDiff;
             }
 
@@ -77,8 +117,7 @@ namespace ABMathematics.LineSweeping
 
             public float2 GetIntersect(int i1, int i2)
             {
-                float2 result = default;
-                job.CheckIntersect(job.segments[i1], job.segments[i2], out result);
+                job.CheckIntersect(job.segments[i1], job.segments[i2], out float2 result);
                 return result;
             }
 
@@ -96,14 +135,14 @@ namespace ABMathematics.LineSweeping
             public int[] ActualOrder()
             {
                 var indices = GetSegmentsIndicesInTree();
-                Array.Sort(indices, job.comparer);
-                return indices;
+                // stable sort
+                return indices.OrderBy((i) => i, job.comparer).ToArray();
             }
 
 
             private string SegmentIndicesAbstract(int[] indices)
             {
-                var result = $"(length: {indices.Length})";
+                var result = $"";
                 foreach (int i in indices)
                 {
                     result += $"{i}, ";
@@ -138,24 +177,77 @@ namespace ABMathematics.LineSweeping
 
         public NativeList<float2> result;
 
-        public IntersectionJob(NativeArray<Line2.Segment> segments, NativeList<float2> result, Allocator allocator = Allocator.Temp)
+        /// <summary>
+        /// temp buffer for swapping (re-ordering)
+        /// </summary>
+        private NativeList<Index> tempBuffer; 
+
+        private NativeReference<Index> eventsCounter;
+
+        private readonly float eps;
+
+        private Index EventsCounter 
         {
+            get => eventsCounter.Value;
+            set => eventsCounter.Value = value;
+        }
+   
+
+        public IntersectionJob(
+            NativeArray<Line2.Segment> segments, 
+            NativeList<float2> result, 
+            Allocator allocator = Allocator.Temp,
+            float eps = 0.01f
+            )
+        {
+            this.eps = eps;
             this.result = result;
             this.segments = segments;
-            comparer = new NativeSegmantComparer(segments, allocator);
+            comparer = new NativeSegmantComparer(segments, allocator, eps);
             eventQueue = new NativeHeap<SweepEvent>(segments.Length / 10 + 10, allocator);
             tree = new NativeSplayTree<Index, NativeSegmantComparer>(comparer, segments.Length * 2, allocator);
-            // eventQueue = new NativeHeap<SweepEvent>(100, Allocator.TempJob);
+            tempBuffer = new NativeList<Index>(allocator);
+            eventsCounter = new NativeReference<Index>(allocator);
+        }
+
+
+        public void Execute2()
+        {
+            int eventsUpperbound = (segments.Length - 1) * segments.Length / 2 + segments.Length * 2;
+            var debuger = new Debuger(this);
+
+            InitStartEnds();
+
+            EventsCounter = 0;
+            SweepEvent lastEvent = default;
+            while (eventQueue.Pop(out var nextEvent))
+            {
+                
+                if (EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: Over UpperBound!");
+                EventsCounter++;
+
+                comparer.UpdateX(nextEvent.posXZ.x); // update comparer x value
+
+                if (SkipEvent(lastEvent, nextEvent))
+                {
+                    debuger.Record(nextEvent);
+                    continue;
+                }
+
+                // Reorder(new int2(lastEvent.kRange.x - 500, lastEvent.kRange.y + 500));
+
+                nextEvent = NextEvent(lastEvent, nextEvent);
+                debuger.Record(nextEvent);
+                lastEvent = nextEvent;
+            }
         }
 
 
         public void Execute()
         {
-            string currentOrder, actualOrder;
+            string abs;
 
-            // int eventsUpperbound = (segments.Length - 1) * segments.Length / 2 + segments.Length * 2;
-            int eventsUpperbound = segments.Length * segments.Length;
-            int eventsCounter = 0;
+            int eventsUpperbound = (segments.Length - 1) * segments.Length / 2 + segments.Length * 2;
 
             // insert all segments start end event
             for (int i = 0; i < segments.Length; i++)
@@ -163,7 +255,6 @@ namespace ABMathematics.LineSweeping
                 InsertStartEndEvent(i, segments[i], ref eventQueue);
             }
 
-            float2 intersectPos;
             int k;
             int2 kRange;
             SweepEvent lastEvent = default;
@@ -175,20 +266,20 @@ namespace ABMathematics.LineSweeping
             {
                 debuger.Record(sweepEvent);
                 
-                if (eventsCounter > eventsUpperbound) throw new Exception("Assertion Error: Over UpperBound!");
-                eventsCounter++;
+                if (EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: Over UpperBound!");
+                EventsCounter++;
 
                 // if duplicate event: skip
-                if (EqualEvent(sweepEvent, lastEvent)) continue;
+                if (SkipEvent(sweepEvent, lastEvent)) continue;
 
                 comparer.UpdateX(sweepEvent.posXZ.x); // update comparer x value
                 int i = sweepEvent.segmentPointers.x;
 
                 // DEBUG: check order is not broken
                 // FIX: has false negative (maybe float precision issue)
-                if (!debuger.CheckOrder(out currentOrder, out actualOrder))
+                if (!debuger.CheckOrder(out abs))
                 {
-                    throw new Exception($"Order Assertion Error: \ncurrent: {currentOrder}\nactual: {actualOrder}");
+                    throw new Exception($"Order Assertion Error: \n{abs}");
                 }
 
                 if (sweepEvent.eventType == SweepEventType.PointStart)
@@ -197,35 +288,15 @@ namespace ABMathematics.LineSweeping
                     k = tree.InsertNode(i);
 
                     // check neighbor's intersections
-                    if (
-                        tree.Kth(k - 1, out var preIndex) &&
-                        CheckIntersect(segments[i], segments[preIndex], out intersectPos) &&
-                        intersectPos.x > sweepEvent.posXZ.x
-                        )
+                    if (tree.Kth(k - 1, out var preIndex) ) 
                     {
-                        eventQueue.Push(new SweepEvent
-                        {
-                            eventType = SweepEventType.Intersection,
-                            posXZ = intersectPos,
-                            segmentPointers = new int2(preIndex, i),
-                            from = eventsCounter
-                        });
-                        
+                        TryCreateNewIntersectionEvent(sweepEvent, preIndex, i);
                     }
 
                     if (
-                        tree.Kth(k + 1, out var nextIndex) &&
-                        CheckIntersect(segments[i], segments[nextIndex], out intersectPos) &&
-                        intersectPos.x > sweepEvent.posXZ.x
-                        )
+                        tree.Kth(k + 1, out var nextIndex) )
                     {
-                        eventQueue.Push(new SweepEvent
-                        {
-                            eventType = SweepEventType.Intersection,
-                            posXZ = intersectPos,
-                            segmentPointers = new int2(i, nextIndex),
-                            from = eventsCounter
-                        });
+                        TryCreateNewIntersectionEvent(sweepEvent, i, nextIndex);
                         
                     }
 
@@ -246,19 +317,10 @@ namespace ABMathematics.LineSweeping
                     // check its neighbor's intersection
                     if (
                         tree.Kth(k - 1, out var preIndex) &&
-                        tree.Kth(k + 1, out var nextIndex) &&
-                        CheckIntersect(segments[preIndex], segments[nextIndex], out intersectPos) &&
-                        intersectPos.x > sweepEvent.posXZ.x
+                        tree.Kth(k + 1, out var nextIndex)
                         )
                     {
-                        eventQueue.Push(new SweepEvent
-                        {
-                            eventType = SweepEventType.Intersection,
-                            posXZ = intersectPos,
-                            segmentPointers = new int2(preIndex, nextIndex),
-                            from = eventsCounter
-                        });
-                        
+                        TryCreateNewIntersectionEvent(sweepEvent, preIndex, nextIndex);
                     }
 
                     
@@ -291,34 +353,15 @@ namespace ABMathematics.LineSweeping
                     tree.Kth(kRange.y, out var index2Highest);
 
                     // check kRange.x and nextIndex
-                    if (hasNext && 
-                        CheckIntersect(segments[index2Lowest], segments[nextIndex], out intersectPos) &&
-                        intersectPos.x > sweepEvent.posXZ.x
-                        )
+                    if (hasNext)
                     {
-                        eventQueue.Push(new SweepEvent
-                        {
-                            eventType = SweepEventType.Intersection,
-                            posXZ = intersectPos,
-                            segmentPointers = new int2(index2Lowest, nextIndex),
-                            from = eventsCounter
-                        });
+                        TryCreateNewIntersectionEvent(sweepEvent, index2Lowest, nextIndex);
                     }
 
                     // check kRange.y and preIndex
-                    if (
-                        hasPre && 
-                        CheckIntersect(segments[index2Highest], segments[preIndex], out intersectPos) &&
-                        intersectPos.x > sweepEvent.posXZ.x
-                        )
+                    if (hasPre)
                     {
-                        eventQueue.Push(new SweepEvent
-                        {
-                            eventType = SweepEventType.Intersection,
-                            posXZ = intersectPos,
-                            segmentPointers = new int2(preIndex, index2Highest),
-                            from = eventsCounter
-                        });
+                        TryCreateNewIntersectionEvent(sweepEvent, preIndex, index2Highest);
                     }
 
                     // reverse order in kRange's nodes (delete and re-insert kRange.x n times)
@@ -329,9 +372,9 @@ namespace ABMathematics.LineSweeping
                     }
 
                     // DEBUG: check order is not broken
-                    if (!debuger.CheckOrder(out currentOrder, out actualOrder))
+                    if (!debuger.CheckOrder(out abs))
                     {
-                        throw new Exception($"Order Assertion Error: \ncurrent: {currentOrder}\nactual: {actualOrder}");
+                        throw new Exception($"Order Assertion Error: \n{abs}");
                     }
                 }
 
@@ -342,11 +385,149 @@ namespace ABMathematics.LineSweeping
         }
 
 
+        private void InitStartEnds()
+        {
+            for (int i = 0; i < segments.Length; i++)
+            {
+                InsertStartEndEvent(i, segments[i], ref eventQueue);
+            }
+        }
+
+        private SweepEvent NextEvent(SweepEvent lastEvent, SweepEvent nextEvent)
+        {
+            int i = nextEvent.segmentPointers.x;
+
+            if (nextEvent.eventType == SweepEventType.PointStart)
+            {
+                // insert into splay tree
+                var k = tree.InsertNode(i);
+
+                // check neighbor's intersections
+                if (tree.Kth(k - 1, out var preIndex))
+                {
+                    TryCreateNewIntersectionEvent(nextEvent, preIndex, i);
+                }
+
+                if (
+                    tree.Kth(k + 1, out var nextIndex))
+                {
+                    TryCreateNewIntersectionEvent(nextEvent, i, nextIndex);
+
+                }
+
+                nextEvent.kRange = new int2(k);
+            }
+            else if (
+                nextEvent.eventType == SweepEventType.PointEnd)
+            {
+                // FIX: actual situation is more complex
+                
+                if (!tree.Rank2(nextEvent.segmentPointers.x, out var kRange))
+                {
+                    tree.AsDebuger().Search(nextEvent.segmentPointers.x);
+                    throw new Exception("Assertion Error: should found matched k");
+                }
+
+                int k;
+                var foundK = false;
+                for (k = kRange.x; k <= kRange.y; k++)
+                {
+                    tree.Kth(k, out var v);
+                    if (v == i)
+                    {
+                        foundK = true;
+                        break;
+                    }
+                }
+                if (!foundK) throw new Exception();
+
+                // check its neighbor's intersection
+                if (
+                    tree.Kth(k - 1, out var preIndex) &&
+                    tree.Kth(k + 1, out var nextIndex)
+                    )
+                {
+                    TryCreateNewIntersectionEvent(nextEvent, preIndex, nextIndex);
+                }
+
+                tree.DeleteNodeByRank(k, out _);
+
+                nextEvent.kRange = new int2(k);
+            }
+            else // is intersection event
+            {
+                tree.Rank2(i, out var kRange); // get intersected k range
+                nextEvent.kRange = kRange; // update event's kRange
+
+                // handle special case: multiple intersection at one point
+                // in these cases, theses intersection events expected be emitted continuously
+                // and their k-range is same
+                // the position swap should only do once or the final segments order in tree will be broken
+                // hense we check lastEvent and nextEvent, both are belongs to same intersection or not
+                // (used to check by kRange, but has float presision issue)
+                // if it is true, just skip the event (do-nothing), only record its kRange
+                if (
+                    lastEvent.eventType == SweepEventType.Intersection &&
+                    IsSameIntersection(lastEvent.posXZ, nextEvent.posXZ)
+                    )
+                {
+                    return nextEvent;
+                }
+
+                result.Add(nextEvent.posXZ); // add intersection point to result
+
+                var hasPre = tree.Kth(kRange.x - 1, out var preIndex);
+                var hasNext = tree.Kth(kRange.y + 1, out var nextIndex);
+
+                tree.Kth(kRange.x, out var index2Lowest);
+                tree.Kth(kRange.y, out var index2Highest);
+
+                // check kRange.x and nextIndex
+                if (hasNext)
+                {
+                    TryCreateNewIntersectionEvent(nextEvent, index2Lowest, nextIndex);
+                }
+
+                // check kRange.y and preIndex
+                if (hasPre)
+                {
+                    TryCreateNewIntersectionEvent(nextEvent, preIndex, index2Highest);
+                }
+
+                // reverse order
+                for (var _k = kRange.y - 1; _k >= kRange.x; _k--)
+                {
+                    tree.DeleteNodeByRank(_k, out var v);
+                    tree.InsertNode(v);
+                }
+
+            }
+            return nextEvent;
+        }
+        
+
+        private void Reorder(int2 kRange)
+        {
+            tempBuffer.Clear();
+            kRange.x = math.max(kRange.x, 1);
+            kRange.y = math.min(kRange.y, tree.Count());
+            for (var k = kRange.y; k >= kRange.x; k--)
+            {
+                tree.DeleteNodeByRank(k, out var i);
+                tempBuffer.Add(i);
+            }
+
+            for (int i = 0; i < tempBuffer.Length; i++)
+            {
+                tree.InsertNode(tempBuffer[i]);
+            }
+        }
+
+
         private void TryCreateNewIntersectionEvent(
             SweepEvent currentEvent, 
             int i1, 
-            int i2,
-            int counter
+            int i2
             )
         {
             if (!CheckIntersect(segments[i1], segments[i2], out var pos)) return;
@@ -356,17 +537,25 @@ namespace ABMathematics.LineSweeping
                 eventType = SweepEventType.Intersection,
                 posXZ = pos,
                 segmentPointers = new int2(i1, i2),
-                from = counter
+                from = EventsCounter
             });
         }
 
 
-        private bool EqualEvent(SweepEvent event1, SweepEvent event2)
+        private bool IsSameIntersection(float2 pos1, float2 pos2)
         {
-            if (event1.eventType != event2.eventType) return false;
-            if (math.any(event1.segmentPointers != event2.segmentPointers)) return false;
-            var eps = 1e-3;
-            return (math.abs(event1.posXZ.x - event2.posXZ.x) < eps);
+            var diffVector = pos1 - pos2;
+            var diff = diffVector.x + diffVector.y; // manhattan dist
+            return math.abs(diff) < eps;
+        }
+
+
+        private bool SkipEvent(SweepEvent lastEvent, SweepEvent currentEvent)
+        {
+            if (lastEvent.eventType != currentEvent.eventType) return false;
+            // if both are intersection
+            if (math.any(lastEvent.segmentPointers != currentEvent.segmentPointers)) return false;
+            return (math.abs(lastEvent.posXZ.x - currentEvent.posXZ.x) < eps);
         }
 
 
@@ -374,7 +563,7 @@ namespace ABMathematics.LineSweeping
         {
             intersectPos = default;
             if (!MathUtils.Intersect(s1, s2, out var t)) return false;
-            intersectPos = math.lerp(s1.a, s1.b, t);
+            intersectPos = math.lerp(s1.a, s1.b, t.x);
             return true;
         }
 
@@ -408,7 +597,13 @@ namespace ABMathematics.LineSweeping
             });
         }
 
-        
+        public void Dispose()
+        {
+            comparer.Dispose();
+            eventQueue.Dispose();
+            tree.Dispose();
+            eventsCounter.Dispose();
+        }
     }
 
     public struct NativeSegmantComparer : IComparer<int>
@@ -417,10 +612,17 @@ namespace ABMathematics.LineSweeping
 
         private NativeArray<float2> mbReprs;
 
+        private readonly float eps;
+
         public float X { get => x.Value; }
 
-        public NativeSegmantComparer(NativeArray<Line2.Segment> segments, Allocator allocator = Allocator.Temp)
+        public NativeSegmantComparer(
+            NativeArray<Line2.Segment> segments, 
+            Allocator allocator = Allocator.Temp,
+            float eps = 0.01f
+            )
         {
+            this.eps = eps;
             x = new NativeReference<float>(allocator);
             mbReprs = new NativeArray<float2>(segments.Length, allocator);
             for (int i = 0; i < segments.Length; i++)
@@ -433,7 +635,7 @@ namespace ABMathematics.LineSweeping
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(Index x, Index y)
         {
-            return SweepEvent.CompareSegment(mbReprs[x], mbReprs[y], this.x.Value);
+            return SweepEvent.CompareSegment(mbReprs[x], mbReprs[y], this.x.Value, eps);
         }
 
         public void Dispose()

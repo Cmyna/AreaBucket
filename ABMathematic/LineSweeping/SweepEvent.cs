@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Mathematics;
@@ -37,10 +38,22 @@ namespace ABMathematics.LineSweeping
         /// </summary>
         public int from;
 
+        /// <summary>
+        /// records event's k range in segments tree (at that moment)
+        /// </summary>
+        public int2 kRange;
+
         public int CompareTo(SweepEvent other)
         {
-            // smaller value has higher priority
-            return (posXZ.x - other.posXZ.x) > 0 ? -1 : 1;
+            // (both x and z) smaller value has higher priority
+            var eps = 1e-3f;
+            var xDiff = posXZ.x - other.posXZ.x;
+            if (math.abs(xDiff) > eps) return xDiff > 0 ? -1 : 1;
+            // check y(z) diff
+            var yDiff = posXZ.y - other.posXZ.y;
+            if (math.abs(yDiff) > eps) return yDiff > 0 ? -1 : 1;
+
+            return 0;
         }
 
         public static float2 AsSweepRepresentation(float2 a, float2 b)
@@ -51,12 +64,12 @@ namespace ABMathematics.LineSweeping
             return new float2(m, _b);
         }
 
-        public static int CompareSegment(float2 s1, float2 s2, float x)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareSegment(float2 s1, float2 s2, float x, float eps)
         {
             float z1 = s1.x * x + s1.y;
             float z2 = s2.x * x + s2.y;
             float diff = math.abs(z1 - z2);
-            float eps = 0.001f;
             if (diff <= eps) return 0;
             else if (z1 > z2) return 1;
             else return -1;
