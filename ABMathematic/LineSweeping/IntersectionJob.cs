@@ -25,6 +25,25 @@ namespace ABMathematics.LineSweeping
                 history = new List<SweepEvent>();
             }
 
+            /// <summary>
+            /// execute with debuger
+            /// </summary>
+            /// <exception cref="Exception"></exception>
+            public void Execute()
+            {
+                int eventsUpperbound = (job.segments.Length - 1) * job.segments.Length / 2 + job.segments.Length * 2;
+
+                job.InitStartEnds();
+
+                job.EventsCounter = 0;
+                while (job.eventQueue.Pop(out var nextEvent))
+                {
+                    job.NextEventsGroup(nextEvent);
+                    job.EventsCounter++;
+                    if (job.EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: over event upper bounds");
+                }
+            }
+
 
             public void Record(SweepEvent e)
             {
@@ -180,7 +199,7 @@ namespace ABMathematics.LineSweeping
         /// <summary>
         /// temp buffer for swapping (re-ordering)
         /// </summary>
-        private NativeList<Index> tempBuffer; 
+        private NativeList<Index> tempBuffer;
 
         private NativeReference<Index> eventsCounter;
 
@@ -211,179 +230,20 @@ namespace ABMathematics.LineSweeping
         }
 
 
-        public void Execute2()
+        public void Execute()
         {
             int eventsUpperbound = (segments.Length - 1) * segments.Length / 2 + segments.Length * 2;
-            var debuger = new Debuger(this);
 
             InitStartEnds();
 
             EventsCounter = 0;
-            SweepEvent lastEvent = default;
-            while (eventQueue.Pop(out var nextEvent))
+            while(eventQueue.Pop(out var nextEvent))
             {
-                
-                if (EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: Over UpperBound!");
+                NextEventsGroup(nextEvent);
                 EventsCounter++;
-
-                comparer.UpdateX(nextEvent.posXZ.x); // update comparer x value
-
-                if (SkipEvent(lastEvent, nextEvent))
-                {
-                    debuger.Record(nextEvent);
-                    continue;
-                }
-
-                // Reorder(new int2(lastEvent.kRange.x - 500, lastEvent.kRange.y + 500));
-
-                nextEvent = NextEvent(lastEvent, nextEvent);
-                debuger.Record(nextEvent);
-                lastEvent = nextEvent;
+                if (EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: over event upper bounds");
             }
         }
-
-
-        public void Execute()
-        {
-            string abs;
-
-            int eventsUpperbound = (segments.Length - 1) * segments.Length / 2 + segments.Length * 2;
-
-            // insert all segments start end event
-            for (int i = 0; i < segments.Length; i++)
-            {
-                InsertStartEndEvent(i, segments[i], ref eventQueue);
-            }
-
-            int k;
-            int2 kRange;
-            SweepEvent lastEvent = default;
-            bool hasPre, hasNext;
-
-            var debuger = new Debuger(this);
-
-            while (eventQueue.Pop(out var sweepEvent))
-            {
-                debuger.Record(sweepEvent);
-                
-                if (EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: Over UpperBound!");
-                EventsCounter++;
-
-                // if duplicate event: skip
-                if (SkipEvent(sweepEvent, lastEvent)) continue;
-
-                comparer.UpdateX(sweepEvent.posXZ.x); // update comparer x value
-                int i = sweepEvent.segmentPointers.x;
-
-                // DEBUG: check order is not broken
-                // FIX: has false negative (maybe float precision issue)
-                if (!debuger.CheckOrder(out abs))
-                {
-                    throw new Exception($"Order Assertion Error: \n{abs}");
-                }
-
-                if (sweepEvent.eventType == SweepEventType.PointStart)
-                {
-                    // insert into splay tree
-                    k = tree.InsertNode(i);
-
-                    // check neighbor's intersections
-                    if (tree.Kth(k - 1, out var preIndex) ) 
-                    {
-                        TryCreateNewIntersectionEvent(sweepEvent, preIndex, i);
-                    }
-
-                    if (
-                        tree.Kth(k + 1, out var nextIndex) )
-                    {
-                        TryCreateNewIntersectionEvent(sweepEvent, i, nextIndex);
-                        
-                    }
-
-
-                }
-                else if (
-                    sweepEvent.eventType == SweepEventType.PointEnd)
-                {
-                    // FIX: actual situation is more complex
-                    if (!tree.Rank2(sweepEvent.segmentPointers.x, out kRange))
-                    {
-                        tree.AsDebuger().Search(sweepEvent.segmentPointers.x);
-                        throw new Exception("Assertion Error: should found matched k");
-                    }
-                    
-                    k = kRange.x;
-
-                    // check its neighbor's intersection
-                    if (
-                        tree.Kth(k - 1, out var preIndex) &&
-                        tree.Kth(k + 1, out var nextIndex)
-                        )
-                    {
-                        TryCreateNewIntersectionEvent(sweepEvent, preIndex, nextIndex);
-                    }
-
-                    
-
-                    tree.DeleteNodeByRank(k, out var v);
-                    if (v != i)
-                    {
-                        throw new Exception();
-                    }
-
-                }
-                else // is intersection event
-                {
-                    result.Add(sweepEvent.posXZ);
-                    // get intersected k range
-                    if (!tree.Rank2(i, out kRange))
-                    {
-                        tree.AsDebuger().Search(sweepEvent.segmentPointers.x);
-                        throw new Exception("Assertion Error: should found match");
-                    }
-                    if (kRange.x == kRange.y)
-                    {
-                        throw new Exception("Assertion Error: should at least 2 segments in range");
-                    }
-
-                    hasPre = tree.Kth(kRange.x - 1, out var preIndex);
-                    hasNext = tree.Kth(kRange.y + 1, out var nextIndex);
-
-                    tree.Kth(kRange.x, out var index2Lowest);
-                    tree.Kth(kRange.y, out var index2Highest);
-
-                    // check kRange.x and nextIndex
-                    if (hasNext)
-                    {
-                        TryCreateNewIntersectionEvent(sweepEvent, index2Lowest, nextIndex);
-                    }
-
-                    // check kRange.y and preIndex
-                    if (hasPre)
-                    {
-                        TryCreateNewIntersectionEvent(sweepEvent, preIndex, index2Highest);
-                    }
-
-                    // reverse order in kRange's nodes (delete and re-insert kRange.x n times)
-                    for (int k2 = kRange.y - 1; k2 >= kRange.x; k2--)
-                    {
-                        tree.DeleteNodeByRank(k2, out var v);
-                        tree.InsertNode(v);
-                    }
-
-                    // DEBUG: check order is not broken
-                    if (!debuger.CheckOrder(out abs))
-                    {
-                        throw new Exception($"Order Assertion Error: \n{abs}");
-                    }
-                }
-
-
-                lastEvent = sweepEvent;
-            }
-
-        }
-
 
         private void InitStartEnds()
         {
@@ -393,134 +253,113 @@ namespace ABMathematics.LineSweeping
             }
         }
 
-        private SweepEvent NextEvent(SweepEvent lastEvent, SweepEvent nextEvent)
+
+        private bool NextEventsGroup(SweepEvent startEvent)
         {
-            int i = nextEvent.segmentPointers.x;
+            // temp buffer create code
+            var indices = new NativeHashSet<Index>(10, Allocator.Temp);
 
-            if (nextEvent.eventType == SweepEventType.PointStart)
+            var nextEvent = startEvent;
+            SweepEvent lastEvent = nextEvent;
+
+            var hasNextGroup = false;
+
+            comparer.UpdateOffset(-1f); // keep before-swapping order in tree 
+
+            var hasIntersection = false;
+            var startEndCount = 0;
+            do
             {
-                // insert into splay tree
-                var k = tree.InsertNode(i);
-
-                // check neighbor's intersections
-                if (tree.Kth(k - 1, out var preIndex))
+                // check is same event group or not
+                // expect EQ will continuously pop events in same group
+                // only if no event in current group, the EQ will pop next group events
+                // in one group, events may not equals (means e.CompareTo(e2) != 0)
+                // but adjacent event is equal
+                // hense we iterate through and compare nextEvent == lastEvent or not,
+                // break if nextEvent != lastEvent, and nextEvent is in next group
+                if (!IsAdjacentEvent(lastEvent, nextEvent))
                 {
-                    TryCreateNewIntersectionEvent(nextEvent, preIndex, i);
+                    hasNextGroup = true;
+                    break;
                 }
-
-                if (
-                    tree.Kth(k + 1, out var nextIndex))
-                {
-                    TryCreateNewIntersectionEvent(nextEvent, i, nextIndex);
-
-                }
-
-                nextEvent.kRange = new int2(k);
-            }
-            else if (
-                nextEvent.eventType == SweepEventType.PointEnd)
-            {
-                // FIX: actual situation is more complex
                 
-                if (!tree.Rank2(nextEvent.segmentPointers.x, out var kRange))
+                if (nextEvent.eventType == SweepEventType.PointStart)
                 {
-                    tree.AsDebuger().Search(nextEvent.segmentPointers.x);
-                    throw new Exception("Assertion Error: should found matched k");
+                    indices.Add(nextEvent.segmentPointers.x);
+                    startEndCount++;
                 }
 
-                int k;
-                var foundK = false;
-                for (k = kRange.x; k <= kRange.y; k++)
+                if (nextEvent.eventType == SweepEventType.PointEnd)
                 {
-                    tree.Kth(k, out var v);
-                    if (v == i)
-                    {
-                        foundK = true;
-                        break;
-                    }
-                }
-                if (!foundK) throw new Exception();
-
-                // check its neighbor's intersection
-                if (
-                    tree.Kth(k - 1, out var preIndex) &&
-                    tree.Kth(k + 1, out var nextIndex)
-                    )
-                {
-                    TryCreateNewIntersectionEvent(nextEvent, preIndex, nextIndex);
+                    tree.DeleteNode(nextEvent.segmentPointers.x, out _);
+                    startEndCount++;
                 }
 
-                tree.DeleteNodeByRank(k, out _);
+                if (nextEvent.eventType == SweepEventType.Intersection) 
+                {
+                    indices.Add(nextEvent.segmentPointers.x);
+                    indices.Add(nextEvent.segmentPointers.y);
+                }
 
-                nextEvent.kRange = new int2(k);
-            }
-            else // is intersection event
+                // one group add one intersection if have intersection event or two start/end point is touching
+                if (!hasIntersection && (nextEvent.eventType == SweepEventType.Intersection || startEndCount >= 2) )
+                {
+                    hasIntersection = true;
+                    result.Add(nextEvent.posXZ);
+                }
+
+                comparer.UpdateX(math.max(comparer.X, nextEvent.posXZ.x));
+
+                lastEvent = nextEvent;
+
+            } while (eventQueue.Pop(out nextEvent));
+
+
+            // pop all exists segments in kRange
+            var enumerator = indices.GetEnumerator();
+            while(enumerator.MoveNext())
             {
-                tree.Rank2(i, out var kRange); // get intersected k range
-                nextEvent.kRange = kRange; // update event's kRange
-
-                // handle special case: multiple intersection at one point
-                // in these cases, theses intersection events expected be emitted continuously
-                // and their k-range is same
-                // the position swap should only do once or the final segments order in tree will be broken
-                // hense we check lastEvent and nextEvent, both are belongs to same intersection or not
-                // (used to check by kRange, but has float presision issue)
-                // if it is true, just skip the event (do-nothing), only record its kRange
-                if (
-                    lastEvent.eventType == SweepEventType.Intersection &&
-                    IsSameIntersection(lastEvent.posXZ, nextEvent.posXZ)
-                    )
-                {
-                    return nextEvent;
-                }
-
-                result.Add(nextEvent.posXZ); // add intersection point to result
-
-                var hasPre = tree.Kth(kRange.x - 1, out var preIndex);
-                var hasNext = tree.Kth(kRange.y + 1, out var nextIndex);
-
-                tree.Kth(kRange.x, out var index2Lowest);
-                tree.Kth(kRange.y, out var index2Highest);
-
-                // check kRange.x and nextIndex
-                if (hasNext)
-                {
-                    TryCreateNewIntersectionEvent(nextEvent, index2Lowest, nextIndex);
-                }
-
-                // check kRange.y and preIndex
-                if (hasPre)
-                {
-                    TryCreateNewIntersectionEvent(nextEvent, preIndex, index2Highest);
-                }
-
-                // reverse order
-                for (var _k = kRange.y - 1; _k >= kRange.x; _k--)
-                {
-                    tree.DeleteNodeByRank(_k, out var v);
-                    tree.InsertNode(v);
-                }
-
+                tree.DeleteNode(enumerator.Current, out _);
             }
-            return nextEvent;
+
+            // handle event buffer and do swapping
+
+            comparer.UpdateOffset(1f); // as after-swapping order in tree 
+
+            // re-insert all segments and added segments, compute kRange
+            int2 kRange = new int2(int.MaxValue, int.MinValue); // k range that will be poped out of tree
+            enumerator.Reset();
+            while (enumerator.MoveNext())
+            {
+                var k = tree.InsertNode(enumerator.Current);
+                kRange.x = math.min(kRange.x, k);
+                kRange.y = math.max(kRange.y, k);
+            }
+
+            // try find two neighbor and check intersect
+            Index i1, i2;
+            if (tree.Kth(kRange.x, out i2) && tree.Kth(kRange.x - 1, out i1))
+            {
+                TryCreateNewIntersectionEvent(startEvent, i1, i2);
+            }
+
+            if (tree.Kth(kRange.y, out i1) && tree.Kth(kRange.y + 1, out i2))
+            {
+                TryCreateNewIntersectionEvent(startEvent, i1, i2);
+            }
+
+            // push back again
+            if (hasNextGroup) eventQueue.Push(nextEvent);
+
+            return hasNextGroup;
         }
-        
 
-        private void Reorder(int2 kRange)
+
+        private bool IsAdjacentEvent(SweepEvent e1, SweepEvent e2)
         {
-            tempBuffer.Clear();
-            kRange.x = math.max(kRange.x, 1);
-            kRange.y = math.min(kRange.y, tree.Count());
-            for (var k = kRange.y; k >= kRange.x; k--)
-            {
-                tree.DeleteNodeByRank(k, out var i);
-                tempBuffer.Add(i);
-            }
-
-            for (int i = 0; i < tempBuffer.Length; i++)
-            {
-                tree.InsertNode(tempBuffer[i]);
-            }
+            // compare by their positions
+            var diff = math.abs(e1.posXZ - e2.posXZ);
+            return math.all(diff < eps);
         }
 
 
@@ -603,12 +442,18 @@ namespace ABMathematics.LineSweeping
             eventQueue.Dispose();
             tree.Dispose();
             eventsCounter.Dispose();
+            if (tempBuffer.IsCreated) tempBuffer.Dispose();
         }
     }
 
     public struct NativeSegmantComparer : IComparer<int>
     {
         private NativeReference<float> x;
+
+        /// <summary>
+        /// extra value to offset x when current compare result is equal
+        /// </summary>
+        private NativeReference<float> xOffset;
 
         private NativeArray<float2> mbReprs;
 
@@ -624,6 +469,8 @@ namespace ABMathematics.LineSweeping
         {
             this.eps = eps;
             x = new NativeReference<float>(allocator);
+            xOffset = new NativeReference<float>(allocator);
+            xOffset.Value = 0;
             mbReprs = new NativeArray<float2>(segments.Length, allocator);
             for (int i = 0; i < segments.Length; i++)
             {
@@ -635,19 +482,30 @@ namespace ABMathematics.LineSweeping
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(Index x, Index y)
         {
-            return SweepEvent.CompareSegment(mbReprs[x], mbReprs[y], this.x.Value, eps);
+            if (x == y) return 0; // if same segment
+            var firstCompare = SweepEvent.CompareSegment(mbReprs[x], mbReprs[y], this.x.Value, eps);
+            if (math.abs(firstCompare) > eps || math.abs(xOffset.Value) < eps) return firstCompare;
+            // if first compare result != 0 and |offset| > 0, do second compare with offset
+            return SweepEvent.CompareSegment(mbReprs[x], mbReprs[y], this.x.Value + xOffset.Value, eps);
         }
 
         public void Dispose()
         {
             if (x.IsCreated) x.Dispose();
             if (mbReprs.IsCreated) mbReprs.Dispose();
+            if (xOffset.IsCreated) xOffset.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateX(float x)
         {
             this.x.Value = x;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateOffset(float offset)
+        {
+            this.xOffset.Value = offset;
         }
     }
 }
