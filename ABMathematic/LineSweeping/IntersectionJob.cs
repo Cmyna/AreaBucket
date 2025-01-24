@@ -381,23 +381,6 @@ namespace ABMathematics.LineSweeping
         }
 
 
-        private bool IsSameIntersection(float2 pos1, float2 pos2)
-        {
-            var diffVector = pos1 - pos2;
-            var diff = diffVector.x + diffVector.y; // manhattan dist
-            return math.abs(diff) < eps;
-        }
-
-
-        private bool SkipEvent(SweepEvent lastEvent, SweepEvent currentEvent)
-        {
-            if (lastEvent.eventType != currentEvent.eventType) return false;
-            // if both are intersection
-            if (math.any(lastEvent.segmentPointers != currentEvent.segmentPointers)) return false;
-            return (math.abs(lastEvent.posXZ.x - currentEvent.posXZ.x) < eps);
-        }
-
-
         private bool CheckIntersect(Line2.Segment s1, Line2.Segment s2, out float2 intersectPos)
         {
             intersectPos = default;
