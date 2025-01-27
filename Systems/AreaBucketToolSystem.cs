@@ -173,7 +173,7 @@ namespace AreaBucket.Systems
 
         private ToolOutputBarrier _toolOutputBarrier;
 
-        private ProxyAction _applyAction;
+        // private ProxyAction _applyAction;
 
         private GizmosSystem _gizmosSystem;
 
@@ -204,7 +204,7 @@ namespace AreaBucket.Systems
 
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
-            _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
+            // _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
             //BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             timer = new System.Diagnostics.Stopwatch();
@@ -222,13 +222,14 @@ namespace AreaBucket.Systems
 #if DEBUG
             Mod.Logger.Info("AreaBucketToolSystem Start Running");
 #endif
-            _applyAction.shouldBeEnabled = true;
-
+            // _applyAction.shouldBeEnabled = true;
+            
             applyMode = ApplyMode.Clear;
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            
             requireAreas = AreaTypeMask.None; // reset requireAreas state
 
             frameCount++;
@@ -240,18 +241,22 @@ namespace AreaBucket.Systems
             AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
             if (Mod.modSetting?.DrawAreaOverlay == true) requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
 
+            if (!applyAction.enabled) applyAction.enabled = true;
+
             applyMode = ApplyMode.Clear;
             if (!GetRaycastResult(out var raycastPoint))
             {
                 return inputDeps;
             }
 
-            if (_applyAction.WasPressedThisFrame())
+            
+
+            if (applyAction.WasPressedThisFrame())
             {
                 _audioManager.PlayUISound(_soundQuery.GetSingleton<ToolUXSoundSettingsData>().m_PlacePropSound);
             }
 
-            if (_applyAction.WasPressedThisFrame() && !PreviewSurface)
+            if (applyAction.WasPressedThisFrame() && !PreviewSurface)
             {
                 applyMode = ApplyMode.Apply;
                 return inputDeps;
@@ -279,13 +284,8 @@ namespace AreaBucket.Systems
 #if DEBUG
             Mod.Logger.Info("AreaBucketToolSystem Stop Running");
 #endif
-            // FIX: I dont know it is bug from me or the tool system,
-            // if one custom tool de-activated (stop running) and other custom tool activated, the apply action will be disabled
-            // although they both have `_applyAction.shouldBeEnabled` = true in OnStartRunning()
-            // while switching tools between vanilla tool and custom tools does not have this issue
 
-            // _applyAction.shouldBeEnabled = false;
-            // if (_applyAction != null) _applyAction.shouldBeEnabled = false;
+            applyAction.enabled = false;
         }
 
         protected override void OnDestroy()

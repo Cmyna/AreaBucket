@@ -30,7 +30,7 @@ namespace AreaBucket.Systems
 
         private ToolOutputBarrier _toolOutputBarrier;
 
-        private ProxyAction _applyAction;
+        // private ProxyAction _applyAction;
 
         /// <summary>
         /// a cache provides relations to native (unmanaged, burst compiled code) between prefabs and RenderedArea component,
@@ -78,7 +78,8 @@ namespace AreaBucket.Systems
             _toolOutputBarrier = World.GetOrCreateSystemManaged<ToolOutputBarrier>();
             _prefabSystem = World.GetOrCreateSystemManaged<PrefabSystem>();
 
-            _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
+            // _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
+
             // BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
 
             _nativeRenderedAreas = new NativeList<NativeRenderedArea>(Allocator.Persistent);
@@ -93,7 +94,7 @@ namespace AreaBucket.Systems
 #if DEBUG
             Mod.Logger.Info("AreaReplacementToolSystem Start Running");
 #endif
-            _applyAction.shouldBeEnabled = true;
+            // _applyAction.shouldBeEnabled = true;
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
@@ -102,13 +103,15 @@ namespace AreaBucket.Systems
             if (!_prefabSystem.TryGetEntity(_selectedPrefab, out var prefabEntity)) return inputDeps;
             if (!GetRaycastResult(out var controlPoint)) return inputDeps;
 
+            if (!applyAction.enabled) applyAction.enabled = true;
+
             applyMode = ApplyMode.Clear;
 
             // update requireAreas mask based on selected prefab
             AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
             if (Mod.modSetting?.DrawAreaOverlay??false) requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
 
-            if (_applyAction.WasPressedThisFrame())
+            if (applyAction.WasPressedThisFrame())
             {
                 _audioManager.PlayUISound(_soundQuery.GetSingleton<ToolUXSoundSettingsData>().m_PlacePropSound);
                 applyMode = ApplyMode.Apply;
@@ -212,11 +215,7 @@ namespace AreaBucket.Systems
 #if DEBUG
             Mod.Logger.Info("AreaReplacementToolSystem Stop Running");
 #endif
-            // FIX: I dont know it is bug from me or the tool system,
-            // if one custom tool de-activated (stop running) and other custom tool activated, the apply action will be disabled
-            // although they both have `_applyAction.shouldBeEnabled = true` in OnStartRunning()
-            // while switching tools between vanilla tool and custom tools does not have this issue
-            // _applyAction.shouldBeEnabled = false;
+            applyAction.enabled = false;
         }
 
 
@@ -283,7 +282,7 @@ namespace AreaBucket.Systems
                     displayName = nameof(Mod.areaToolEnabled),
                     getter = () => Mod.areaToolEnabled,
                 },
-                new DebugUI.Value { displayName = "apply action enabled", getter = () => _applyAction?.enabled ?? false },
+                new DebugUI.Value { displayName = "apply action enabled", getter = () => applyAction?.enabled ?? false },
                 new DebugUI.Value
                 {
                     displayName = nameof(_selectedPrefab),

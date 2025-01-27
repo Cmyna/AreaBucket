@@ -47,10 +47,10 @@ namespace AreaBucket
         public float MaxFillingRange { get; set; } = 250f;
 
 
-        [SettingsUIHidden]
-        [SettingsUIBindingMimic(InputManager.kToolMap, "Apply")]
-        [SettingsUIMouseBinding(Mod.kModAreaToolApply)]
-        public ProxyBinding AreaBucketToolApply { get; set; }
+        // [SettingsUIHidden]
+        // [SettingsUIBindingMimic(InputManager.kToolMap, "Apply")]
+        // [SettingsUIMouseBinding(Mod.kModAreaToolApply)]
+        // public ProxyBinding AreaBucketToolApply { get; set; }
 
 
         public override void SetDefaults()
