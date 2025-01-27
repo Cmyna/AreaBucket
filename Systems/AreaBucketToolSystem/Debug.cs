@@ -45,7 +45,7 @@ namespace AreaBucket.Systems
                 new DebugUI.Value
                 {
                     displayName = "IsApplyActionEnabled",
-                    getter = () => _applyAction != null && _applyAction.enabled,
+                    getter = () => applyAction?.enabled ?? false,
                 },
 
                 new DebugUI.BoolField

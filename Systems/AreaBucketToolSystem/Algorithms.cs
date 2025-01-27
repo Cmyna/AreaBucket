@@ -102,7 +102,7 @@ namespace AreaBucket.Systems
                 points = generatedAreaData.points,
                 prefab = m_PrefabSystem.GetEntity(_selectedPrefab),
                 previewSurface = PreviewSurface,
-                apply = _applyAction.WasPressedThisFrame(),
+                apply = applyAction.WasPressedThisFrame(),
                 ecb = _toolOutputBarrier.CreateCommandBuffer()
             };
             jobHandle = Schedule(polyLines2AreaDefsJob, jobHandle);
