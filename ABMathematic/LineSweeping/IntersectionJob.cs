@@ -39,7 +39,6 @@ namespace ABMathematics.LineSweeping
                 job.EventsCounter = 0;
                 while (job.eventQueue.Pop(out var nextEvent))
                 {
-                    CheckTree();
                     job.NextEventsGroup(nextEvent);
                     job.EventsCounter++;
                     if (job.EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: over event upper bounds");
@@ -184,18 +183,19 @@ namespace ABMathematics.LineSweeping
                 return result;
             }
 
-            private void CheckTree()
+            public void CheckTree()
             {
                 var debuger = job.tree.AsDebuger();
                 for (int k = 1; k <= job.tree.Count(); k++)
                 {
-                    var (_, __, v) = debuger.Kth(k);
+                    var (_, _, v) = debuger.Kth(k);
                     var r = debuger.Search(v);
                     var rMin = math.max(r.x, 1);
                     var rMax = math.min(job.tree.Count(), r.y);
 
                     if (rMin > rMax)
                     {
+                        debuger.Search(v);
                         throw new Exception($"Assertion Error: k-th value(k: {k},v: {v}) search failed");
                     }
                 }
@@ -281,7 +281,7 @@ namespace ABMathematics.LineSweeping
 
             var hasNextGroup = false;
 
-            comparer.UpdateOffset(-1f); // keep before-swapping order in tree 
+            comparer.UpdateOffset(-100f); // keep before-swapping order in tree 
 
             var hasIntersection = false;
             var startEndCount = 0;
@@ -330,7 +330,10 @@ namespace ABMathematics.LineSweeping
                 lastEvent = nextEvent;
 
             } while (eventQueue.Pop(out nextEvent));
-            
+
+#if UNITYPACKAGE
+            new Debuger(this).CheckTree();
+#endif
 
             // pop all exists segments in kRange
             var enumerator = indices.GetEnumerator();
@@ -341,7 +344,7 @@ namespace ABMathematics.LineSweeping
 
             // handle event buffer and do swapping
 
-            comparer.UpdateOffset(1f); // as after-swapping order in tree 
+            comparer.UpdateOffset(100f); // as after-swapping order in tree 
 
             // re-insert all segments and added segments, compute kRange
             var reinsertNum = indices.Count;
@@ -484,8 +487,8 @@ namespace ABMathematics.LineSweeping
         {
             if (x == y) return 0; // if same segment
             var firstCompare = SweepEvent.CompareSegment(mbReprs[x], mbReprs[y], this.x.Value, eps);
-            if (math.abs(firstCompare) > eps || math.abs(xOffset.Value) < eps) return firstCompare;
-            // if first compare result != 0 and |offset| > 0, do second compare with offset
+            if (firstCompare != 0 || math.abs(xOffset.Value) < eps) return firstCompare;
+            // if first compare result == 0 and |offset| > 0, do second compare with offset
             return SweepEvent.CompareSegment(mbReprs[x], mbReprs[y], this.x.Value + xOffset.Value, eps);
         }
 
