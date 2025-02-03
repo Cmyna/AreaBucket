@@ -327,23 +327,23 @@ namespace ABMathematics.LineSweeping
             comparer.UpdateOffset(1f); // as after-swapping order in tree 
 
             // re-insert all segments and added segments, compute kRange
-            int2 kRange = new int2(int.MaxValue, int.MinValue); // k range that will be poped out of tree
+            var reinsertNum = indices.Count;
+            var minK = int.MaxValue;
             enumerator.Reset();
             while (enumerator.MoveNext())
             {
                 var k = tree.InsertNode(enumerator.Current);
-                kRange.x = math.min(kRange.x, k);
-                kRange.y = math.max(kRange.y, k);
+                minK = math.min(k, minK);
             }
 
             // try find two neighbor and check intersect
             Index i1, i2;
-            if (tree.Kth(kRange.x, out i2) && tree.Kth(kRange.x - 1, out i1))
+            if (tree.Kth(minK, out i2) && tree.Kth(minK - 1, out i1))
             {
                 TryCreateNewIntersectionEvent(startEvent, i1, i2);
             }
 
-            if (tree.Kth(kRange.y, out i1) && tree.Kth(kRange.y + 1, out i2))
+            if (tree.Kth(minK + reinsertNum - 1, out i1) && tree.Kth(minK + reinsertNum, out i2))
             {
                 TryCreateNewIntersectionEvent(startEvent, i1, i2);
             }
@@ -451,7 +451,7 @@ namespace ABMathematics.LineSweeping
             )
         {
             this.eps = eps;
-            x = new NativeReference<float>(allocator);
+            x = new NativeReference<float>(-999999f, allocator);
             xOffset = new NativeReference<float>(allocator);
             xOffset.Value = 0;
             mbReprs = new NativeArray<float2>(segments.Length, allocator);
