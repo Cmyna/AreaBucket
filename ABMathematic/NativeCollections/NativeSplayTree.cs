@@ -255,7 +255,6 @@ namespace AreaBucket.Mathematics.NativeCollections
                     remainK -= leftChildSize + 1; // minus left tree + current node
                     if (remainK <= 0)
                     {
-                        Splay(current);
                         value = values[current];
                         index = current;
                         return true;
