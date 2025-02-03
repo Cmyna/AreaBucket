@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using static Unity.Collections.AllocatorManager;
 using Index = System.Int32;
 
 namespace ABMathematics.LineSweeping
@@ -38,6 +39,7 @@ namespace ABMathematics.LineSweeping
                 job.EventsCounter = 0;
                 while (job.eventQueue.Pop(out var nextEvent))
                 {
+                    CheckTree();
                     job.NextEventsGroup(nextEvent);
                     job.EventsCounter++;
                     if (job.EventsCounter > eventsUpperbound) throw new Exception("Assertion Error: over event upper bounds");
@@ -182,7 +184,22 @@ namespace ABMathematics.LineSweeping
                 return result;
             }
 
-           
+            private void CheckTree()
+            {
+                var debuger = job.tree.AsDebuger();
+                for (int k = 1; k <= job.tree.Count(); k++)
+                {
+                    var (_, __, v) = debuger.Kth(k);
+                    var r = debuger.Search(v);
+                    var rMin = math.max(r.x, 1);
+                    var rMax = math.min(job.tree.Count(), r.y);
+
+                    if (rMin > rMax)
+                    {
+                        throw new Exception($"Assertion Error: k-th value(k: {k},v: {v}) search failed");
+                    }
+                }
+            }
         }
 
 
@@ -313,7 +330,7 @@ namespace ABMathematics.LineSweeping
                 lastEvent = nextEvent;
 
             } while (eventQueue.Pop(out nextEvent));
-
+            
 
             // pop all exists segments in kRange
             var enumerator = indices.GetEnumerator();
