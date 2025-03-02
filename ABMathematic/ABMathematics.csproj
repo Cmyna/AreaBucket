@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <Configurations>Debug;Release;UnityPackage</Configurations>
+    <AssemblyName>AreaBucket.Mathematics</AssemblyName>
+    
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'UnityPackage'">
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\UnityPackage\areabucket-mathematics\Runtime</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Colossal.Mathematics">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Burst">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.Burst.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Collections">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.Collections.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Mathematics">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.Mathematics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'UnityPackage'">
+    <Content Include="..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <GeneratedDLLs Include="$(OutputPath)AreaBucket.Mathematics.dll"></GeneratedDLLs>
+  </ItemGroup>
+
+  <Target Name="GeneratePackage" Condition="'$(Configuration)' == 'UnityPackage'" BeforeTargets="CoreBuild">
+    
+    <Message Text="### GeneratePackage ###" Importance="high" />
+    
+    <Copy SourceFiles=".\package.json" DestinationFolder="$(OutDir)..\" SkipUnchangedFiles="true"></Copy>
+  </Target>
+
+</Project>

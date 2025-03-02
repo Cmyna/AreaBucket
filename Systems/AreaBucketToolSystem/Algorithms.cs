@@ -1,6 +1,7 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
+using AreaBucket.Utils;
 using Colossal;
 using Colossal.Mathematics;
 using Game.Tools;
@@ -44,6 +45,13 @@ namespace AreaBucket.Systems
 
             // collect singleton data
             jobHandle = ScheduleDataCollection(jobHandle, singletonData);
+            jobHandle.Complete();
+
+            if (_dumpAction.WasReleasedThisFrame())
+            {
+                Mod.Logger.Info("dump pressed");
+                DumpUtils.WriteSegments(singletonData.totalBoundaryLines);
+            }
 
             if (DrawBoundaries)
             {
@@ -140,16 +148,19 @@ namespace AreaBucket.Systems
             var jobHandle = inputDeps;
 
             var floodingContext = new CommonContext().Init(floodingDefinition); // Area bucket jobs common context
+            
 
-           
             var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
             collectBoudariesJob.useOldWay = OcclusionUseOldWay;
             jobHandle = Schedule(collectBoudariesJob, jobHandle);
-
             // here should ensure last job is complete, to get actual floodingContext.usedBoundaryLines.Length
             // if not do it, the length will be zero and memery leak will happen
             jobHandle.Complete();
+            
+            
+
             var projectedBoundaries = new NativeList<PolarSegment>(floodingContext.usedBoundaryLines.Length, Allocator.TempJob);
+
 
             if (CheckOcclusion && !OcclusionUseOldWay)
             {

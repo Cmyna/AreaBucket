@@ -52,6 +52,9 @@ namespace AreaBucket
         // [SettingsUIMouseBinding(Mod.kModAreaToolApply)]
         // public ProxyBinding AreaBucketToolApply { get; set; }
 
+        // [SettingsUIHidden]
+        [SettingsUIKeyboardBinding(BindingKeyboard.Semicolon, "Dump", ctrl: true)]
+        public ProxyBinding Dump { get; set; }
 
         public override void SetDefaults()
         {
