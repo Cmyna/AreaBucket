@@ -1,7 +1,9 @@
-﻿using Colossal.Mathematics;
+﻿using Colossal.Collections;
+using Colossal.Mathematics;
 using Game.Simulation;
 using System;
 using System.Collections.Generic;
+using System.Drawing.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -46,5 +48,19 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             jobHandle = totalBoundaryLines.Dispose(jobHandle);
             return jobHandle;
         }
+
+        public void AddLine(Line2 line)
+        {
+            AddLine(line.a, line.b);
+        }
+
+        public void AddLine(float2 a, float2 b)
+        {
+            this.totalBoundaryLines.Add(new Line2(a, b));
+        }
     }
+
+    
+
+    
 }

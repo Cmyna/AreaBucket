@@ -26,6 +26,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             return this;
         }
 
+        public void AddIntersectedSegment(Line2.Segment s)
+        {
+            intersectedLines.Add(new Line2.Segment(s.a, s.b));
+        }
+
+        public void AddRaySegment(Line2.Segment rs)
+        {
+            intersectedRays.Add(new Line2.Segment(rs.a, rs.b));
+        }
+
         public void Dispose()
         {
             intersectedLines.Dispose();

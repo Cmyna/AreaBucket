@@ -5,6 +5,7 @@ using AreaBucket.Utils;
 using Colossal;
 using Colossal.Mathematics;
 using Game.Tools;
+using Game.UI.Editor;
 using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
@@ -151,7 +152,6 @@ namespace AreaBucket.Systems
             
 
             var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
-            collectBoudariesJob.useOldWay = OcclusionUseOldWay;
             jobHandle = Schedule(collectBoudariesJob, jobHandle);
             // here should ensure last job is complete, to get actual floodingContext.usedBoundaryLines.Length
             // if not do it, the length will be zero and memery leak will happen
@@ -162,7 +162,7 @@ namespace AreaBucket.Systems
             var projectedBoundaries = new NativeList<PolarSegment>(floodingContext.usedBoundaryLines.Length, Allocator.TempJob);
 
 
-            if (CheckOcclusion && !OcclusionUseOldWay)
+            if (CheckOcclusion)
             {
                 var projectionJob = new PolarProjectionJob
                 {
@@ -177,12 +177,7 @@ namespace AreaBucket.Systems
 
 
                 //jobHandle = Schedule(projectionJob, jobHandle);
-                var checkOcclusionJob = new CheckOcclusionJob
-                {
-                    usedBoundaries = floodingContext.usedBoundaryLines,
-                    projectedBoundaries = projectedBoundaries,
-                    occlusionBuffer = floodingContext.occlusionsBuffer,
-                };
+                var checkOcclusionJob = new CheckOcclusionJob().Init(floodingContext, projectedBoundaries);
                 jobHandle = Schedule(checkOcclusionJob, jobHandle);
             }
             
@@ -193,22 +188,38 @@ namespace AreaBucket.Systems
 
             if (DrawBoundaries)
             {
-                jobHandle = Schedule(new DrawLinesJob
+                if (useQuadTree)
                 {
-                    color = UnityEngine.Color.red,
-                    heightData = singletonData.terrainHeightData,
-                    gizmoBatcher = debugContext.gizmoBatcher,
-                    lines = floodingContext.usedBoundaryLines,
-                    yOffset = -0.25f
-                }, jobHandle);
+                    var usedBoundaries = new NativeList<Line2.Segment>(Allocator.TempJob);
+                    floodingContext.usedBoundaryLines2.CollectBoundaries(usedBoundaries);
+                    jobHandle = Schedule(new DrawLinesJob2
+                    {
+                        color = UnityEngine.Color.red,
+                        heightData = singletonData.terrainHeightData,
+                        gizmoBatcher = debugContext.gizmoBatcher,
+                        lines = usedBoundaries,
+                        yOffset = -0.25f
+                    }, jobHandle);
+                    jobHandle = usedBoundaries.Dispose(jobHandle);
+                } else
+                {
+                    jobHandle = Schedule(new DrawLinesJob
+                    {
+                        color = UnityEngine.Color.red,
+                        heightData = singletonData.terrainHeightData,
+                        gizmoBatcher = debugContext.gizmoBatcher,
+                        lines = floodingContext.usedBoundaryLines,
+                        yOffset = -0.25f
+                    }, jobHandle);
+                }
             }
 
             jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
 
             if (UseExperimentalOptions && CheckBoundariesCrossing)
             {
-                var genIntersectionPointsJob = default(GenIntersectedPoints).Init(floodingContext);
-                jobHandle = Schedule(genIntersectionPointsJob, jobHandle);
+                if (useQuadTree) jobHandle = Schedule(default(GenIntersectedPoints2).Init(floodingContext), jobHandle);
+                else jobHandle = Schedule(default(GenIntersectedPoints).Init(floodingContext), jobHandle);
             }
 
             if (MergePoints)
@@ -222,7 +233,11 @@ namespace AreaBucket.Systems
             var generateRaysJob = default(GenerateRays).Init(floodingContext, singletonData, RayBetweenFloodRange);
             jobHandle = Schedule(generateRaysJob, jobHandle);
 
-            if (CheckIntersection)
+            if (CheckIntersection && useQuadTree)
+            {
+                var dropRaysJob = default(DropIntersectedRays2).Init(floodingContext, debugContext, RayTollerance, singletonData);
+                jobHandle = Schedule(dropRaysJob, jobHandle);
+            } else if (CheckIntersection)
             {
                 var dropRaysJob = default(DropIntersectedRays).Init(floodingContext, debugContext, RayTollerance, singletonData);
                 jobHandle = Schedule(dropRaysJob, jobHandle);

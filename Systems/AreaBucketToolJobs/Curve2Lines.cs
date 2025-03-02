@@ -41,14 +41,16 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             if (depth > depthLimit)
             {
-                staticData.totalBoundaryLines.Add(new Line2 { a = curve.a.xz, b = curve.d.xz });
+                staticData.AddLine(curve.a.xz, curve.d.xz);
+                // staticData.totalBoundaryLines.Add(new Line2 { a = curve.a.xz, b = curve.d.xz });
                 return;
             }
             var bounds = GetDistanceBound(curve);
             var angleMeasure = ControlPointAngleMeasure(curve);
             if (bounds.max < 0.5f || angleMeasure <= angleLimit)
             {
-                staticData.totalBoundaryLines.Add(new Line2 { a = curve.a.xz, b = curve.d.xz });
+                staticData.AddLine(curve.a.xz, curve.d.xz);
+                // staticData.totalBoundaryLines.Add(new Line2 { a = curve.a.xz, b = curve.d.xz });
                 return;
             }
             var leftCurve = MathUtils.Cut(curve, new float2(0, 0.5f));

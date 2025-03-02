@@ -1,18 +1,15 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Collections;
 using Colossal.Mathematics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
+
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
+
     /// <summary>
     /// 
     /// </summary>
@@ -54,18 +51,18 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                     a = rayStartPos,
                     b = rayStartPos + ray.vector
                 };
-                bool hasIntersction = false;
+                bool hasIntersection = false;
                 for (var j = 0; j < context.usedBoundaryLines.Length; j++)
                 {
-                    hasIntersction = Intersect(context.usedBoundaryLines[j], rayline);
-                    if (hasIntersction)
+                    hasIntersection = RayIntersectionHelper.IsSoftIntersect(rayline, context.usedBoundaryLines[j], rayTollerance);
+                    if (hasIntersection)
                     {
                         debugContext.intersectedLines.Add(context.usedBoundaryLines[j]);
                         debugContext.intersectedRays.Add(rayline);
                         break;
                     }
                 }
-                if (hasIntersction) continue; // drop ray
+                if (hasIntersection) continue; // drop ray
                 raysCache.Add(ray);
             }
 
@@ -79,67 +76,126 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             raysCache.Dispose();
         }
 
-        private bool Intersect(Line2 line1, Line2 ray)
-        {
-            // check bounds first
-            if (!MathUtils.Intersect(GetBounds(line1), GetBounds(ray))) return false;
+    }
 
-            // TODO: parallel iff crossing from two lines exactly zero
-            // it is too strict, while if angle between two lines extremely small, the t calcuation seems has 'visible' deivation
-            // (visible: false intersection detection)
-            // the function result gives two (infinite) lines intersect or not, if false, means they are parallel
-            var isParallel = !MathUtils.Intersect(ray, line1, out var t);
+    [BurstCompile]
+    public struct DropIntersectedRays2 : IJob
+    {
+
+        private struct TreeIterator : INativeQuadTreeIterator<EquatableSegment, Bounds2>
+        {
+            public Line2.Segment ray;
+
+            public Bounds2 bounds;
+
+            public NativeReference<bool> hasIntersection;
+
+            public NativeReference<Line2.Segment> intersectedLine;
+
+            public float2 tollerances;
+
+            public TreeIterator(
+                Line2.Segment ray, 
+                NativeReference<bool> hasIntersection, 
+                NativeReference<Line2.Segment> intersectedLine,
+                float2 tollerances
+                )
+            {
+                this.ray = ray;
+                this.bounds = MathUtils.Bounds(ray);
+                this.hasIntersection = hasIntersection;
+                this.intersectedLine = intersectedLine;
+                this.tollerances = tollerances;
+            }
+
+            public bool Intersect(Bounds2 b)
+            {
+                if (hasIntersection.Value) return false;
+                return MathUtils.Intersect(b, this.bounds);
+            }
+
+            public void Iterate(Bounds2 bounds, EquatableSegment item)
+            {
+                if (hasIntersection.Value) return;
+                hasIntersection.Value = RayIntersectionHelper.IsSoftIntersect(this.ray, item.segment, this.tollerances);
+                if (hasIntersection.Value) intersectedLine.Value = item.segment;
+            }
+        }
+
+        public CommonContext context;
+
+        public DebugContext debugContext;
+
+        public float2 rayTollerance;
+
+        public SingletonData signletonData;
+
+        public DropIntersectedRays2 Init(
+            CommonContext context,
+            DebugContext debugContext,
+            float2 rayTollerance,
+            SingletonData singletonData
+        )
+        {
+            this.context = context;
+            this.debugContext = debugContext;
+            this.rayTollerance = rayTollerance;
+            this.signletonData = singletonData;
+            return this;
+        }
+
+        public void Execute()
+        {
+            var raysCache = new NativeList<Ray>(Allocator.Temp);
+            var rayStartPos = context.floodingDefinition.rayStartPoint;
+            var hasIntersection = new NativeReference<bool>(Allocator.Temp);
+            var intersectedLine = new NativeReference<Line2.Segment>(Allocator.Temp);
+            // drop rays has intersection with any check lines
+            for (var i = 0; i < context.rays.Length; i++)
+            {
+                var ray = context.rays[i];
+                var raySegment = new Line2.Segment(rayStartPos, rayStartPos + ray.vector);
+                hasIntersection.Value = false;
+                var it = new TreeIterator(raySegment, hasIntersection, intersectedLine, this.rayTollerance);
+                context.usedBoundaryLines2.Iterate(ref it);
+                if (hasIntersection.Value)
+                {
+                    debugContext.AddRaySegment(raySegment);
+                    debugContext.AddIntersectedSegment(intersectedLine.Value);
+                    continue; // drop ray
+                }
+                raysCache.Add(ray);
+            }
+
+            context.rays.Clear();
+            context.rays.AddRange(raysCache.AsArray());
+        }
+    }
+
+
+    public struct RayIntersectionHelper
+    {
+
+        public static bool IsSoftIntersect(Line2 ray, Line2 s2, float2 tollerances)
+        {
+            return IsSoftIntersect(
+                new Line2.Segment(ray.a, ray.b),
+                new Line2.Segment(s2.a, s2.b),
+                tollerances);
+        }
+
+        public static bool IsSoftIntersect(Line2.Segment ray, Line2.Segment s2, float2 tollerances)
+        {
+            // segment intersect checking has wierd bounds check issue, hense use line intersect function
+            var isParallel = !MathUtils.Intersect(new Line2(ray.a, ray.b), new Line2(s2.a, s2.b), out var t);
             if (isParallel) return false;
-            // should both t.x and t.y between 0-1 iff intersected: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/1201356#1201356
-            // we allow t.x has weaker intersection check (t for ray line)
-            /**
-             * denote ray under tollerance as A, check line under tollerance as B
-             * truth table: 
-             * A, B => Intersect(A, B)
-             * T, T => F
-             * T, F => F
-             * F, T => F
-             * F, F => T
-             */
+            if (math.any(t < 0 | t > 1)) return false;
+
             var divPoint1 = math.lerp(ray.a, ray.b, t.x);
             var dist1 = math.length(divPoint1 - ray.a);
             var dist2 = math.length(divPoint1 - ray.b);
-            // if ray intersect happens nears to ray's start, the tollerance is stricter,
-            // when intersect happens at far side, tollerance is weaker
-            var rayUnderTollerance = dist1 < rayTollerance.x || dist2 < rayTollerance.y || t.x <= 0 || t.x >= 1;
-            if (rayUnderTollerance) return false;
-
-            return (t.y >= 0 && t.y <= 1);
-        }
-
-
-        private Bounds2 GetBounds(Line2 line)
-        {
-            return new Bounds2()
-            {
-                min = math.min(line.a, line.b),
-                max = math.max(line.a, line.b)
-            };
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="tolleranceDist">the tollerance distance (unit: meter)</param>
-        /// <param name="rayLine"></param>
-        /// <param name="t"></param>
-        /// <returns></returns>
-        private bool UnderTollerance(float tolleranceDist, Line2 rayLine, float t)
-        {
-            if (t <= 0 || t >= 1) return true;
-            var middle = math.lerp(rayLine.a, rayLine.b, t);
-            var v1 = middle - rayLine.a;
-            var v2 = rayLine.b - middle;
-
-            var dist1 = math.length(v1);
-            var dist2 = math.length(v2);
-            var minDist = math.min(dist1, dist2);
-            return minDist <= tolleranceDist;
+            // if intersect under start/end tollerance, the regard it as not intersect
+            return !(dist1 < tollerances.x || dist2 < tollerances.y);
         }
     }
 }

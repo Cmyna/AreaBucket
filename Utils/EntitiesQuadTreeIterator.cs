@@ -12,7 +12,9 @@ namespace AreaBucket.Utils
     /// copy private struct from Game.Common.RaycastSystem.FindEntitiesFromTreeJob,
     /// it seems like a common entity search iterator in a quad tree
     /// </summary>
-    public struct In2DHitRangeEntitesIterator<TItem> : INativeQuadTreeIterator<TItem, QuadTreeBoundsXZ>, IUnsafeQuadTreeIterator<TItem, QuadTreeBoundsXZ>
+    public struct In2DHitRangeEntitesIterator<TItem> : 
+        INativeQuadTreeIterator<TItem, QuadTreeBoundsXZ>, 
+        IUnsafeQuadTreeIterator<TItem, QuadTreeBoundsXZ>
         where TItem: unmanaged, System.IEquatable<TItem>
     {
 
@@ -38,4 +40,6 @@ namespace AreaBucket.Utils
             }
         }
     }
+
+    
 }

@@ -94,7 +94,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             if (math.distance(p1, p2) < 0.5f) return;
             var line = new Line2(p1, p2);
             if (!InRange(line)) return;
-            signletonData.totalBoundaryLines.Add(line);
+            // signletonData.totalBoundaryLines.Add(line);
+            signletonData.AddLine(line);
         }
 
         private bool InRange(Line2 line)

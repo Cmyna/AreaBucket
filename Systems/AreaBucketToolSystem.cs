@@ -157,7 +157,7 @@ namespace AreaBucket.Systems
             }
         }
 
-        public bool OcclusionUseOldWay = false;
+        public bool useQuadTree = true;
 
         public float Curve2LineAngleLimit = 5f;
 
@@ -390,7 +390,8 @@ namespace AreaBucket.Systems
                 jobHandle = Job.WithCode(() => {
                     while (!lotLineQueue.IsEmpty())
                     {
-                        singletonData.totalBoundaryLines.Add(lotLineQueue.Dequeue());
+                        singletonData.AddLine(lotLineQueue.Dequeue());
+                        // singletonData.totalBoundaryLines.Add(lotLineQueue.Dequeue());
                     }
                 }).WithBurst().Schedule(collectLotLinesDeps2);
                 lotLineQueue.Dispose(jobHandle);

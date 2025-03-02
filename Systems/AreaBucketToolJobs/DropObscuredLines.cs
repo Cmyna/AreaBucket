@@ -20,9 +20,11 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public bool checkOcculsion;
 
-        public bool useOldWay;
-
-        public DropObscuredLines Init(CommonContext context, SingletonData singletonData, GeneratedArea generatedAreaData, bool checkOcculsion)
+        public DropObscuredLines Init(
+            CommonContext context, 
+            SingletonData singletonData, 
+            GeneratedArea generatedAreaData, 
+            bool checkOcculsion)
         {
             this.context = context;
             this.singletonData = singletonData;
@@ -33,35 +35,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
-            context.usedBoundaryLines.Clear();
+            context.ClearBoundaries();
             AddGeneratedPolylinesAsBoundary();
-
-            if (!useOldWay)
-            {
-                context.usedBoundaryLines.AddRange(singletonData.totalBoundaryLines.AsArray());
-                return;
-            }
-
-            context.ClearOcclusionBuffer(); // clear buffer before
-            if (!checkOcculsion)
-            {
-                context.usedBoundaryLines.AddRange(singletonData.totalBoundaryLines.AsArray());
-                return;
-            }
-            
-            var projectedSegments = new NativeList<PolarSegment>(Allocator.Temp);
-
-            for (int i = 0; i < singletonData.totalBoundaryLines.Length; i++)
-            {
-                HandleBoundary(singletonData.totalBoundaryLines[i], projectedSegments);
-            }
-
-            // drop obscured lines
-            for (int i = 0; i < singletonData.totalBoundaryLines.Length; i++)
-            {
-                if (IsObscured(projectedSegments[i])) continue;
-                context.usedBoundaryLines.Add(singletonData.totalBoundaryLines[i]);
-            }
+            context.AddBoundaries(singletonData.totalBoundaryLines.AsArray());
         }
 
         private void AddGeneratedPolylinesAsBoundary()
@@ -70,83 +46,9 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             for (int i = 0; i < generatedAreaData.polyLines.Length; i++)
             {
                 if (i == context.floodingDefinition.newAreaPointInsertStartIndex) continue;
-                context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
+                context.AddBoundary(generatedAreaData.polyLines[i]);
+                // context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
             }
-        }
-
-        /// <summary>
-        /// colllect some related info for each boundary lines
-        /// </summary>
-        /// <param name="line"></param>
-        /// <param name="projectedSegments"></param>
-        private void HandleBoundary(Line2 line, NativeList<PolarSegment> projectedSegments)
-        {
-            var v1 = line.a - context.floodingDefinition.rayStartPoint;
-            var v2 = line.b - context.floodingDefinition.rayStartPoint;
-
-            var minDist = MinDist(line);
-            var maxDist = math.max(math.length(v1), math.length(v2));
-
-            var projectedSegment = new PolarSegment
-            {
-                minDist = minDist,
-                maxDist = maxDist,
-                bounds = GetTraveledDegs(v1, v2, out _, out _)
-            };
-            projectedSegments.Add(projectedSegment);
-
-            UpdateOcclusionBuffer(projectedSegment);
-        }
-
-        private void UpdateOcclusionBuffer(PolarSegment meta)
-        {
-            for (int i = Mathf.CeilToInt(meta.bounds.x); i < Mathf.FloorToInt(meta.bounds.y); i++)
-            {
-                var idx = i % context.occlusionsBuffer.Length;
-                context.occlusionsBuffer[idx] = math.min(context.occlusionsBuffer[idx], meta.maxDist);
-            }
-        }
-
-        public bool IsObscured(PolarSegment meta)
-        {
-            bool exposed = false;
-            for (int i = Mathf.FloorToInt(meta.bounds.x); i < Mathf.CeilToInt(meta.bounds.y); i++)
-            {
-                var depth = context.occlusionsBuffer[i % context.occlusionsBuffer.Length];
-                exposed |= depth >= meta.minDist;
-            }
-            return !exposed;
-        }
-
-
-        private float2 GetTraveledDegs(float2 v1, float2 v2, out bool crossZeroDeg, out float degreeDiff)
-        {
-            // assume context.occlusionsBuffer.Length == 360
-            float2 xzUp = new float2(0, 1);
-
-            var d1 = Utils.Math.RadianInClock(xzUp, v1) * Mathf.Rad2Deg;
-            var d2 = Utils.Math.RadianInClock(xzUp, v2) * Mathf.Rad2Deg;
-
-            var dmin = math.min(d1, d2);
-            var dmax = math.max(d1, d2);
-
-            degreeDiff = math.abs(d1 - d2);
-
-            crossZeroDeg = degreeDiff > 180;
-
-            if (crossZeroDeg) return new float2 { x = dmax, y = dmin + 360 };
-            else return new float2{ x = dmin, y = dmax };
-        }
-
-        private float MinDist(Line2 line)
-        {
-            var rayStartPos = context.floodingDefinition.rayStartPoint;
-            var dist = MathUtils.Distance(line, rayStartPos, out var t);
-            if (t >= 0 && t <= 1) return dist;
-            var v1 = line.a - rayStartPos;
-            var v2 = line.b - rayStartPos;
-
-            return math.min(math.length(v1), math.length(v2));
         }
 
     }
@@ -154,29 +56,40 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct CheckOcclusionJob : IJob
     {
-        public NativeList<Line2> usedBoundaries;
 
         public NativeList<PolarSegment> projectedBoundaries;
 
-        public NativeArray<float> occlusionBuffer;
+
+        public CommonContext context;
+
+        public CheckOcclusionJob Init(
+            CommonContext context, 
+            NativeList<PolarSegment> projectedBoundaries)
+        {
+            this.context = context;
+            this.projectedBoundaries = projectedBoundaries;
+            return this;
+        }
 
         public void Execute()
         {
             var boundariesCache = new NativeList<Line2>(Allocator.Temp);
-            for (int i = 0; i < occlusionBuffer.Length; i++) occlusionBuffer[i] = float.MaxValue;
+            for (int i = 0; i < context.occlusionsBuffer.Length; i++) context.occlusionsBuffer[i] = float.MaxValue;
 
             for (int i = 0; i < projectedBoundaries.Length; i++)
             {
-                UpdateOcclusionBuffer(projectedBoundaries[i], occlusionBuffer);
+                UpdateOcclusionBuffer(projectedBoundaries[i], context.occlusionsBuffer);
             }
 
             for (int i = 0; i < projectedBoundaries.Length; i++)
             {
-                if (IsObscured(projectedBoundaries[i], occlusionBuffer)) continue;
+                if (IsObscured(projectedBoundaries[i], context.occlusionsBuffer)) continue;
                 boundariesCache.Add(projectedBoundaries[i].originalLine);
             }
-            usedBoundaries.Clear();
-            usedBoundaries.AddRange(boundariesCache.AsArray());
+            context.ClearBoundaries();
+            context.AddBoundaries(boundariesCache.AsArray());
+            // usedBoundaries.Clear();
+            // context.usedBoundaryLines.AddRange(boundariesCache.AsArray());
         }
 
         private static void UpdateOcclusionBuffer(PolarSegment segment, NativeArray<float> buffer)
@@ -215,12 +128,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var line = boudaries[index];
             var projectedSegment = CreateProjection(line, polarCenter);
             projectedBoundaries.AddNoResize(projectedSegment);
-            /*for (int i = 0; i < boudaries.Length; i++)
-            {
-                var line = boudaries[i];
-                var projectedSegment = CreateProjection(line, polarCenter);
-                projectedBoundaries.AddNoResize(projectedSegment);
-            }*/
         }
 
         public static PolarSegment CreateProjection(Line2 segment, float2 polarCenter)

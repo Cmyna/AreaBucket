@@ -77,9 +77,9 @@ namespace AreaBucket.Systems
 
                 new DebugUI.BoolField
                 {
-                    displayName = nameof(OcclusionUseOldWay),
-                    getter = () => OcclusionUseOldWay,
-                    setter = (v) => OcclusionUseOldWay = v
+                    displayName = "Use Quad Tree",
+                    getter = () => useQuadTree,
+                    setter = (v) => useQuadTree = v,
                 },
 
                 new DebugUI.BoolField

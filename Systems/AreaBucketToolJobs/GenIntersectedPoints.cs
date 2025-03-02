@@ -1,14 +1,10 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using Colossal.Collections;
 using Colossal.Mathematics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Burst;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
+
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
@@ -29,6 +25,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
+            
             // TODO: just use brutal intersection check now, should be optimized for performance
             for (int i = 0; i < context.usedBoundaryLines.Length; i++)
             {
@@ -59,6 +56,81 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 min = math.min(line.a, line.b),
                 max = math.max(line.a, line.b)
             };
+        }
+    }
+
+
+    [BurstCompile]
+    public struct GenIntersectedPoints2: IJob
+    {
+        public CommonContext context;
+
+
+        private struct IntersectionChecker : INativeQuadTreeIterator<EquatableSegment, Bounds2>
+        {
+            CommonContext ctx;
+            Bounds2 baseBounds;
+            public Line2.Segment segment;
+
+            public IntersectionChecker(CommonContext ctx, Bounds2 bounds, Line2.Segment s)
+            {
+                this.ctx = ctx;
+                this.baseBounds = bounds;
+                this.segment = s;
+            }
+
+            public bool Intersect(Bounds2 bounds)
+            {
+                return MathUtils.Intersect(bounds, this.baseBounds);
+            }
+
+            public void Iterate(Bounds2 bounds, EquatableSegment item)
+            {
+                var hasIntersect = MathUtils.Intersect(this.segment, item.segment, out var t);
+                if (hasIntersect)
+                {
+                    var p = math.lerp(this.segment.a, this.segment.b, t.x);
+                    ctx.points.Add(p);
+                }
+            }
+        }
+
+
+        private struct FullIterator : INativeQuadTreeIterator<EquatableSegment, Bounds2>
+        {
+            private NativeQuadTree<EquatableSegment, Bounds2> tree;
+
+            CommonContext ctx;
+
+            public FullIterator(CommonContext ctx)
+            {
+                this.tree = ctx.usedBoundaryLines2;
+                this.ctx = ctx;
+            }
+
+            public bool Intersect(Bounds2 bounds)
+            {
+                return true;
+            }
+
+            public void Iterate(Bounds2 bounds, EquatableSegment item)
+            {
+                var iterator = new IntersectionChecker(ctx, bounds, item.segment);
+                tree.Iterate(ref iterator);
+            }
+        }
+
+        public GenIntersectedPoints2 Init(CommonContext context)
+        {
+            this.context = context;
+            return this;
+        }
+
+
+        public void Execute()
+        {
+            var it = new FullIterator(this.context);
+            this.context.usedBoundaryLines2.Iterate(ref it);
         }
     }
 }
