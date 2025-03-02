@@ -1,4 +1,5 @@
-﻿using AreaBucket.Mathematics.NativeCollections;
+﻿using AreaBucket.Mathematics;
+using AreaBucket.Mathematics.NativeCollections;
 using Colossal.Mathematics;
 using System;
 using System.Collections.Generic;
@@ -299,7 +300,13 @@ namespace ABMathematics.LineSweeping
                     hasNextGroup = true;
                     break;
                 }
-                
+#if UNITYPACKAGE
+                Debug.intersectionJobDebuger.Record(nextEvent);
+#endif
+
+                // should update X first, or cause issue when delete node below
+                comparer.UpdateX(math.max(comparer.X, nextEvent.posXZ.x));
+
                 if (nextEvent.eventType == SweepEventType.PointStart)
                 {
                     indices.Add(nextEvent.segmentPointers.x);
@@ -308,7 +315,14 @@ namespace ABMathematics.LineSweeping
 
                 if (nextEvent.eventType == SweepEventType.PointEnd)
                 {
-                    tree.DeleteNode(nextEvent.segmentPointers.x, out _);
+
+                    if (!tree.DeleteNode(nextEvent.segmentPointers.x, out _))
+                    {
+#if UNITYPACKAGE
+                        Debug.intersectionJobDebuger.CheckTree();
+                        throw new Exception();
+#endif
+                    }
                     startEndCount++;
                 }
 
@@ -324,15 +338,14 @@ namespace ABMathematics.LineSweeping
                     hasIntersection = true;
                     result.Add(nextEvent.posXZ);
                 }
-
-                comparer.UpdateX(math.max(comparer.X, nextEvent.posXZ.x));
+                
 
                 lastEvent = nextEvent;
 
             } while (eventQueue.Pop(out nextEvent));
 
 #if UNITYPACKAGE
-            new Debuger(this).CheckTree();
+            Debug.intersectionJobDebuger.CheckTree();
 #endif
 
             // pop all exists segments in kRange
@@ -511,4 +524,7 @@ namespace ABMathematics.LineSweeping
             this.xOffset.Value = offset;
         }
     }
+
+
+    
 }
