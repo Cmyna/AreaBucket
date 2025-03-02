@@ -175,6 +175,8 @@ namespace AreaBucket.Systems
 
         // private ProxyAction _applyAction;
 
+        private ProxyAction _dumpAction;
+
         private GizmosSystem _gizmosSystem;
 
         private Game.Net.SearchSystem _netSearchSystem;
@@ -206,6 +208,7 @@ namespace AreaBucket.Systems
 
             // _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);
             //BindingUtils.MimicBuiltinBinding(_applyAction, InputManager.kToolMap, "Apply", nameof(Mouse));
+            _dumpAction = Mod.modSetting.GetAction("Dump");
 
             timer = new System.Diagnostics.Stopwatch();
 
@@ -223,7 +226,7 @@ namespace AreaBucket.Systems
             Mod.Logger.Info("AreaBucketToolSystem Start Running");
 #endif
             // _applyAction.shouldBeEnabled = true;
-            
+            _dumpAction.shouldBeEnabled = true;
             applyMode = ApplyMode.Clear;
         }
 
@@ -284,7 +287,7 @@ namespace AreaBucket.Systems
 #if DEBUG
             Mod.Logger.Info("AreaBucketToolSystem Stop Running");
 #endif
-
+            _dumpAction.shouldBeEnabled = false;
             applyAction.enabled = false;
         }
 
