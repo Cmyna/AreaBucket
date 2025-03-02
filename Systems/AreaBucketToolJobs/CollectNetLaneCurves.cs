@@ -14,7 +14,7 @@ using Unity.Jobs;
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
     [BurstCompile]
-    public struct CollectNetLaneCurves : IJob
+    public struct CollectNetLaneCurves : IJob, IHandleUpdatable
     {
         public NativeQuadTree<Entity, QuadTreeBoundsXZ> searchTree;
 
@@ -78,6 +78,24 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
 
             candidateEntites.Dispose();
+        }
+
+        public void AssignHandle(ref SystemState state)
+        {
+            luOwner = state.GetComponentLookup<Owner>(isReadOnly: true);
+            luNetLaneGeoData = state.GetComponentLookup<NetLaneGeometryData>(isReadOnly: true);
+            luCurve = state.GetComponentLookup<Curve>(isReadOnly: true);
+            luPrefabRef = state.GetComponentLookup<PrefabRef>(isReadOnly: true);
+            luEditorContainer = state.GetComponentLookup<Game.Tools.EditorContainer>(isReadOnly: true);
+        }
+
+        public void UpdateHandle(ref SystemState state)
+        {
+            luOwner.Update(ref state);
+            luNetLaneGeoData.Update(ref state);
+            luCurve.Update(ref state);
+            luPrefabRef.Update(ref state);
+            luEditorContainer.Update(ref state);
         }
     }
 }

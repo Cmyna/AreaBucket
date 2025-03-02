@@ -15,7 +15,7 @@ using Unity.Mathematics;
 namespace AreaBucket.Systems.AreaBucketToolJobs
 {
     [BurstCompile]
-    public struct CollectAreaLines : IJob
+    public struct CollectAreaLines : IJob, IHandleUpdatable
     {
 
         [ReadOnly] public BufferLookup<Node> bluNode;
@@ -118,6 +118,26 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var dist2 = math.length(line.b - hitPos);
             var minDist = math.min(dist1, dist2);
             return minDist <= signletonData.fillingRange;
+        }
+
+        public void AssignHandle(ref SystemState state)
+        {
+            this.bluNode = state.GetBufferLookup<Node>();
+            this.bluTriangle = state.GetBufferLookup<Triangle>();
+            this.cluArea = state.GetComponentLookup<Area>();
+            this.cluDistrict = state.GetComponentLookup<District>();
+            this.cluMapTile = state.GetComponentLookup<MapTile>();
+            this.cluSurfacePreviewMarker = state.GetComponentLookup<SurfacePreviewMarker>();
+        }
+
+        public void UpdateHandle(ref SystemState state)
+        {
+            this.bluNode.Update(ref state);
+            this.bluTriangle.Update(ref state);
+            this.cluArea.Update(ref state);
+            this.cluDistrict.Update(ref state);
+            this.cluMapTile.Update(ref state);
+            this.cluSurfacePreviewMarker.Update(ref state);
         }
     }
 }

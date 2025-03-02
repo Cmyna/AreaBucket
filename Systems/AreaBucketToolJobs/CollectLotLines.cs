@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
+using AreaBucket.Utils;
 using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Buildings;
@@ -22,7 +23,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     /// convert building lots to lines
     /// </summary>
     [BurstCompile]
-    public struct CollectLotLines : IJobChunk
+    public struct CollectLotLines : IJobChunk, IHandleUpdatable
     {
 
         [ReadOnly] public ComponentTypeHandle<PrefabRef> thPrefabRef;
@@ -164,5 +165,27 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         }
 
+        public void AssignHandle(ref SystemState state)
+        {
+            this.thBuilding = state.GetComponentTypeHandle<Building>(isReadOnly: true);
+            this.thExtension = state.GetComponentTypeHandle<Extension>(isReadOnly: true);
+            this.thPrefabRef = state.GetComponentTypeHandle<PrefabRef>(isReadOnly: true);
+            this.thTransform = state.GetComponentTypeHandle<Transform>(isReadOnly: true);
+            this.luBuildingData = state.GetComponentLookup<BuildingData>(isReadOnly: true);
+            this.luBuildingExtData = state.GetComponentLookup<BuildingExtensionData>(isReadOnly: true);
+            this.luObjectGeoData = state.GetComponentLookup<ObjectGeometryData>(isReadOnly: true);
+            
+        }
+
+        public void UpdateHandle(ref SystemState state)
+        {
+            this.thBuilding.Update(ref state);
+            this.thExtension.Update(ref state);
+            this.thPrefabRef.Update(ref state);
+            this.thTransform.Update(ref state);
+            this.luBuildingData.Update(ref state);
+            this.luBuildingExtData.Update(ref state);
+            this.luObjectGeoData.Update(ref state);
+        }
     }
 }
