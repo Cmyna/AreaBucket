@@ -1,7 +1,9 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using Colossal.Collections;
 using Colossal.Mathematics;
+using Game.Net;
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
@@ -66,16 +68,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         public CommonContext context;
 
 
-        private struct IntersectionChecker : INativeQuadTreeIterator<EquatableSegment, Bounds2>
+        private struct IntersectionChecker : IIntersectionChecker
         {
-            CommonContext ctx;
             Bounds2 baseBounds;
             public Line2.Segment segment;
 
-            public IntersectionChecker(CommonContext ctx, Bounds2 bounds, Line2.Segment s)
+            public IntersectionChecker(Line2.Segment s)
             {
-                this.ctx = ctx;
-                this.baseBounds = bounds;
+                this.baseBounds = MathUtils.Bounds(s);
                 this.segment = s;
             }
 
@@ -84,39 +84,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
                 return MathUtils.Intersect(bounds, this.baseBounds);
             }
 
-            public void Iterate(Bounds2 bounds, EquatableSegment item)
+            public bool Intersect(Bounds2 bounds, EquatableSegment segment)
             {
-                var hasIntersect = MathUtils.Intersect(this.segment, item.segment, out var t);
-                if (hasIntersect)
-                {
-                    var p = math.lerp(this.segment.a, this.segment.b, t.x);
-                    ctx.points.Add(p);
-                }
-            }
-        }
-
-
-        private struct FullIterator : INativeQuadTreeIterator<EquatableSegment, Bounds2>
-        {
-            private NativeQuadTree<EquatableSegment, Bounds2> tree;
-
-            CommonContext ctx;
-
-            public FullIterator(CommonContext ctx)
-            {
-                this.tree = ctx.usedBoundaryLines2;
-                this.ctx = ctx;
-            }
-
-            public bool Intersect(Bounds2 bounds)
-            {
-                return true;
-            }
-
-            public void Iterate(Bounds2 bounds, EquatableSegment item)
-            {
-                var iterator = new IntersectionChecker(ctx, bounds, item.segment);
-                tree.Iterate(ref iterator);
+                if (math.all(this.segment.ab == segment.segment.ab)) return false;
+                return MathUtils.Intersect(this.segment, segment.segment, out var t);
             }
         }
 
@@ -129,8 +100,17 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
-            var it = new FullIterator(this.context);
-            this.context.usedBoundaryLines2.Iterate(ref it);
+            var enumerator1 = this.context.usedBoundaryLines2.GetEnumerator(Allocator.Temp, new AllTrueChecker());
+            while (enumerator1.Next(out var s1))
+            {
+                var enumerator2 = this.context.usedBoundaryLines2.GetEnumerator(Allocator.Temp, new IntersectionChecker(s1));
+                while (enumerator2.Next(out var s2))
+                {
+                    MathUtils.Intersect(s1, s2, out var t);
+                    var p = math.lerp(s1.a, s1.b, t.x);
+                    context.points.Add(p);
+                }
+            }
         }
     }
 }
