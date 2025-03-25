@@ -19,8 +19,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public NativeList<Bezier4x3> curves;
 
-        public NativeReference<int> rawBoundaryLinesCount;
-
         public float2 playerHitPos;
 
         public float fillingRange;
@@ -31,7 +29,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         {
             curves = new NativeList<Bezier4x3>(allocator);
             totalBoundaryLines = new NativeList<Line2>(allocator);
-            rawBoundaryLinesCount = new NativeReference<int>(allocator);
             this.playerHitPos = playerHitPos;
             this.fillingRange = fillingRange;
             this.terrainHeightData = terrainHeightData;
@@ -55,7 +52,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         public void AddLine(Line2 line)
         {
             AddLine(line.a, line.b);
-            rawBoundaryLinesCount.Value++;
         }
 
         public void AddLine(float2 a, float2 b)

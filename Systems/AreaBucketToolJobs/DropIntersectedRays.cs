@@ -81,32 +81,46 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct DropIntersectedRays2 : IJob
     {
-        private struct RayIntersectionChecker : IIntersectionChecker
+
+        private struct TreeIterator : INativeQuadTreeIterator<EquatableSegment, Bounds2>
         {
-            private Line2.Segment ray;
+            public Line2.Segment ray;
 
-            private Bounds2 rayBounds;
+            public Bounds2 bounds;
 
-            private float2 tollerances;
+            public NativeReference<bool> hasIntersection;
 
-            public RayIntersectionChecker(Line2.Segment ray, float2 tollerances)
+            public NativeReference<Line2.Segment> intersectedLine;
+
+            public float2 tollerances;
+
+            public TreeIterator(
+                Line2.Segment ray, 
+                NativeReference<bool> hasIntersection, 
+                NativeReference<Line2.Segment> intersectedLine,
+                float2 tollerances
+                )
             {
                 this.ray = ray;
-                this.rayBounds = MathUtils.Bounds(ray);
+                this.bounds = MathUtils.Bounds(ray);
+                this.hasIntersection = hasIntersection;
+                this.intersectedLine = intersectedLine;
                 this.tollerances = tollerances;
             }
 
-            public bool Intersect(Bounds2 bounds)
+            public bool Intersect(Bounds2 b)
             {
-                return MathUtils.Intersect(bounds, rayBounds);
+                if (hasIntersection.Value) return false;
+                return MathUtils.Intersect(b, this.bounds);
             }
 
-            public bool Intersect(Bounds2 bounds, EquatableSegment segment)
+            public void Iterate(Bounds2 bounds, EquatableSegment item)
             {
-                return RayIntersectionHelper.IsSoftIntersect(this.ray, segment.segment, this.tollerances);
+                if (hasIntersection.Value) return;
+                hasIntersection.Value = RayIntersectionHelper.IsSoftIntersect(this.ray, item.segment, this.tollerances);
+                if (hasIntersection.Value) intersectedLine.Value = item.segment;
             }
         }
-        
 
         public CommonContext context;
 
@@ -134,23 +148,23 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         {
             var raysCache = new NativeList<Ray>(Allocator.Temp);
             var rayStartPos = context.floodingDefinition.rayStartPoint;
+            var hasIntersection = new NativeReference<bool>(Allocator.Temp);
+            var intersectedLine = new NativeReference<Line2.Segment>(Allocator.Temp);
             // drop rays has intersection with any check lines
             for (var i = 0; i < context.rays.Length; i++)
             {
                 var ray = context.rays[i];
                 var raySegment = new Line2.Segment(rayStartPos, rayStartPos + ray.vector);
-                var checker = new RayIntersectionChecker(raySegment, rayTollerance);
-                var enumerator = this.context.usedBoundaryLines2.GetEnumerator(Allocator.Temp, checker);
-
-                if (enumerator.Next(out var intersectedSegment))
+                hasIntersection.Value = false;
+                var it = new TreeIterator(raySegment, hasIntersection, intersectedLine, this.rayTollerance);
+                context.usedBoundaryLines2.Iterate(ref it);
+                if (hasIntersection.Value)
                 {
                     debugContext.AddRaySegment(raySegment);
-                    debugContext.AddIntersectedSegment(intersectedSegment);
+                    debugContext.AddIntersectedSegment(intersectedLine.Value);
+                    continue; // drop ray
                 }
-                else
-                {
-                    raysCache.Add(ray);
-                }
+                raysCache.Add(ray);
             }
 
             context.rays.Clear();

@@ -23,7 +23,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public NativeList<Line2> usedBoundaryLines;
 
-        public BoundariesCollections usedBoundaryLines2;
+        public NativeQuadTree<EquatableSegment, Bounds2> usedBoundaryLines2;
 
         public NativeList<Ray> rays;
 
@@ -35,14 +35,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public FloodingDefinition floodingDefinition;
 
-        public bool useQuadTree;
-
         public CommonContext Init(FloodingDefinition floodingDefinition, Allocator allocator = Allocator.TempJob)
         {
             this.floodingDefinition = floodingDefinition;
             points = new NativeList<float2>(allocator);
             usedBoundaryLines = new NativeList<Line2>(allocator);
-            usedBoundaryLines2 = new BoundariesCollections(allocator);
+            usedBoundaryLines2 = new NativeQuadTree<EquatableSegment, Bounds2>(10f, allocator);
             rays = new NativeList<Ray>(allocator);
             occlusionsBuffer = new NativeArray<float>(360, allocator); // 1 degree per unit
             // floodRadRange = new float2(0, Mathf.PI * 2);
@@ -66,21 +64,17 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         public void AddBoundaries(NativeArray<Line2> boundaries)
         {
             usedBoundaryLines.AddRange(boundaries);
-            if (!useQuadTree) return;
             for (int i = 0; i < boundaries.Length; i++)
             {
                 var l = boundaries[i];
-                usedBoundaryLines2.Add(l.a, l.b);
-                
+                usedBoundaryLines2.AddSegment(l.a, l.b);
             }
         }
 
         public void AddBoundary(Line2 boundary)
         {
             usedBoundaryLines.Add(boundary);
-            if (!useQuadTree) return;
-            usedBoundaryLines2.Add(boundary.a, boundary.b);
-            
+            usedBoundaryLines2.AddSegment(boundary.a, boundary.b);
         }
         
 

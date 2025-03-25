@@ -5,6 +5,7 @@ using AreaBucket.Utils;
 using Colossal;
 using Colossal.Mathematics;
 using Game.Tools;
+using Game.UI.Editor;
 using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
@@ -17,10 +18,6 @@ namespace AreaBucket.Systems
 {
     public partial class AreaBucketToolSystem : ToolBaseSystem
     {
-
-        private int usedBoundariesCount = 0;
-
-        private int avargeBoundaryLinesCount = 0;
 
         public JobHandle StartAlgorithm(JobHandle inputDeps, ControlPoint raycastPoint)
         {
@@ -131,7 +128,6 @@ namespace AreaBucket.Systems
             usedBoundariesCount = 0;
             UpdateOtherFieldView("Generated Area Poly Lines Count", generatedAreaData.polyLines.Length);
             UpdateOtherFieldView("Gened Area Points Count", generatedAreaData.points.Length);
-            UpdateOtherFieldView("Raw Boundary Lines Count", singletonData.rawBoundaryLinesCount.Value);
             //UpdateOtherFieldView("Exposed Gened Area Lines", exposedList.Length);
 
             jobHandle = floodingDefsList.Dispose(jobHandle);
@@ -153,7 +149,7 @@ namespace AreaBucket.Systems
             var jobHandle = inputDeps;
 
             var floodingContext = new CommonContext().Init(floodingDefinition); // Area bucket jobs common context
-            floodingContext.useQuadTree = useQuadTree;
+            
 
             var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
             jobHandle = Schedule(collectBoudariesJob, jobHandle);
@@ -188,15 +184,14 @@ namespace AreaBucket.Systems
             jobHandle = projectedBoundaries.Dispose(jobHandle);
             jobHandle.Complete();
             usedBoundariesCount += floodingContext.usedBoundaryLines.Length;
-            avargeBoundaryLinesCount = (avargeBoundaryLinesCount * 5 + floodingContext.usedBoundaryLines.Length) / 6;
-            UpdateOtherFieldView("Quad Tree Collision Count: ", floodingContext.usedBoundaryLines2.CollisionCount());
-            UpdateOtherFieldView("Avarge Used Boundaries Count: ", avargeBoundaryLinesCount);
+
 
             if (DrawBoundaries)
             {
                 if (useQuadTree)
                 {
-                    var usedBoundaries = floodingContext.usedBoundaryLines2.AllToList(Allocator.TempJob);
+                    var usedBoundaries = new NativeList<Line2.Segment>(Allocator.TempJob);
+                    floodingContext.usedBoundaryLines2.CollectBoundaries(usedBoundaries);
                     jobHandle = Schedule(new DrawLinesJob2
                     {
                         color = UnityEngine.Color.red,

@@ -189,7 +189,7 @@ namespace AreaBucket.Systems
 
         private System.Diagnostics.Stopwatch timer;
 
-        
+        private int usedBoundariesCount = 0;
 
         private CollectAreaLines collectAreaLinesJob;
 
