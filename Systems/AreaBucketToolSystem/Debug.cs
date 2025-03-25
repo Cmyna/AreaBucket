@@ -77,13 +77,6 @@ namespace AreaBucket.Systems
 
                 new DebugUI.BoolField
                 {
-                    displayName = "Use Quad Tree",
-                    getter = () => useQuadTree,
-                    setter = (v) => useQuadTree = v,
-                },
-
-                new DebugUI.BoolField
-                {
                     displayName = "Recursive Flooding",
                     getter = () => RecursiveFlooding,
                     setter = (v) => RecursiveFlooding = v

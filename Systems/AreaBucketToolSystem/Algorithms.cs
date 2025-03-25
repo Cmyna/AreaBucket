@@ -37,7 +37,6 @@ namespace AreaBucket.Systems
                 gizmosBatcher = _gizmosSystem.GetGizmosBatcher(out var gizmosSysDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, gizmosSysDeps);
             }
-
             var debugContext = default(DebugContext).Init(gizmosBatcher);
 
             var generatedAreaData = new GeneratedArea().Init();
@@ -188,38 +187,21 @@ namespace AreaBucket.Systems
 
             if (DrawBoundaries)
             {
-                if (useQuadTree)
+                jobHandle = Schedule(new DrawLinesJob
                 {
-                    var usedBoundaries = new NativeList<Line2.Segment>(Allocator.TempJob);
-                    floodingContext.usedBoundaryLines2.CollectBoundaries(usedBoundaries);
-                    jobHandle = Schedule(new DrawLinesJob2
-                    {
-                        color = UnityEngine.Color.red,
-                        heightData = singletonData.terrainHeightData,
-                        gizmoBatcher = debugContext.gizmoBatcher,
-                        lines = usedBoundaries,
-                        yOffset = -0.25f
-                    }, jobHandle);
-                    jobHandle = usedBoundaries.Dispose(jobHandle);
-                } else
-                {
-                    jobHandle = Schedule(new DrawLinesJob
-                    {
-                        color = UnityEngine.Color.red,
-                        heightData = singletonData.terrainHeightData,
-                        gizmoBatcher = debugContext.gizmoBatcher,
-                        lines = floodingContext.usedBoundaryLines,
-                        yOffset = -0.25f
-                    }, jobHandle);
-                }
+                    color = UnityEngine.Color.red,
+                    heightData = singletonData.terrainHeightData,
+                    gizmoBatcher = debugContext.gizmoBatcher,
+                    lines = floodingContext.usedBoundaryLines,
+                    yOffset = -0.25f
+                }, jobHandle);
             }
 
             jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
 
             if (UseExperimentalOptions && CheckBoundariesCrossing)
             {
-                if (useQuadTree) jobHandle = Schedule(default(GenIntersectedPoints2).Init(floodingContext), jobHandle);
-                else jobHandle = Schedule(default(GenIntersectedPoints).Init(floodingContext), jobHandle);
+                jobHandle = Schedule(default(GenIntersectedPoints).Init(floodingContext), jobHandle);
             }
 
             if (MergePoints)
@@ -233,11 +215,7 @@ namespace AreaBucket.Systems
             var generateRaysJob = default(GenerateRays).Init(floodingContext, singletonData, RayBetweenFloodRange);
             jobHandle = Schedule(generateRaysJob, jobHandle);
 
-            if (CheckIntersection && useQuadTree)
-            {
-                var dropRaysJob = default(DropIntersectedRays2).Init(floodingContext, debugContext, RayTollerance, singletonData);
-                jobHandle = Schedule(dropRaysJob, jobHandle);
-            } else if (CheckIntersection)
+            if (CheckIntersection)
             {
                 var dropRaysJob = default(DropIntersectedRays).Init(floodingContext, debugContext, RayTollerance, singletonData);
                 jobHandle = Schedule(dropRaysJob, jobHandle);

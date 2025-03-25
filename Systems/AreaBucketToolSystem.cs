@@ -157,8 +157,6 @@ namespace AreaBucket.Systems
             }
         }
 
-        public bool useQuadTree = true;
-
         public float Curve2LineAngleLimit = 5f;
 
         private AudioManager _audioManager;
@@ -213,7 +211,6 @@ namespace AreaBucket.Systems
             _gizmosSystem = World.GetOrCreateSystemManaged<GizmosSystem>();
             _netSearchSystem = World.GetOrCreateSystemManaged<Game.Net.SearchSystem>();
             _areaSearchSystem = World.GetOrCreateSystemManaged<Game.Areas.SearchSystem>();
-
             _controlPoints = new NativeList<ControlPoint>(Allocator.Persistent);
 
             // _applyAction = Mod.modSetting.GetAction(Mod.kModAreaToolApply);

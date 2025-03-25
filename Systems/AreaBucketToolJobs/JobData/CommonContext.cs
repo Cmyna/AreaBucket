@@ -23,8 +23,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public NativeList<Line2> usedBoundaryLines;
 
-        public NativeQuadTree<EquatableSegment, Bounds2> usedBoundaryLines2;
-
         public NativeList<Ray> rays;
 
         /// <summary>
@@ -40,7 +38,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             this.floodingDefinition = floodingDefinition;
             points = new NativeList<float2>(allocator);
             usedBoundaryLines = new NativeList<Line2>(allocator);
-            usedBoundaryLines2 = new NativeQuadTree<EquatableSegment, Bounds2>(10f, allocator);
             rays = new NativeList<Ray>(allocator);
             occlusionsBuffer = new NativeArray<float>(360, allocator); // 1 degree per unit
             // floodRadRange = new float2(0, Mathf.PI * 2);
@@ -58,7 +55,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         public void ClearBoundaries()
         {
             usedBoundaryLines.Clear();
-            usedBoundaryLines2.Clear();
         }
 
         public void AddBoundaries(NativeArray<Line2> boundaries)
@@ -67,14 +63,12 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             for (int i = 0; i < boundaries.Length; i++)
             {
                 var l = boundaries[i];
-                usedBoundaryLines2.AddSegment(l.a, l.b);
             }
         }
 
         public void AddBoundary(Line2 boundary)
         {
             usedBoundaryLines.Add(boundary);
-            usedBoundaryLines2.AddSegment(boundary.a, boundary.b);
         }
         
 
@@ -84,7 +78,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             rays.Dispose();
             occlusionsBuffer.Dispose();
             usedBoundaryLines.Dispose();
-            usedBoundaryLines2.Dispose();
         }
 
         public JobHandle Dispose(JobHandle inputDeps)
@@ -94,7 +87,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             jobHandle = rays.Dispose(jobHandle);
             jobHandle = occlusionsBuffer.Dispose(jobHandle);
             jobHandle = usedBoundaryLines.Dispose(jobHandle);
-            jobHandle = usedBoundaryLines2.Dispose(jobHandle);
             return jobHandle;
         }
     }
