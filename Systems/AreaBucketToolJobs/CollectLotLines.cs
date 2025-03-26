@@ -44,6 +44,8 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         //public SingletonData singletonData;
 
+        public NativeReference<int> collectedLotCount;
+
         private NativeQueue<Line2>.ParallelWriter lotLinesWriter;
 
         private float2 playerHitPos;
@@ -94,7 +96,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var buildingData = luBuildingData[prefabEntity];
             var lotSize = (float2)buildingData.m_LotSize * 8;
             var objectGeoData = luObjectGeoData[prefabEntity];
-            if (IsSquareLot(objectGeoData)) CollectSquareLotData(lotSize, transform.m_Position, transform.m_Rotation);
+            if (IsSquareLot(objectGeoData))
+            {
+                CollectSquareLotData(lotSize, transform.m_Position, transform.m_Rotation);
+            }
         }
 
 
@@ -142,7 +147,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var filterRange = fillingRange;
             var dist = MathUtils.Distance(bounds, hitPos);
             if (dist > filterRange) return;
-
+            collectedLotCount.Value++;
             /*context.points.Add(p1.xz);
             context.points.Add(p2.xz);
             context.points.Add(p3.xz);

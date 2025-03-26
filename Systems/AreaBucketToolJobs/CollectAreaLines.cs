@@ -5,6 +5,7 @@ using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Areas;
 using Game.Common;
+using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -32,6 +33,10 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public SingletonData signletonData;
 
+        public NativeReference<int> collectedAreaCount;
+
+        public NativeReference<int> areaLineCount;
+
         private NativeQuadTree<AreaSearchItem, QuadTreeBoundsXZ> areaSearchTree;
 
         public CollectAreaLines InitContext(SingletonData signletonData, NativeQuadTree<AreaSearchItem, QuadTreeBoundsXZ> areaSearchTree)
@@ -49,12 +54,13 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             iterator.hitPos = signletonData.playerHitPos;
             iterator.range = signletonData.fillingRange;
             areaSearchTree.Iterate(ref iterator);
-
+            
             var entitySet = new NativeHashSet<Entity>(100, Allocator.Temp);
 
             for (int i = 0; i < items.Length; i++) entitySet.Add(items[i].m_Area);
 
             var entities = entitySet.ToNativeArray(Allocator.Temp);
+            if (collectedAreaCount.IsCreated) collectedAreaCount.Value = entities.Length;
 
             for (int i = 0; i < entities.Length; i++)
             {
@@ -95,6 +101,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             var line = new Line2(p1, p2);
             if (!InRange(line)) return;
             // signletonData.totalBoundaryLines.Add(line);
+            if (areaLineCount.IsCreated) areaLineCount.Value++;
             signletonData.AddLine(line);
         }
 

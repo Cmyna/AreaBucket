@@ -371,7 +371,13 @@ namespace AreaBucket.Systems
                 var areaSearchTree = _areaSearchSystem.GetSearchTree(readOnly: true, out var areaSearchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, areaSearchDeps);
                 collectAreaLinesJob.InitContext(singletonData, areaSearchTree).UpdateHandle(ref base.CheckedStateRef);
+                collectAreaLinesJob.collectedAreaCount = new NativeReference<int>(Allocator.TempJob);
+                collectAreaLinesJob.areaLineCount = new NativeReference<int>(Allocator.TempJob);
                 jobHandle = Schedule(collectAreaLinesJob, jobHandle);
+                jobHandle.Complete();
+                UpdateOtherFieldView("Area Count: ", collectAreaLinesJob.collectedAreaCount.Value);
+                UpdateOtherFieldView("Area Line Count: ", collectAreaLinesJob.areaLineCount.Value);
+                collectAreaLinesJob.collectedAreaCount.Dispose();
             }
 
             if (BoundaryMask.Match(BoundaryMask.Lot))
@@ -380,6 +386,7 @@ namespace AreaBucket.Systems
                 if (profileJobTime) collectLotLineStopwatch = Stopwatch.StartNew();
                 var lotLineQueue = new NativeQueue<Line2>(Allocator.TempJob);
                 collectLotLinesJob.InitContext(singletonData, lotLineQueue).AssignHandle(ref base.CheckedStateRef);
+                collectLotLinesJob.collectedLotCount = new NativeReference<int>(Allocator.TempJob);
                 var collectLotLinesDeps = jobHandle;
                 jobHandle = collectLotLinesJob.ScheduleParallel(lotEntityQuery, collectLotLinesDeps);
                 // jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
@@ -392,6 +399,9 @@ namespace AreaBucket.Systems
                     }
                 }).WithBurst().Schedule(collectLotLinesDeps2);
                 lotLineQueue.Dispose(jobHandle);
+                jobHandle.Complete();
+                UpdateOtherFieldView("Lot Count: ", collectLotLinesJob.collectedLotCount.Value);
+                collectLotLinesJob.collectedLotCount.Dispose(jobHandle);
 
                 if (profileJobTime)
                 {
@@ -407,6 +417,9 @@ namespace AreaBucket.Systems
                 collectNetLaneCurvesJob.Init(singletonData, searchTree).AssignHandle(ref base.CheckedStateRef);
                 jobHandle = Schedule(collectNetLaneCurvesJob, jobHandle);
             }
+
+            jobHandle.Complete();
+            UpdateOtherFieldView("Raw Boundary Line Count: ", singletonData.totalBoundaryLines.Length);
 
             var curve2LinesJob = default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit);
             jobHandle = Schedule(curve2LinesJob, jobHandle);

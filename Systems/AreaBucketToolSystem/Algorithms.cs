@@ -3,6 +3,7 @@ using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
 using AreaBucket.Utils;
 using Colossal;
+using Colossal.Collections;
 using Colossal.Mathematics;
 using Game.Tools;
 using Game.UI.Editor;
@@ -201,7 +202,32 @@ namespace AreaBucket.Systems
 
             if (UseExperimentalOptions && CheckBoundariesCrossing)
             {
-                jobHandle = Schedule(default(GenIntersectedPoints).Init(floodingContext), jobHandle);
+                jobHandle.Complete();
+                var linesNum = floodingContext.usedBoundaryLines.Length;
+                jobHandle = NativeStream.ScheduleConstruct(
+                    out var pointsStream, 
+                    floodingContext.usedBoundaryLines, 
+                    jobHandle,
+                    Allocator.TempJob
+                );
+                var genIntersectedPointsJob = new GenIntersectedPointsJobParallel
+                {
+                    lines = floodingContext.usedBoundaryLines.AsArray().AsReadOnly(),
+                    points = pointsStream.AsWriter()
+                };
+
+                
+                jobHandle = Schedule(
+                    () => genIntersectedPointsJob.Schedule(floodingContext.usedBoundaryLines.Length, 64, jobHandle),
+                    nameof(genIntersectedPointsJob)
+                    );
+                jobHandle.Complete();
+
+                jobHandle = Job.WithCode(() =>
+                {
+                    floodingContext.points.AddRange(pointsStream.ToNativeArray<float2>(Allocator.Temp));
+                }).WithBurst().Schedule(jobHandle);
+                pointsStream.Dispose(jobHandle);
             }
 
             if (MergePoints)
