@@ -15,7 +15,7 @@ namespace AreaBucket.Utils
     internal static class DumpUtils
     {
 
-        public static void WriteSegments(NativeList<Line2> lines)
+        public static void WriteSegments(NativeList<Line2.Segment> lines)
         {
             try
             {
@@ -46,9 +46,9 @@ namespace AreaBucket.Utils
 
         }
 
-        public static void WriteSegments(NativeList<Line2> lines, string filePath)
+        public static void WriteSegments(NativeList<Line2.Segment> lines, string filePath)
         {
-            float4[] data = lines.AsArray().ToArray().Select((Line2 line) => line.ab ).ToArray();
+            float4[] data = lines.AsArray().ToArray().Select((Line2.Segment line) => line.ab ).ToArray();
             var str = JSON.Dump(data);
 
             try

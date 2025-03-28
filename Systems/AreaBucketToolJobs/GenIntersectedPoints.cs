@@ -63,7 +63,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct GenIntersectedPointsJobParallel : IJobParallelFor
     {
-        public NativeArray<Line2>.ReadOnly lines;
+        public NativeArray<Line2.Segment>.ReadOnly lines;
 
         public NativeStream.Writer points;
         public void Execute(int index)

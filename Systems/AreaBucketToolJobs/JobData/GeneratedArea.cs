@@ -17,14 +17,14 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
     /// </summary>
     public struct GeneratedArea : IDisposable
     {
-        public NativeList<Line2> polyLines;
+        public NativeList<Line2.Segment> polyLines;
 
         public NativeList<float2> points;
 
 
         public GeneratedArea Init(Allocator allocator = Allocator.TempJob)
         {
-            polyLines = new NativeList<Line2>(allocator);
+            polyLines = new NativeList<Line2.Segment>(allocator);
             points = new NativeList<float2>(allocator);
             return this;
         }

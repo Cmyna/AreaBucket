@@ -21,7 +21,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public NativeList<float2> points;
 
-        public NativeList<Line2> usedBoundaryLines;
+        public NativeList<Line2.Segment> usedBoundaryLines;
 
         public NativeList<Ray> rays;
 
@@ -37,7 +37,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         {
             this.floodingDefinition = floodingDefinition;
             points = new NativeList<float2>(allocator);
-            usedBoundaryLines = new NativeList<Line2>(allocator);
+            usedBoundaryLines = new NativeList<Line2.Segment>(allocator);
             rays = new NativeList<Ray>(allocator);
             occlusionsBuffer = new NativeArray<float>(360, allocator); // 1 degree per unit
             // floodRadRange = new float2(0, Mathf.PI * 2);
@@ -57,7 +57,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             usedBoundaryLines.Clear();
         }
 
-        public void AddBoundaries(NativeArray<Line2> boundaries)
+        public void AddBoundaries(NativeArray<Line2.Segment> boundaries)
         {
             usedBoundaryLines.AddRange(boundaries);
             for (int i = 0; i < boundaries.Length; i++)
@@ -66,7 +66,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
             }
         }
 
-        public void AddBoundary(Line2 boundary)
+        public void AddBoundary(Line2.Segment boundary)
         {
             usedBoundaryLines.Add(boundary);
         }

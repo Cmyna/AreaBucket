@@ -47,7 +47,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             {
                 if (i == context.floodingDefinition.newAreaPointInsertStartIndex) continue;
                 context.AddBoundary(generatedAreaData.polyLines[i]);
-                // context.usedBoundaryLines.Add(generatedAreaData.polyLines[i]);
             }
         }
 
@@ -73,7 +72,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
         public void Execute()
         {
-            var boundariesCache = new NativeList<Line2>(Allocator.Temp);
+            var boundariesCache = new NativeList<Line2.Segment>(Allocator.Temp);
             for (int i = 0; i < context.occlusionsBuffer.Length; i++) context.occlusionsBuffer[i] = float.MaxValue;
 
             for (int i = 0; i < projectedBoundaries.Length; i++)
@@ -88,8 +87,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             }
             context.ClearBoundaries();
             context.AddBoundaries(boundariesCache.AsArray());
-            // usedBoundaries.Clear();
-            // context.usedBoundaryLines.AddRange(boundariesCache.AsArray());
         }
 
         private static void UpdateOcclusionBuffer(PolarSegment segment, NativeArray<float> buffer)
@@ -117,7 +114,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     public struct PolarProjectionJob : IJobParallelFor
     {
 
-        public NativeArray<Line2>.ReadOnly boudaries;
+        public NativeArray<Line2.Segment>.ReadOnly boudaries;
 
         public NativeList<PolarSegment>.ParallelWriter projectedBoundaries;
 
@@ -130,7 +127,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
             projectedBoundaries.AddNoResize(projectedSegment);
         }
 
-        public static PolarSegment CreateProjection(Line2 segment, float2 polarCenter)
+        public static PolarSegment CreateProjection(Line2.Segment segment, float2 polarCenter)
         {
             var v1 = segment.a - polarCenter;
             var v2 = segment.b - polarCenter;
@@ -196,6 +193,6 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         /// </summary>
         public float2 bounds;
 
-        public Line2 originalLine;
+        public Line2.Segment originalLine;
     }
 }

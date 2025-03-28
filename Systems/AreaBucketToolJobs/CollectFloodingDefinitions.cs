@@ -56,7 +56,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
 
 
 
-        private bool FoundIntersection(Line2 line, NativeList<Line2> boundaryLines)
+        private bool FoundIntersection(Line2 line, NativeList<Line2.Segment> boundaryLines)
         {
             var vector = line.b - line.a;
             var middle = math.lerp(line.a, line.b, 0.5f);
@@ -82,7 +82,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
         }
 
 
-        private FloodingDefinition NewFloodingDef(Line2 line, int insertStartIndex)
+        private FloodingDefinition NewFloodingDef(Line2.Segment line, int insertStartIndex)
         {
             var vector = line.b - line.a;
             var middle = math.lerp(line.a, line.b, 0.5f);

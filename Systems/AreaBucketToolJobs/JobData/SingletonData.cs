@@ -15,7 +15,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 {
     public struct SingletonData : IDisposable
     {
-        public NativeList<Line2> totalBoundaryLines;
+        public NativeList<Line2.Segment> totalBoundaryLines;
 
         public NativeList<Bezier4x3> curves;
 
@@ -28,7 +28,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
         public SingletonData Init(float2 playerHitPos, float fillingRange, TerrainHeightData terrainHeightData, Allocator allocator = Allocator.TempJob)
         {
             curves = new NativeList<Bezier4x3>(allocator);
-            totalBoundaryLines = new NativeList<Line2>(allocator);
+            totalBoundaryLines = new NativeList<Line2.Segment>(allocator);
             this.playerHitPos = playerHitPos;
             this.fillingRange = fillingRange;
             this.terrainHeightData = terrainHeightData;
@@ -56,7 +56,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public void AddLine(float2 a, float2 b)
         {
-            this.totalBoundaryLines.Add(new Line2(a, b));
+            this.totalBoundaryLines.Add(new Line2.Segment(a, b));
         }
     }
 

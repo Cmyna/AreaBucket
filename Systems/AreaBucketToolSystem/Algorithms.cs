@@ -56,7 +56,7 @@ namespace AreaBucket.Systems
 
             if (DrawBoundaries)
             {
-                jobHandle = Schedule(new DrawLinesJob
+                jobHandle = Schedule(new DrawLinesJob2
                 {
                     color = new Color(100, 100, 0),
                     heightData = singletonData.terrainHeightData,
@@ -157,13 +157,9 @@ namespace AreaBucket.Systems
             // if not do it, the length will be zero and memery leak will happen
             jobHandle.Complete();
             
-            
-
-            var projectedBoundaries = new NativeList<PolarSegment>(floodingContext.usedBoundaryLines.Length, Allocator.TempJob);
-
-
             if (CheckOcclusion)
             {
+                var projectedBoundaries = new NativeList<PolarSegment>(floodingContext.usedBoundaryLines.Length, Allocator.TempJob);
                 var projectionJob = new PolarProjectionJob
                 {
                     polarCenter = floodingContext.floodingDefinition.rayStartPoint,
@@ -179,16 +175,17 @@ namespace AreaBucket.Systems
                 //jobHandle = Schedule(projectionJob, jobHandle);
                 var checkOcclusionJob = new CheckOcclusionJob().Init(floodingContext, projectedBoundaries);
                 jobHandle = Schedule(checkOcclusionJob, jobHandle);
+                jobHandle = projectedBoundaries.Dispose(jobHandle);
             }
             
-            jobHandle = projectedBoundaries.Dispose(jobHandle);
+            
             jobHandle.Complete();
             usedBoundariesCount += floodingContext.usedBoundaryLines.Length;
 
 
             if (DrawBoundaries)
             {
-                jobHandle = Schedule(new DrawLinesJob
+                jobHandle = Schedule(new DrawLinesJob2
                 {
                     color = UnityEngine.Color.red,
                     heightData = singletonData.terrainHeightData,

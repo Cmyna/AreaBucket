@@ -64,7 +64,7 @@ namespace AreaBucket.Systems
 
         public static void BuildPolylines(
             NativeList<float2> points, 
-            NativeList<Line2> lines
+            NativeList<Line2.Segment> lines
         )
         {
             lines.Clear();
@@ -74,7 +74,7 @@ namespace AreaBucket.Systems
                 var i2 = (i + 1) % points.Length;
                 var p1 = points[i1];
                 var p2 = points[i2];
-                lines.Add(new Line2 { a = p1, b = p2 });
+                lines.Add(new Line2.Segment(p1, p2));
             }
         }
 

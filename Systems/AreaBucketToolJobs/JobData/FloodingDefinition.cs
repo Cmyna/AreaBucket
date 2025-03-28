@@ -15,7 +15,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs.JobData
 
         public float2 rayStartPoint;
 
-        public Line2 floodingSourceLine;
+        public Line2.Segment floodingSourceLine;
 
         /// <summary>
         /// set the filling sector radian range, the algorithms should generate area filling polygons between range.
