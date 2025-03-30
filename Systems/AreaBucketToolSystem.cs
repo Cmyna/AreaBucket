@@ -248,7 +248,7 @@ namespace AreaBucket.Systems
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            
+
             requireAreas = AreaTypeMask.None; // reset requireAreas state
 
             frameCount++;
@@ -290,8 +290,6 @@ namespace AreaBucket.Systems
                 newHandle.Complete();
                 AddJobTime("totalTimeCost", (float)stopwatch.Elapsed.TotalMilliseconds);
             }
-
-            //var newHandle = ApplyBucket(inputDeps, raycastPoint);
 
             return newHandle;
         }
@@ -377,7 +375,8 @@ namespace AreaBucket.Systems
                 jobHandle.Complete();
                 UpdateOtherFieldView("Area Count: ", collectAreaLinesJob.collectedAreaCount.Value);
                 UpdateOtherFieldView("Area Line Count: ", collectAreaLinesJob.areaLineCount.Value);
-                collectAreaLinesJob.collectedAreaCount.Dispose();
+                collectAreaLinesJob.collectedAreaCount.Dispose(jobHandle);
+                collectAreaLinesJob.areaLineCount.Dispose(jobHandle);
             }
 
             if (BoundaryMask.Match(BoundaryMask.Lot))
