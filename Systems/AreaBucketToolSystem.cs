@@ -1,31 +1,23 @@
-﻿using AreaBucket.Components;
-using AreaBucket.Systems.AreaBucketToolJobs;
+﻿using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Systems.AreaBucketToolJobs.JobData;
-using AreaBucket.Systems.DebugHelperJobs;
-using AreaBucket.Utils;
+using AreaBucket.Utils.Job.Profiling;
 using Colossal;
-using Colossal.Collections;
 using Colossal.Logging;
 using Colossal.Mathematics;
 using Game.Areas;
 using Game.Audio;
-using Game.Buildings;
 using Game.Common;
 using Game.Input;
-using Game.Net;
 using Game.Prefabs;
 using Game.Simulation;
 using Game.Tools;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Profiling;
-using UnityEngine.InputSystem;
-using UnityEngine.Profiling;
 
 namespace AreaBucket.Systems
 {
@@ -267,7 +259,6 @@ namespace AreaBucket.Systems
             {
                 return inputDeps;
             }
-
             
 
             if (applyAction.WasPressedThisFrame())
@@ -282,15 +273,34 @@ namespace AreaBucket.Systems
             }
 
             ClearJobTimeProfiles();
-            Stopwatch stopwatch = null;
-            if (WatchJobTime) stopwatch = Stopwatch.StartNew();
+
+            Func<JobHandle, JobHandle> schedule = (deps) => 
+            {
+                return StartAlgorithm(inputDeps, raycastPoint);
+            };
+            schedule = WithProfiling(schedule, "totalTimeCost");
+            var newHandle = schedule(inputDeps);
+
+            /*Stopwatch stopwatch = null;
+            // if (WatchJobTime) stopwatch = Stopwatch.StartNew();
+            stopwatch = Stopwatch.StartNew();
             var newHandle = StartAlgorithm(inputDeps, raycastPoint);
-            if (WatchJobTime && stopwatch != null)
+            // if (WatchJobTime && stopwatch != null)
             {
                 newHandle.Complete();
                 AddJobTime("totalTimeCost", (float)stopwatch.Elapsed.TotalMilliseconds);
-            }
+            }*/
 
+            // this.jobDebuger.Post("totalTimeCost", totalProfiler);
+            
+            if (WatchJobTime)
+            {
+                this.jobDebuger.UpdateProfilers();
+                this.jobDebuger.Refresh();
+            }
+            UpdateOtherFieldView("QueueNum", this.jobDebuger.profilers.QueueNum);
+
+            
             return newHandle;
         }
 
@@ -354,24 +364,46 @@ namespace AreaBucket.Systems
         {
             var profileJobTime = WatchJobTime;
             var jobHandle = inputDeps;
+            Func<JobHandle, JobHandle> schedule;
+
             if (BoundaryMask.Match(BoundaryMask.Net))
             {
                 var netSearchTree = _netSearchSystem.GetNetSearchTree(readOnly: true, out var netSearchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, netSearchDeps);
-                collectNetEdgesJob.InitContext(singletonData, BoundaryMask, netSearchTree).AssignHandle(ref base.CheckedStateRef);
-                // subnet mask is experimental (for performance issue)
+
+                // update net mask
                 if (collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
-                // if (!UseExperimentalOptions && collectNetEdgesJob.mask.Match(BoundaryMask.SubNet)) collectNetEdgesJob.mask ^= BoundaryMask.SubNet;
-                jobHandle = Schedule(collectNetEdgesJob, jobHandle);
+                schedule = (deps) =>
+                {
+                    collectNetEdgesJob.InitContext(singletonData, BoundaryMask, netSearchTree);
+                    collectNetEdgesJob.AssignHandle(ref base.CheckedStateRef);
+                    return collectNetEdgesJob.Schedule(deps);
+                };
+                schedule = WithProfiling(schedule, nameof(collectNetEdgesJob));
+                jobHandle = schedule(jobHandle);
+                
+                // jobHandle = Schedule(collectNetEdgesJob, jobHandle);
+                
             }
             if (BoundaryMask.Match(BoundaryMask.Area))
             {
                 var areaSearchTree = _areaSearchSystem.GetSearchTree(readOnly: true, out var areaSearchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, areaSearchDeps);
-                collectAreaLinesJob.InitContext(singletonData, areaSearchTree).UpdateHandle(ref base.CheckedStateRef);
-                collectAreaLinesJob.collectedAreaCount = new NativeReference<int>(Allocator.TempJob);
-                collectAreaLinesJob.areaLineCount = new NativeReference<int>(Allocator.TempJob);
-                jobHandle = Schedule(collectAreaLinesJob, jobHandle);
+
+                schedule = (deps) =>
+                {
+                    collectAreaLinesJob.InitContext(singletonData, areaSearchTree);
+                    collectAreaLinesJob.UpdateHandle(ref base.CheckedStateRef);
+
+                    // DEBUG
+                    collectAreaLinesJob.collectedAreaCount = new NativeReference<int>(Allocator.TempJob);
+                    collectAreaLinesJob.areaLineCount = new NativeReference<int>(Allocator.TempJob);
+
+                    return collectAreaLinesJob.Schedule(deps);
+                };
+                schedule = WithProfiling(schedule, nameof(collectAreaLinesJob));
+                jobHandle = schedule(jobHandle);
+
                 jobHandle.Complete();
                 UpdateOtherFieldView("Area Count: ", collectAreaLinesJob.collectedAreaCount.Value);
                 UpdateOtherFieldView("Area Line Count: ", collectAreaLinesJob.areaLineCount.Value);
@@ -381,47 +413,60 @@ namespace AreaBucket.Systems
 
             if (BoundaryMask.Match(BoundaryMask.Lot))
             {
-                Stopwatch collectLotLineStopwatch = null;
-                if (profileJobTime) collectLotLineStopwatch = Stopwatch.StartNew();
                 var lotLineQueue = new NativeQueue<Line2>(Allocator.TempJob);
-                collectLotLinesJob.InitContext(singletonData, lotLineQueue).AssignHandle(ref base.CheckedStateRef);
-                collectLotLinesJob.collectedLotCount = new NativeReference<int>(Allocator.TempJob);
-                var collectLotLinesDeps = jobHandle;
-                jobHandle = collectLotLinesJob.ScheduleParallel(lotEntityQuery, collectLotLinesDeps);
-                // jobHandle = Schedule(collectLotLines, lotEntityQuery, jobHandle);
-                var collectLotLinesDeps2 = jobHandle;
-                jobHandle = Job.WithCode(() => {
-                    while (!lotLineQueue.IsEmpty())
+
+                // collect lots geometries
+                schedule = (deps) =>
+                {
+                    collectLotLinesJob.InitContext(singletonData, lotLineQueue).AssignHandle(ref base.CheckedStateRef);
+                    collectLotLinesJob.collectedLotCount = new NativeReference<int>(Allocator.TempJob);
+                    return collectLotLinesJob.ScheduleParallel(lotEntityQuery, deps);
+                };
+                schedule = WithProfiling(schedule, nameof(collectAreaLinesJob));
+                jobHandle = schedule(jobHandle);
+
+                // lots to segments
+                schedule = (deps) =>
+                {
+                    return Job.WithCode(() =>
                     {
-                        singletonData.AddLine(lotLineQueue.Dequeue());
-                        // singletonData.totalBoundaryLines.Add(lotLineQueue.Dequeue());
-                    }
-                }).WithBurst().Schedule(collectLotLinesDeps2);
+                        while (!lotLineQueue.IsEmpty()) singletonData.AddLine(lotLineQueue.Dequeue());
+                    }).WithBurst().Schedule(jobHandle);
+                };
+                schedule = WithProfiling(schedule, "lot2SegmentsJob");
+                jobHandle = schedule(jobHandle);
+
+                // cleanup
                 lotLineQueue.Dispose(jobHandle);
                 jobHandle.Complete();
                 UpdateOtherFieldView("Lot Count: ", collectLotLinesJob.collectedLotCount.Value);
                 collectLotLinesJob.collectedLotCount.Dispose(jobHandle);
-
-                if (profileJobTime)
-                {
-                    jobHandle.Complete();
-                    AddJobTime(nameof(CollectLotLines), collectLotLineStopwatch.ElapsedMilliseconds);
-                }
-
             }
             if (BoundaryMask.Match(BoundaryMask.NetLane))
             {
                 var searchTree = _netSearchSystem.GetLaneSearchTree(true, out var searchDeps);
                 jobHandle = JobHandle.CombineDependencies(jobHandle, searchDeps);
-                collectNetLaneCurvesJob.Init(singletonData, searchTree).AssignHandle(ref base.CheckedStateRef);
-                jobHandle = Schedule(collectNetLaneCurvesJob, jobHandle);
+
+                schedule = (deps) => 
+                {
+                    collectNetLaneCurvesJob.Init(singletonData, searchTree).AssignHandle(ref base.CheckedStateRef);
+                    return collectNetLaneCurvesJob.Schedule(deps);
+                };
+                schedule = WithProfiling(schedule, nameof(collectNetLaneCurvesJob));
+                jobHandle = schedule(jobHandle);
             }
 
             jobHandle.Complete();
             UpdateOtherFieldView("Raw Boundary Line Count: ", singletonData.totalBoundaryLines.Length);
 
-            var curve2LinesJob = default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit);
-            jobHandle = Schedule(curve2LinesJob, jobHandle);
+            schedule = (deps) =>
+            {
+                return default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit).Schedule(deps);
+            };
+            schedule = WithProfiling(schedule, "Curve2Lines");
+            jobHandle = schedule(jobHandle);
+            //var curve2LinesJob = default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit);
+            //jobHandle = Schedule(curve2LinesJob, jobHandle);
 
             return jobHandle;
         }
@@ -443,24 +488,34 @@ namespace AreaBucket.Systems
         }
 
 
-        private JobHandle Schedule<T>(T job, EntityQuery query, JobHandle handle) where T : struct, IJobChunk
+        private Func<JobHandle, JobHandle> WithProfiling(Func<JobHandle, JobHandle> scheduleFunc, string jobName)
         {
-            return Schedule(() => job.Schedule(query, handle), job.GetType().Name);
+            return (JobHandle depends) =>
+            {
+                if (!WatchJobTime) return scheduleFunc(depends);
+                var profiler = new JobProfiler();
+                profiler.BeginWith(depends);
+                var jobHandle = scheduleFunc(depends);
+                profiler.EndWith(jobHandle);
+                this.jobDebuger.Post(jobName, profiler);
+                return jobHandle;
+            };
         }
+
 
         private JobHandle Schedule(Func<JobHandle> scheduleFunc, string name)
         {
-            Stopwatch stopwatch = null;
+            /*Stopwatch stopwatch = null;
             if (WatchJobTime)
             {
                 stopwatch = Stopwatch.StartNew();
-            }
+            }*/
             var jobHandle = scheduleFunc();
-            if (WatchJobTime)
+            /*if (WatchJobTime)
             {
                 jobHandle.Complete();
                 AddJobTime(name, (float)stopwatch.Elapsed.TotalMilliseconds);
-            }
+            }*/
             return jobHandle;
         }
 

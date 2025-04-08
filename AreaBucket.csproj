@@ -136,7 +136,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Utils\Job\Profiling\" />
     <Folder Include="Snippets\" />
   </ItemGroup>
 

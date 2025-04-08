@@ -1,4 +1,5 @@
 ﻿using AreaBucket.Systems.AreaBucketToolJobs;
+using AreaBucket.Utils.Job.Profiling;
 using Game.Buildings;
 using Game.Debug;
 using Game.Tools;
@@ -17,13 +18,17 @@ namespace AreaBucket.Systems
         /// <summary>
         /// dictionary stores jobs time cost
         /// </summary>
+        [Obsolete("Deprecated")]
         private readonly Dictionary<string, float> jobTimeProfile = new Dictionary<string, float>();
 
         private readonly Dictionary<string, string> otherProfile = new Dictionary<string, string>();
 
+        [Obsolete("Deprecated")]
         private readonly DebugUI.Container jobTimeProfileContainer = new DebugUI.Container("Job Time Cost");
 
         private readonly DebugUI.Container otherProfileContainer = new DebugUI.Container("Others");
+
+        private readonly JobDebuger jobDebuger = new JobDebuger("Job Time Cost2");
 
         /// <summary>
         /// Here we borrow Unity's HDRP debug panel (also the CO developer panel) to shows our debug options
@@ -146,6 +151,7 @@ namespace AreaBucket.Systems
                 ),
 
                 jobTimeProfileContainer,
+                jobDebuger.uiContainer,
                 otherProfileContainer,
                 // OtherProfiles(),
 
@@ -276,6 +282,7 @@ namespace AreaBucket.Systems
             otherProfile[key] = value.ToString();
         }
 
+        [Obsolete("Deprecated")]
         private void ClearJobTimeProfiles()
         {
             var keys = jobTimeProfile.Keys.ToArray();

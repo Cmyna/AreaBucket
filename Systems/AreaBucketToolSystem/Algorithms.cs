@@ -1,12 +1,13 @@
-﻿using AreaBucket.Systems.AreaBucketToolJobs;
+﻿using AreaBucket.Systems;
+using AreaBucket.Systems.AreaBucketToolJobs;
 using AreaBucket.Systems.AreaBucketToolJobs.JobData;
 using AreaBucket.Systems.DebugHelperJobs;
 using AreaBucket.Utils;
 using Colossal;
-using Colossal.Collections;
 using Colossal.Mathematics;
+using Game.Net;
 using Game.Tools;
-using Game.UI.Editor;
+using System;
 using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
@@ -22,7 +23,8 @@ namespace AreaBucket.Systems
 
         public JobHandle StartAlgorithm(JobHandle inputDeps, ControlPoint raycastPoint)
         {
-            
+            Func<JobHandle, JobHandle> schedule;
+
             var jobHandle = inputDeps;
 
             Stopwatch prepareStopwatch = null;
@@ -56,14 +58,26 @@ namespace AreaBucket.Systems
 
             if (DrawBoundaries)
             {
-                jobHandle = Schedule(new DrawLinesJob2
+                schedule = (deps) =>
+                {
+                    return new DrawLinesJob2
+                    {
+                        color = new Color(100, 100, 0),
+                        heightData = singletonData.terrainHeightData,
+                        gizmoBatcher = debugContext.gizmoBatcher,
+                        lines = singletonData.totalBoundaryLines,
+                        yOffset = -0.5f
+                    }.Schedule(deps);
+                };
+                schedule(jobHandle);
+                /*jobHandle = Schedule(new DrawLinesJob2
                 {
                     color = new Color(100, 100, 0),
                     heightData = singletonData.terrainHeightData,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     lines = singletonData.totalBoundaryLines,
                     yOffset = -0.5f
-                }, jobHandle);
+                }, jobHandle);*/
             }
 
             if (WatchJobTime)
@@ -95,18 +109,41 @@ namespace AreaBucket.Systems
 
             if (MergeGenedPolylines)
             {
-                jobHandle = Schedule(new MergePolylines
+                schedule = (deps) =>
+                {
+                    return new MergePolylines
+                    {
+                        generatedAreaData = generatedAreaData,
+                        minEdgeLength = MinEdgeLength,
+                        breakMergeAngleThreshold = MergePolylinesAngleThreshold * Mathf.Deg2Rad,
+                        mergeUnderDistances = MergePointsUnderDist,
+                        mergeUnderAngleThreshold = MergePointsUnderAngleThreshold,
+                    }.Schedule(deps);
+                };
+                jobHandle = schedule(jobHandle);
+                /*jobHandle = Schedule(new MergePolylines
                 {
                     generatedAreaData = generatedAreaData,
                     minEdgeLength = MinEdgeLength,
                     breakMergeAngleThreshold = MergePolylinesAngleThreshold * Mathf.Deg2Rad,
                     mergeUnderDistances = MergePointsUnderDist,
                     mergeUnderAngleThreshold = MergePointsUnderAngleThreshold,
-                }, jobHandle);
+                }, jobHandle);*/
             }
 
-
-            var polyLines2AreaDefsJob = new Polylines2AreaDefinition
+            schedule = (deps) =>
+            {
+                return new Polylines2AreaDefinition
+                {
+                    points = generatedAreaData.points,
+                    prefab = m_PrefabSystem.GetEntity(_selectedPrefab),
+                    previewSurface = PreviewSurface,
+                    apply = applyAction.WasPressedThisFrame(),
+                    ecb = _toolOutputBarrier.CreateCommandBuffer()
+                }.Schedule(deps);
+            };
+            jobHandle = schedule(jobHandle);
+            /*var polyLines2AreaDefsJob = new Polylines2AreaDefinition
             {
                 points = generatedAreaData.points,
                 prefab = m_PrefabSystem.GetEntity(_selectedPrefab),
@@ -114,7 +151,7 @@ namespace AreaBucket.Systems
                 apply = applyAction.WasPressedThisFrame(),
                 ecb = _toolOutputBarrier.CreateCommandBuffer()
             };
-            jobHandle = Schedule(polyLines2AreaDefsJob, jobHandle);
+            jobHandle = Schedule(polyLines2AreaDefsJob, jobHandle);*/
 
             
 
@@ -146,13 +183,21 @@ namespace AreaBucket.Systems
             DebugContext debugContext,
             NativeList<FloodingDefinition> floodingDefinitions
         ) {
+            Func<JobHandle, JobHandle> schedule;
             var jobHandle = inputDeps;
 
             var floodingContext = new CommonContext().Init(floodingDefinition); // Area bucket jobs common context
-            
 
-            var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
-            jobHandle = Schedule(collectBoudariesJob, jobHandle);
+            schedule = (deps) =>
+            {
+                return new DropObscuredLines()
+                    .Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion)
+                    .Schedule(deps);
+            };
+            schedule = WithProfiling(schedule, "DropObsuredLines");
+            jobHandle = schedule(jobHandle);
+            /*var collectBoudariesJob = new DropObscuredLines().Init(floodingContext, singletonData, generatedAreaData, CheckOcclusion);
+            jobHandle = Schedule(collectBoudariesJob, jobHandle);*/
             // here should ensure last job is complete, to get actual floodingContext.usedBoundaryLines.Length
             // if not do it, the length will be zero and memery leak will happen
             jobHandle.Complete();
@@ -160,7 +205,18 @@ namespace AreaBucket.Systems
             if (CheckOcclusion)
             {
                 var projectedBoundaries = new NativeList<PolarSegment>(floodingContext.usedBoundaryLines.Length, Allocator.TempJob);
-                var projectionJob = new PolarProjectionJob
+                schedule = (deps) =>
+                {
+                    return new PolarProjectionJob
+                    {
+                        polarCenter = floodingContext.floodingDefinition.rayStartPoint,
+                        boudaries = floodingContext.usedBoundaryLines.AsParallelReader(),
+                        projectedBoundaries = projectedBoundaries.AsParallelWriter(),
+                    }.Schedule(floodingContext.usedBoundaryLines.Length, 64, deps);
+                };
+                schedule = WithProfiling(schedule, "PolarProjection");
+                jobHandle = schedule(jobHandle);
+                /*var projectionJob = new PolarProjectionJob
                 {
                     polarCenter = floodingContext.floodingDefinition.rayStartPoint,
                     boudaries = floodingContext.usedBoundaryLines.AsParallelReader(),
@@ -169,12 +225,18 @@ namespace AreaBucket.Systems
                 jobHandle = Schedule(
                     () => projectionJob.Schedule(floodingContext.usedBoundaryLines.Length, 64, jobHandle), 
                     nameof(PolarProjectionJob)
-                );
+                );*/
 
 
                 //jobHandle = Schedule(projectionJob, jobHandle);
-                var checkOcclusionJob = new CheckOcclusionJob().Init(floodingContext, projectedBoundaries);
-                jobHandle = Schedule(checkOcclusionJob, jobHandle);
+                schedule = (deps) =>
+                {
+                    return new CheckOcclusionJob().Init(floodingContext, projectedBoundaries).Schedule(deps);
+                };
+                schedule = WithProfiling(schedule, "CheckOcclusionJob");
+                jobHandle = schedule(jobHandle);
+                /*var checkOcclusionJob = new CheckOcclusionJob().Init(floodingContext, projectedBoundaries);
+                jobHandle = Schedule(checkOcclusionJob, jobHandle);*/
                 jobHandle = projectedBoundaries.Dispose(jobHandle);
             }
             
@@ -185,63 +247,127 @@ namespace AreaBucket.Systems
 
             if (DrawBoundaries)
             {
-                jobHandle = Schedule(new DrawLinesJob2
+                schedule = (deps) =>
+                {
+                    return new DebugHelperJobs.DrawLinesJob2
+                    {
+                        color = UnityEngine.Color.red,
+                        heightData = singletonData.terrainHeightData,
+                        gizmoBatcher = debugContext.gizmoBatcher,
+                        lines = floodingContext.usedBoundaryLines,
+                        yOffset = -0.25f
+                    }.Schedule(jobHandle);
+                };
+                jobHandle = schedule(jobHandle);
+                /*jobHandle = Schedule(new DebugHelperJobs.DrawLinesJob2
                 {
                     color = UnityEngine.Color.red,
                     heightData = singletonData.terrainHeightData,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     lines = floodingContext.usedBoundaryLines,
                     yOffset = -0.25f
-                }, jobHandle);
+                }, jobHandle);*/
             }
 
-            jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
+            schedule = (deps) => new Lines2Points().Init(floodingContext, singletonData).Schedule(deps);
+            schedule = WithProfiling(schedule, "Line2Points");
+            jobHandle = schedule(jobHandle);
+            // jobHandle = Schedule(new Lines2Points().Init(floodingContext, singletonData), jobHandle);
 
             if (UseExperimentalOptions && CheckBoundariesCrossing)
             {
                 jobHandle.Complete();
                 var linesNum = floodingContext.usedBoundaryLines.Length;
-                jobHandle = NativeStream.ScheduleConstruct(
+                NativeStream pointsStream;
+                schedule = (deps) =>
+                {
+                    deps = NativeStream.ScheduleConstruct(
+                        out pointsStream,
+                        floodingContext.usedBoundaryLines,
+                        jobHandle,
+                        Allocator.TempJob
+                    );
+                    deps = new GenIntersectedPointsJobParallel
+                    {
+                        lines = floodingContext.usedBoundaryLines.AsArray().AsReadOnly(),
+                        points = pointsStream.AsWriter()
+                    }.Schedule(floodingContext.usedBoundaryLines.Length, 64, deps);
+
+                    deps = Job.WithCode(() =>
+                    {
+                        floodingContext.points.AddRange(pointsStream.ToNativeArray<float2>(Allocator.Temp));
+                    }).WithBurst().Schedule(deps);
+
+                    pointsStream.Dispose(deps);
+
+                    return deps;
+                };
+                schedule = WithProfiling(schedule, "GenIntersectedPoints");
+                jobHandle = schedule(jobHandle);
+                /*jobHandle = NativeStream.ScheduleConstruct(
                     out var pointsStream, 
                     floodingContext.usedBoundaryLines, 
                     jobHandle,
                     Allocator.TempJob
                 );
+
                 var genIntersectedPointsJob = new GenIntersectedPointsJobParallel
                 {
                     lines = floodingContext.usedBoundaryLines.AsArray().AsReadOnly(),
                     points = pointsStream.AsWriter()
                 };
-
-                
                 jobHandle = Schedule(
                     () => genIntersectedPointsJob.Schedule(floodingContext.usedBoundaryLines.Length, 64, jobHandle),
                     nameof(genIntersectedPointsJob)
-                    );
+                );*/
                 jobHandle.Complete();
 
-                jobHandle = Job.WithCode(() =>
+                /*jobHandle = Job.WithCode(() =>
                 {
                     floodingContext.points.AddRange(pointsStream.ToNativeArray<float2>(Allocator.Temp));
                 }).WithBurst().Schedule(jobHandle);
-                pointsStream.Dispose(jobHandle);
+                pointsStream.Dispose(jobHandle);*/
             }
 
             if (MergePoints)
             {
                 // only drop points totally overlayed. higher range causes accidently intersection dropping
                 // (points are merged and moved, which cause rays generated from those points becomes intersected)
-                var mergePointsJob = default(MergePoints).Init(floodingContext, singletonData, MergePointDist);
-                jobHandle = Schedule(mergePointsJob, jobHandle);
+                schedule = (deps) =>
+                {
+                    return default(MergePoints)
+                        .Init(floodingContext, singletonData, MergePointDist)
+                        .Schedule(deps);
+                };
+                schedule = WithProfiling(schedule, "MergePoints");
+                jobHandle = schedule(jobHandle);
+                // var mergePointsJob = default(MergePoints).Init(floodingContext, singletonData, MergePointDist);
+                // jobHandle = Schedule(mergePointsJob, jobHandle);
             }
 
-            var generateRaysJob = default(GenerateRays).Init(floodingContext, singletonData, RayBetweenFloodRange);
-            jobHandle = Schedule(generateRaysJob, jobHandle);
+            schedule = (deps) =>
+            {
+                return default(GenerateRays)
+                    .Init(floodingContext, singletonData, RayBetweenFloodRange)
+                    .Schedule(deps);
+            };
+            schedule = WithProfiling(schedule, "GenerateRays");
+            jobHandle = schedule(jobHandle);
+            // var generateRaysJob = default(GenerateRays).Init(floodingContext, singletonData, RayBetweenFloodRange);
+            // jobHandle = Schedule(generateRaysJob, jobHandle);
 
             if (CheckIntersection)
             {
-                var dropRaysJob = default(DropIntersectedRays).Init(floodingContext, debugContext, RayTollerance, singletonData);
-                jobHandle = Schedule(dropRaysJob, jobHandle);
+                schedule = (deps) =>
+                {
+                    return default(DropIntersectedRays)
+                        .Init(floodingContext, debugContext, RayTollerance, singletonData)
+                        .Schedule(deps);
+                };
+                schedule = WithProfiling(schedule, "DropIntersectedRays");
+                jobHandle = schedule(jobHandle);
+                // var dropRaysJob = default(DropIntersectedRays).Init(floodingContext, debugContext, RayTollerance, singletonData);
+                // jobHandle = Schedule(dropRaysJob, jobHandle);
             }
 
             if (DrawGeneratedRays && (DrawRaysDepth == 0 || DrawRaysDepth == floodingDefinition.floodingDepth))
@@ -258,33 +384,64 @@ namespace AreaBucket.Systems
                         raylines.Add(line);
                     }
                 }).Schedule(jobHandle);
-                jobHandle = Schedule(new DrawLinesJob
+                schedule = (deps) =>
+                {
+                    return new DebugHelperJobs.DrawLinesJob
+                    {
+                        lines = raylines,
+                        gizmoBatcher = debugContext.gizmoBatcher,
+                        heightData = singletonData.terrainHeightData,
+                        color = new UnityEngine.Color(0.3f, 0.5f, 0.7f, 1)
+                    }.Schedule(deps);
+                };
+                jobHandle = schedule(jobHandle);
+
+                /*jobHandle = Schedule(new DebugHelperJobs.DrawLinesJob
                 {
                     lines = raylines,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     heightData = singletonData.terrainHeightData,
                     color = new UnityEngine.Color(0.3f, 0.5f, 0.7f, 1)
-                }, jobHandle);
+                }, jobHandle);*/
                 jobHandle.Complete();
                 jobHandle = raylines.Dispose(jobHandle);
             }
 
             if (DrawIntersections)
             {
-                jobHandle = Schedule(new DrawLinesJob
+                schedule = (deps) =>
+                {
+                    new DebugHelperJobs.DrawLinesJob
+                    {
+                        lines = debugContext.intersectedLines,
+                        gizmoBatcher = debugContext.gizmoBatcher,
+                        heightData = singletonData.terrainHeightData,
+                        color = UnityEngine.Color.blue
+                    }.Schedule(deps);
+                    new DebugHelperJobs.DrawLinesJob
+                    {
+                        lines = debugContext.intersectedRays,
+                        gizmoBatcher = debugContext.gizmoBatcher,
+                        heightData = singletonData.terrainHeightData,
+                        color = UnityEngine.Color.magenta
+                    }.Schedule(deps);
+                    return deps;
+                };
+                schedule(jobHandle);
+                /*jobHandle = Schedule(new DebugHelperJobs.DrawLinesJob
                 {
                     lines = debugContext.intersectedLines,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     heightData = singletonData.terrainHeightData,
                     color = UnityEngine.Color.blue
                 }, jobHandle);
-                jobHandle = Schedule(new DrawLinesJob
+                jobHandle = Schedule(new DebugHelperJobs.DrawLinesJob
                 {
                     lines = debugContext.intersectedRays,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     heightData = singletonData.terrainHeightData,
                     color = UnityEngine.Color.magenta
-                }, jobHandle);
+                }, jobHandle);*/
             }
 
             var newPointsIndicesRange = new NativeReference<int2>(Allocator.TempJob);
@@ -297,58 +454,72 @@ namespace AreaBucket.Systems
                     floodingDefinitions, 
                     newPointsIndicesRange
                     );
-                jobHandle = Schedule(r2plJob, jobHandle);
+                schedule = (deps) => r2plJob.Schedule(deps);
+                schedule = WithProfiling(schedule, "Ray2Polylines");
+                jobHandle = schedule(jobHandle);
+                // jobHandle = Schedule(r2plJob, jobHandle);
             }
 
             // collect new flooding definitions
             
             if (UseExperimentalOptions && floodingDefinition.floodingDepth < RecursiveFloodingDepth)
             {
-                jobHandle = Schedule(new CollectFloodingDefinitions().Init(
+                schedule = (deps) =>
+                {
+                    return new CollectFloodingDefinitions().Init(
+                        floodingContext,
+                        generatedAreaData,
+                        floodingDefinitions,
+                        newPointsIndicesRange
+                    ).Schedule(deps);
+                };
+                schedule = WithProfiling(schedule, "CollectFloodingDefinitions");
+                jobHandle = schedule(jobHandle);
+                /*jobHandle = Schedule(new CollectFloodingDefinitions().Init(
                     floodingContext,
                     generatedAreaData,
                     floodingDefinitions,
                     newPointsIndicesRange
-                    ), jobHandle);
+                    ), jobHandle);*/
             }
 
             // filter flooding definitions (that has been obscured by new geneated polylines)
             var filterFloodingDefsDeps = jobHandle;
-            jobHandle = Schedule(
-                () => {
-                    return Job.WithCode(() =>
+            schedule = (deps) =>
+            {
+                return Job.WithCode(() =>
+                {
+                    var usableFloodingDefs = new NativeList<FloodingDefinition>(Allocator.Temp);
+                    for (int i = 0; i < floodingDefinitions.Length; i++)
                     {
-                        var usableFloodingDefs = new NativeList<FloodingDefinition>(Allocator.Temp);
-                        for (int i = 0; i < floodingDefinitions.Length; i++)
+                        var floodingDef = floodingDefinitions[i];
+                        var line = floodingDef.floodingSourceLine;
+                        var vector = line.b - line.a;
+                        var middle = math.lerp(line.a, line.b, 0.5f); // choose middle point of exposed line
+
+                        var exposed = true;
+                        for (int j = 0; j < generatedAreaData.polyLines.Length; j++)
                         {
-                            var floodingDef = floodingDefinitions[i];
-                            var line = floodingDef.floodingSourceLine;
-                            var vector = line.b - line.a;
-                            var middle = math.lerp(line.a, line.b, 0.5f); // choose middle point of exposed line
+                            // if satisfy this condition, means it is flooding candidate source line
+                            if (j == floodingDef.newAreaPointInsertStartIndex) continue;
 
-                            var exposed = true;
-                            for (int j = 0; j < generatedAreaData.polyLines.Length; j++)
+                            var boundaryLine = generatedAreaData.polyLines[j];
+                            if (FoundIntersection(line, vector, middle, boundaryLine))
                             {
-                                // if satisfy this condition, means it is flooding candidate source line
-                                if (j == floodingDef.newAreaPointInsertStartIndex) continue;
-
-                                var boundaryLine = generatedAreaData.polyLines[j];
-                                if (FoundIntersection(line, vector, middle, boundaryLine))
-                                {
-                                    exposed = false;
-                                    break;
-                                }
+                                exposed = false;
+                                break;
                             }
-                            if (exposed) usableFloodingDefs.Add(floodingDef);
                         }
+                        if (exposed) usableFloodingDefs.Add(floodingDef);
+                    }
 
-                        floodingDefinitions.Clear();
-                        floodingDefinitions.AddRange(usableFloodingDefs.AsArray());
-                        usableFloodingDefs.Dispose();
-                    }).Schedule(filterFloodingDefsDeps);
-                },
-                "filterFloodingDefs"
-            );
+                    floodingDefinitions.Clear();
+                    floodingDefinitions.AddRange(usableFloodingDefs.AsArray());
+                    usableFloodingDefs.Dispose();
+                }).Schedule(filterFloodingDefsDeps);
+            };
+            schedule = WithProfiling(schedule, "filterFloodingDefs");
+            jobHandle = schedule(jobHandle);
 
             jobHandle = newPointsIndicesRange.Dispose(jobHandle);
 
@@ -358,14 +529,23 @@ namespace AreaBucket.Systems
                 jobHandle = Job.WithCode(() => {
                     for (int i = 0; i < floodingDefinitions.Length; i++) exposedList.Add(floodingDefinitions[i].floodingSourceLine);
                 }).Schedule(jobHandle);
-                jobHandle = Schedule(new DrawLinesJob
+
+                jobHandle = new DebugHelperJobs.DrawLinesJob
                 {
                     color = UnityEngine.Color.green,
                     heightData = singletonData.terrainHeightData,
                     gizmoBatcher = debugContext.gizmoBatcher,
                     lines = exposedList,
                     yOffset = 2f
-                }, jobHandle);
+                }.Schedule(jobHandle);
+                /*jobHandle = Schedule(new DebugHelperJobs.DrawLinesJob
+                {
+                    color = UnityEngine.Color.green,
+                    heightData = singletonData.terrainHeightData,
+                    gizmoBatcher = debugContext.gizmoBatcher,
+                    lines = exposedList,
+                    yOffset = 2f
+                }, jobHandle);*/
                 jobHandle = exposedList.Dispose(jobHandle);
             }
 

@@ -5,6 +5,7 @@ using Unity.Collections;
 using Unity.Entities.UniversalDelegates;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace AreaBucket.Systems.AreaBucketToolJobs
@@ -55,6 +56,7 @@ namespace AreaBucket.Systems.AreaBucketToolJobs
     [BurstCompile]
     public struct CheckOcclusionJob : IJob
     {
+
 
         public NativeList<PolarSegment> projectedBoundaries;
 
