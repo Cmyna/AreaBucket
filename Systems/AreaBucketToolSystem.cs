@@ -280,18 +280,6 @@ namespace AreaBucket.Systems
             };
             schedule = WithProfiling(schedule, "totalTimeCost");
             var newHandle = schedule(inputDeps);
-
-            /*Stopwatch stopwatch = null;
-            // if (WatchJobTime) stopwatch = Stopwatch.StartNew();
-            stopwatch = Stopwatch.StartNew();
-            var newHandle = StartAlgorithm(inputDeps, raycastPoint);
-            // if (WatchJobTime && stopwatch != null)
-            {
-                newHandle.Complete();
-                AddJobTime("totalTimeCost", (float)stopwatch.Elapsed.TotalMilliseconds);
-            }*/
-
-            // this.jobDebuger.Post("totalTimeCost", totalProfiler);
             
             if (WatchJobTime)
             {
@@ -382,8 +370,6 @@ namespace AreaBucket.Systems
                 schedule = WithProfiling(schedule, nameof(collectNetEdgesJob));
                 jobHandle = schedule(jobHandle);
                 
-                // jobHandle = Schedule(collectNetEdgesJob, jobHandle);
-                
             }
             if (BoundaryMask.Match(BoundaryMask.Area))
             {
@@ -465,8 +451,6 @@ namespace AreaBucket.Systems
             };
             schedule = WithProfiling(schedule, "Curve2Lines");
             jobHandle = schedule(jobHandle);
-            //var curve2LinesJob = default(Curve2Lines).Init(singletonData, Curve2LineAngleLimit);
-            //jobHandle = Schedule(curve2LinesJob, jobHandle);
 
             return jobHandle;
         }
@@ -481,11 +465,6 @@ namespace AreaBucket.Systems
             );
         }
 
-
-        private JobHandle Schedule<T>(T job, JobHandle handle) where T : struct, IJob
-        {
-            return Schedule(() => job.Schedule(handle), job.GetType().Name);
-        }
 
 
         private Func<JobHandle, JobHandle> WithProfiling(Func<JobHandle, JobHandle> scheduleFunc, string jobName)
@@ -502,22 +481,6 @@ namespace AreaBucket.Systems
             };
         }
 
-
-        private JobHandle Schedule(Func<JobHandle> scheduleFunc, string name)
-        {
-            /*Stopwatch stopwatch = null;
-            if (WatchJobTime)
-            {
-                stopwatch = Stopwatch.StartNew();
-            }*/
-            var jobHandle = scheduleFunc();
-            /*if (WatchJobTime)
-            {
-                jobHandle.Complete();
-                AddJobTime(name, (float)stopwatch.Elapsed.TotalMilliseconds);
-            }*/
-            return jobHandle;
-        }
 
         public void LogToolState(ILog logger, string headMsg)
         {
