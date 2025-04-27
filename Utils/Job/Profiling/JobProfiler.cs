@@ -22,6 +22,27 @@ namespace AreaBucket.Utils.Job.Profiling
     }
 
 
+    public struct AddableWeightedValue
+    {
+        public double current;
+
+        public double weight;
+
+        public double final;
+
+        public void Add(double v)
+        {
+            this.current += v;
+        }
+
+        public void Update()
+        {
+            this.final = (this.current * this.weight + this.final) / (1 + this.weight);
+            this.current = 0;
+        }
+    }
+
+
     public class JobProfiler
     {
 
@@ -89,7 +110,7 @@ namespace AreaBucket.Utils.Job.Profiling
     {
         private List<(string, JobProfiler)> waitedQueue;
 
-        private Dictionary<string, WeightedValue> timeCostsMap;
+        private Dictionary<string, AddableWeightedValue> timeCostsMap;
 
         private double weight = 0.05;
 
@@ -100,10 +121,15 @@ namespace AreaBucket.Utils.Job.Profiling
         public JobProfilers(double weight = 0.05)
         {
             this.waitedQueue = new List<(string, JobProfiler)>();
-            this.timeCostsMap = new Dictionary<string, WeightedValue>();
+            this.timeCostsMap = new Dictionary<string, AddableWeightedValue>();
             this.weight = weight;
             this.avgWaitNum = default;
             this.avgWaitNum.weight = weight;
+        }
+
+        public bool IsCompleted()
+        {
+            return waitedQueue.Count <= 0;
         }
 
         public void Post(string name, JobProfiler profiler)
@@ -112,19 +138,31 @@ namespace AreaBucket.Utils.Job.Profiling
         }
 
 
-        public void Update()
+        public void UpdateTotal()
+        {
+            var keys = this.timeCostsMap.Keys.ToList();
+            foreach (var key in keys)
+            {
+                var value = this.timeCostsMap[key];
+                value.Update();
+                this.timeCostsMap[key] = value;
+            }
+        }
+
+
+        public void UpdateSegments()
         {
             this.waitedQueue = this.waitedQueue.Where((value) =>
             {
                 var (name, profiler) = value;
                 if (!profiler.IsCompleted()) return true;
-                WeightedValue time = default;
+                AddableWeightedValue time = default;
                 time.weight = this.weight;
                 if (this.timeCostsMap.ContainsKey(name))
                 {
                     time = this.timeCostsMap[name];
                 }
-                time.Update(profiler.GetTimeMs());
+                time.Add(profiler.GetTimeMs());
                 this.timeCostsMap[name] = time;
                 return false;
             }).ToList();
@@ -180,17 +218,20 @@ namespace AreaBucket.Utils.Job.Profiling
         }
 
         /// <summary>
-        /// refresh debug UI 
+        /// refresh debug UI if all profiles are completed
         /// time consuming (roughly up to 1ms each call?)
         /// </summary>
-        public void Refresh()
+        public bool Refresh()
         {
+            if (!this.profilers.IsCompleted()) return false;
+            this.profilers.UpdateTotal();
             this.uiContainer.children.Clear();
             var list = this.profilers.AsDebugUIList();
             foreach (var item in list)
             {
                 this.uiContainer.children.Add(item);
             }
+            return true;
         }
 
 
@@ -202,7 +243,7 @@ namespace AreaBucket.Utils.Job.Profiling
 
         public void UpdateProfilers()
         {
-            this.profilers.Update();
+            this.profilers.UpdateSegments();
         }
     }
 }

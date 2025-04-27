@@ -273,6 +273,12 @@ namespace AreaBucket.Systems
             }
 
             ClearJobTimeProfiles();
+            if (WatchJobTime &&　this.jobDebuger.profilers.IsCompleted())
+            {
+                // refresh debug UI and start next profiling if last time one-tick profiling has been completed 
+                this.jobDebuger.Refresh();
+                jobProfileSwitch = true;
+            }
 
             Func<JobHandle, JobHandle> schedule = (deps) => 
             {
@@ -284,7 +290,7 @@ namespace AreaBucket.Systems
             if (WatchJobTime)
             {
                 this.jobDebuger.UpdateProfilers();
-                this.jobDebuger.Refresh();
+                this.jobProfileSwitch = false;
             }
             UpdateOtherFieldView("QueueNum", this.jobDebuger.profilers.QueueNum);
 
@@ -471,7 +477,7 @@ namespace AreaBucket.Systems
         {
             return (JobHandle depends) =>
             {
-                if (!WatchJobTime) return scheduleFunc(depends);
+                if (!WatchJobTime || !jobProfileSwitch) return scheduleFunc(depends);
                 var profiler = new JobProfiler();
                 profiler.BeginWith(depends);
                 var jobHandle = scheduleFunc(depends);

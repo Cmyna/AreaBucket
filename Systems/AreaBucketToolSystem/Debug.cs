@@ -31,6 +31,12 @@ namespace AreaBucket.Systems
         private readonly JobDebuger jobDebuger = new JobDebuger("Job Time Cost2");
 
         /// <summary>
+        /// a flag that control activating/deactivating one tick job time profiling
+        /// enable at the beginning of loop (if allowed) and disable it at the end of loop
+        /// </summary>
+        private bool jobProfileSwitch = true;
+
+        /// <summary>
         /// Here we borrow Unity's HDRP debug panel (also the CO developer panel) to shows our debug options
         /// </summary>
         private void CreateDebugPanel()
