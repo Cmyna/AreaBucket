@@ -50,11 +50,13 @@ namespace AreaBucket.Systems
             jobHandle = ScheduleDataCollection(jobHandle, singletonData);
             jobHandle.Complete();
 
+#if DEBUG
             if (_dumpAction.WasReleasedThisFrame())
             {
                 Mod.Logger.Info("dump pressed");
                 DumpUtils.WriteSegments(singletonData.totalBoundaryLines);
             }
+#endif
 
             if (DrawBoundaries)
             {
