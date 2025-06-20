@@ -38,7 +38,7 @@ namespace AreaBucket
         public bool PreviewSurface { get; set; } = false;
 
         [SettingsUISection(ksMain, "About")]
-        public string Version => "0.5.2";
+        public string Version => "0.5.3";
 
         [SettingsUIHidden]
         public bool AlterVanillaGeometrySystem { get; set; } = false;
