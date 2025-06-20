@@ -60,7 +60,11 @@ namespace AreaBucket
                 { modSetting.GetOptionDescLocaleID(nameof(Setting.PreviewSurface)), "Preview surface texture when using buckect tool" },
 
                 { modSetting.GetOptionLabelLocaleID(nameof(Setting.UseExperientalOption)), "Experimental Options" },
-                { modSetting.GetOptionDescLocaleID(nameof(Setting.UseExperientalOption)), "Use Experimental Options (May have performance or other issue)" }
+                { modSetting.GetOptionDescLocaleID(nameof(Setting.UseExperientalOption)), "Use Experimental Options (May have performance or other issue)" },
+
+
+                { modSetting.GetOptionDescLocaleID(nameof(Setting.Version)), "Version" },
+                { modSetting.GetOptionLabelLocaleID(nameof(Setting.Version)), "Version" },
             };
         }
 
