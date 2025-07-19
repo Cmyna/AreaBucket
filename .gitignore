@@ -12,3 +12,5 @@ UI/**/node_modules/**/*
 .vs
 AreaBucket.csproj.user
 *.user
+.qodo
+.idea
