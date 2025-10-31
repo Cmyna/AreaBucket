@@ -233,7 +233,7 @@ namespace AreaBucket.Systems
             Mod.Logger.Info("AreaBucketToolSystem Start Running");
             _dumpAction.shouldBeEnabled = true;
 #endif
-            // _applyAction.shouldBeEnabled = true;
+            applyAction.shouldBeEnabled = true;
 
             applyMode = ApplyMode.Clear;
         }
@@ -252,7 +252,7 @@ namespace AreaBucket.Systems
             AreaGeometryData componentData = m_PrefabSystem.GetComponentData<AreaGeometryData>(_selectedPrefab);
             if (Mod.modSetting?.DrawAreaOverlay == true) requireAreas = AreaUtils.GetTypeMask(componentData.m_Type);
 
-            if (!applyAction.enabled) applyAction.enabled = true;
+            // if (!applyAction.enabled) applyAction.enabled = true;
 
             applyMode = ApplyMode.Clear;
             if (!GetRaycastResult(out var raycastPoint))
@@ -306,7 +306,7 @@ namespace AreaBucket.Systems
             Mod.Logger.Info("AreaBucketToolSystem Stop Running");
             _dumpAction.shouldBeEnabled = false;
 #endif
-            applyAction.enabled = false;
+            applyAction.shouldBeEnabled = false;
         }
 
         protected override void OnDestroy()

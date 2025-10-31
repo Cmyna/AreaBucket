@@ -94,7 +94,7 @@ namespace AreaBucket.Systems
 #if DEBUG
             Mod.Logger.Info("AreaReplacementToolSystem Start Running");
 #endif
-            // _applyAction.shouldBeEnabled = true;
+            applyAction.shouldBeEnabled = true;
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
@@ -103,7 +103,7 @@ namespace AreaBucket.Systems
             if (!_prefabSystem.TryGetEntity(_selectedPrefab, out var prefabEntity)) return inputDeps;
             if (!GetRaycastResult(out var controlPoint)) return inputDeps;
 
-            if (!applyAction.enabled) applyAction.enabled = true;
+            // if (!applyAction.enabled) applyAction.enabled = true;
 
             applyMode = ApplyMode.Clear;
 
@@ -215,7 +215,8 @@ namespace AreaBucket.Systems
 #if DEBUG
             Mod.Logger.Info("AreaReplacementToolSystem Stop Running");
 #endif
-            applyAction.enabled = false;
+            // applyAction.enabled = false;
+            applyAction.shouldBeEnabled = false;
         }
 
 
