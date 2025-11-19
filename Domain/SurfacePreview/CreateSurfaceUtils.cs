@@ -52,22 +52,23 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
         public static void AdjustPosition
         (
             DynamicBuffer<Node> nodeBuffer, 
-            ref TerrainHeightData terrainHeightData,
-            ref WaterSurfaceData waterSurfaceData,
-            bool onWaterSurface
+            ref TerrainHeightData terrainHeightData
+            // ref WaterSurfaceData waterSurfaceData,
+            // bool onWaterSurface
         )
         {
             for (int i = 0; i < nodeBuffer.Length; i++)
             {
                 var node = nodeBuffer[i];
-                if (!onWaterSurface)
+                node = AreaUtils.AdjustPosition(node, ref terrainHeightData);
+                /*if (!onWaterSurface)
                 {
                     node = AreaUtils.AdjustPosition(node, ref terrainHeightData);
                 }
                 else
                 {
                     node = AreaUtils.AdjustPosition(node, ref terrainHeightData, ref waterSurfaceData);
-                }
+                }*/
                 nodeBuffer[i] = node;
             }
         }

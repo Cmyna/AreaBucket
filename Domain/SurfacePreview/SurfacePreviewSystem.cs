@@ -1,5 +1,4 @@
 ﻿using AreaBucket.Components;
-using AreaBucket.Utils;
 using Game;
 using Game.Areas;
 using Game.Common;
@@ -33,7 +32,7 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
             public TerrainHeightData terrainHeightData;
 
-            public WaterSurfaceData waterSurfaceData;
+            // public WaterSurfaceData waterSurfaceData;
 
 
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -61,8 +60,8 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
                 AreaFlags areaFlag = AreaFlags.Complete;
 
-                var onWaterSurface = cluAreaGeometryData.TryGetComponent(surfacePreviewDefinition.prefab, out var areaGeometryData) &&
-                     (areaGeometryData.m_Flags & GeometryFlags.OnWaterSurface) != 0;
+                /*var onWaterSurface = cluAreaGeometryData.TryGetComponent(surfacePreviewDefinition.prefab, out var areaGeometryData) &&
+                     (areaGeometryData.m_Flags & GeometryFlags.OnWaterSurface) != 0;*/
 
                 // add new entity
                 var prefabData = cluAreaData[surfacePreviewDefinition.prefab];
@@ -70,7 +69,8 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
                 ecb.SetComponent(newAreaEntity, new PrefabRef(surfacePreviewDefinition.prefab));
                 var nodeBuffer = ecb.AddBuffer<Node>(newAreaEntity);
                 CreateSurfaceUtils.Drawing2Scene(defNodesBuffer, nodeBuffer);
-                CreateSurfaceUtils.AdjustPosition(nodeBuffer, ref terrainHeightData, ref waterSurfaceData, onWaterSurface);
+                // CreateSurfaceUtils.AdjustPosition(nodeBuffer, ref terrainHeightData, ref waterSurfaceData, onWaterSurface);
+                CreateSurfaceUtils.AdjustPosition(nodeBuffer, ref terrainHeightData);
                 ecb.AddComponent(newAreaEntity, new Area(areaFlag));
 
                 // if not apply preview, then add a marker represent that the entity is been previewed
@@ -93,7 +93,7 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
         private TerrainSystem _terrainSystem;
 
-        private WaterSystem _waterSystem;
+        // private WaterSystem _waterSystem;
 
         private int lastDefsCount { get; set; } = -1;
 
@@ -115,7 +115,7 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
 
             _modificationBarrier = World.GetOrCreateSystemManaged<ModificationBarrier1>();
             _terrainSystem = World.GetOrCreateSystemManaged<TerrainSystem>();
-            _waterSystem = World.GetOrCreateSystemManaged<WaterSystem>();
+            // _waterSystem = World.GetOrCreateSystemManaged<WaterSystem>();
 
             CreateDebugUI();
         }
@@ -130,16 +130,14 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
             MarkOldEntitiesDeleted(ecb);
 
             var terrainHeightData = _terrainSystem.GetHeightData();
-            var waterSystemLoaded = _waterSystem.Loaded;
+            // var waterSystemLoaded = _waterSystem.Loaded;
             
-            if (!waterSystemLoaded) return;
+            // if (!waterSystemLoaded) return;
 
             GetComponentTypeHandle<Area>();
 
-            WaterSurfaceData waterSurfaceData = _waterSystem.GetSurfaceData(out var deps);
-            JobHandle.CombineDependencies(jobHandle, deps);
-
-            var a = CheckedStateRef;
+            // WaterSurfaceData waterSurfaceData = _waterSystem.GetSurfaceData(out var deps);
+            // JobHandle.CombineDependencies(jobHandle, deps);
 
             var genPreviewedSurfaceJob = default(GeneratePreviewedSurfaceJob);
 
@@ -150,14 +148,14 @@ namespace AreaBucket.Systems.SurfacePreviewSystem
             genPreviewedSurfaceJob.thEntity = SystemAPI.GetEntityTypeHandle();
 
             genPreviewedSurfaceJob.ecb = ecb;
-            genPreviewedSurfaceJob.waterSurfaceData = waterSurfaceData;
+            // genPreviewedSurfaceJob.waterSurfaceData = waterSurfaceData;
             genPreviewedSurfaceJob.terrainHeightData = terrainHeightData;
 
             jobHandle = genPreviewedSurfaceJob.Schedule(_previewDefintionQuery, jobHandle);
 
 
             _terrainSystem.AddCPUHeightReader(jobHandle);
-            _waterSystem.AddSurfaceReader(jobHandle);
+            // _waterSystem.AddSurfaceReader(jobHandle);
             _modificationBarrier.AddJobHandleForProducer(jobHandle);
 
             base.Dependency = jobHandle;
