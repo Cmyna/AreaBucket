@@ -55,20 +55,14 @@ You can active Anarchy in tool options panel to hide the warning.
   <Screenshot Value="Properties/Images/settings.jpg" />
 	<Tag Value="Code Mod" />
 	<ForumLink Value="" />
-	<ModVersion Value="0.5.3" />
+	<ModVersion Value="0.5.4" />
 	<GameVersion Value="1.3.*" />
 
   <Dependency Id="74417" /> <!--Dependency Unified Icon Library -->
 
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
   <ChangeLog>
-
-Try to fix Crash to Desktop issues on game version 1.3.3f1
-
-Add version in Setting.
-
-Slightly optimize performance when Boundary Crossing enabled
-
+Compatable Update for Game Version 1.3.6f1
   </ChangeLog>
 	<ExternalLink Type="github" Url="https://github.com/Cmyna/AreaBucket" />
   <ExternalLink Type="discord" Url="https://discord.gg/HxJn5XHY" />
